@@ -453,3 +453,7 @@ Decision: large list popovers opened from small icon buttons use anchorVisibilit
 - Reverted every reference (package.json, README, checklist, BRIEF, smoke example, scripts, showcase), regenerated docs/api-surface.txt header; CHANGELOG note about @ultralabss removed. Export list unchanged (674).
 - Re-run: build:release 0, typecheck 0, check:locked 42/0, callbacks 241/0, jsdoc 0 mismatch, api matches, check:pack 0 problems; npm pack -> ultralabs-glass-0.1.0.tgz (137 files); smoke install + tsc + vite build exit 0.
 - Publish NOT done: owner runs `npm publish --access public --ignore-scripts` (2FA). Note: @ultralabss/glass has a pending staged 0.1.0 — delete it with the org.
+## H10. Published + GitHub (2026-11-10)
+- npm: @ultralabs/glass@0.1.0 live (license MIT, verified with npm view).
+- GitHub: https://github.com/ultralabss/liquid-glass (public). Commit 1 = state as published, tag v0.1.0 on it; commit 2 adds repository/homepage/bugs to package.json (shown on npm from the next release). .gitignore excludes node_modules, tgz, dist/esm, dist/types, maps, docs/BRIEF.md (owner notes, contains a real name). showcase quote source changed to "UltraLabs".
+- Open: GitHub org is `ultralabss`; the `UltraLabs` org on GitHub belongs to someone else. npm scope `ultralabs` is ours. Delete npm org `ultralabss` (owner). Ledger: UL-613.
