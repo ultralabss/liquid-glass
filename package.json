@@ -1,0 +1,64 @@
+{
+  "name": "@ultralabs/glass",
+  "version": "0.1.0",
+  "license": "MIT",
+  "type": "module",
+  "source": "./src/index.ts",
+  "main": "./dist/esm/index.js",
+  "module": "./dist/esm/index.js",
+  "types": "./dist/types/src/index.d.ts",
+  "style": "./dist/ul-glass.css",
+  "sideEffects": [
+    "*.css",
+    "./dist/ul-glass.js",
+    "./dist/ul-glass.min.js"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/types/src/index.d.ts",
+      "import": "./dist/esm/index.js",
+      "default": "./dist/esm/index.js"
+    },
+    "./dist": "./dist/ul-glass.js",
+    "./dist/min": "./dist/ul-glass.min.js",
+    "./dist/ul-glass.css": "./dist/ul-glass.css",
+    "./tokens.css": "./tokens/tokens.css",
+    "./tokens.json": "./tokens/tokens.json",
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "tokens": "node scripts/build-tokens.mjs",
+    "check:locked": "node scripts/check-locked.mjs",
+    "check:callbacks": "node scripts/check-callbacks.mjs",
+    "check:tokens": "node scripts/check-tokens.mjs",
+    "check:jsdoc": "node scripts/check-jsdoc.mjs && node scripts/check-jsdoc-defaults.mjs",
+    "check:api": "node scripts/api-surface.mjs --check",
+    "check:pack": "node scripts/check-pack.mjs",
+    "check:links": "node scripts/check-links.mjs",
+    "api:snapshot": "node scripts/api-surface.mjs",
+    "typecheck": "tsc --noEmit",
+    "build": "node scripts/build-tokens.mjs && node scripts/check-locked.mjs && node scripts/check-callbacks.mjs && node scripts/check-tokens.mjs && node scripts/build-bundle.mjs",
+    "build:min": "node scripts/build-tokens.mjs && node scripts/check-locked.mjs && node scripts/check-callbacks.mjs && node scripts/check-tokens.mjs && node scripts/build-bundle.mjs --min",
+    "build:esm": "esbuild src/index.ts --bundle --format=esm --platform=browser --target=es2022 --external:react --external:react-dom --jsx=transform --loader:.css=empty --outfile=dist/esm/index.js",
+    "build:types": "rm -rf dist/types && tsc -p tsconfig.build.json && node scripts/fix-dts-extensions.mjs",
+    "build:release": "npm run build:min && npm run build:esm && npm run build:types"
+  },
+  "peerDependencies": {
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "typescript": "^5.6.0",
+    "esbuild": "^0.25.0"
+  },
+  "files": [
+    "dist",
+    "tokens",
+    "icons",
+    "README.md",
+    "DESIGN.md",
+    "CHANGELOG.md"
+  ]
+}

@@ -1,0 +1,124 @@
+/* Checkbox, radio, switch. Material from ULGlass (boxes, thumb); this file lays out, sizes and states. Tokens only. */
+.ul-choice, .ul-switch-row {
+  position: relative;
+  display: inline-flex;
+  align-items: flex-start;
+  gap: var(--ul-space-3);
+  min-height: var(--ul-control-hit-min);
+  padding: calc((var(--ul-control-hit-min) - var(--ul-selection-box)) / 2) 0;
+  box-sizing: border-box;
+  color: var(--ul-color-text);
+  font-family: var(--ul-font-sans);
+  font-size: var(--ul-text-md);
+  line-height: var(--ul-selection-box);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.ul-switch-row { align-items: center; padding: 0; line-height: 1.35; }
+.ul-choice[data-disabled], .ul-switch-row[data-disabled] { cursor: not-allowed; opacity: var(--ul-control-disabled-opacity); }
+.ul-choice-input { position: absolute; opacity: 0; width: 1px; height: 1px; margin: 0; pointer-events: none; }
+.ul-choice-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.ul-choice-label { font-weight: var(--ul-weight-medium); }
+.ul-choice-msg { display: flex; gap: var(--ul-space-1); font-size: var(--ul-text-sm); line-height: 1.45; color: var(--ul-color-text-2); }
+.ul-choice-msg[data-tone="error"] { color: var(--ul-field-error-text); }
+.ul-choice-msg-icon { display: inline-grid; flex: none; width: 15px; height: 15px; margin-top: 1px; }
+
+/* box (checkbox) and circle (radio): glass sm */
+.ul-check-box, .ul-radio-box {
+  position: relative;
+  flex: none;
+  display: inline-grid;
+  place-items: center;
+  width: var(--ul-selection-box);
+  height: var(--ul-selection-box);
+  color: var(--ul-color-white);
+}
+.ul-choice:hover:not([data-disabled]) :is(.ul-check-box, .ul-radio-box),
+.ul-choice[data-ul-force~="hover"] :is(.ul-check-box, .ul-radio-box) { --ul-glass-tint: calc(var(--ul-glass-sm-tint) + var(--ul-control-hover-tint) * 2); --ul-light: 1; }
+.ul-choice[data-ul-force~="pressed"] :is(.ul-check-box, .ul-radio-box) { scale: .92; }
+.ul-check-box > .ul-spinner { --ul-spinner-size: 12px; }
+.ul-check-mark { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 1; stroke-dashoffset: 1; transition: stroke-dashoffset var(--ul-duration-base) var(--ul-ease-snappy); }
+.ul-check-box[data-on] .ul-check-mark { stroke-dashoffset: 0; }
+.ul-radio-dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; scale: 0; transition: scale var(--ul-ease-bouncy-settle) var(--ul-ease-bouncy); }
+.ul-radio-box[data-on] .ul-radio-dot { scale: 1; }
+
+/* focus ring: a child above the filtered backdrop (never an outline on a refracted surface) */
+.ul-choice-ring {
+  position: absolute;
+  inset: calc(-1 * (var(--ul-focus-offset) + var(--ul-focus-width)));
+  border: var(--ul-focus-width) solid var(--ul-focus-color);
+  border-radius: calc(var(--ul-glass-radius) + var(--ul-focus-offset) + var(--ul-focus-width));
+  opacity: 0;
+  pointer-events: none;
+}
+.ul-choice-input:focus-visible + * > .ul-choice-ring, .ul-choice[data-ul-force~="focus"] .ul-choice-ring,
+.ul-switch:focus-visible > .ul-switch-ring, .ul-switch-row[data-ul-force~="focus"] .ul-switch-ring { opacity: 1; }
+
+/* group */
+.ul-choice-group { display: flex; flex-direction: column; gap: var(--ul-space-2); font-family: var(--ul-font-sans); color: var(--ul-color-text); }
+.ul-choice-group-label { font-size: var(--ul-text-sm); font-weight: var(--ul-weight-semibold); color: var(--ul-color-text-2); }
+.ul-choice-group-items { display: flex; flex-direction: column; gap: 0; }
+.ul-choice-group[data-orientation="horizontal"] .ul-choice-group-items { flex-direction: row; flex-wrap: wrap; gap: 0 var(--ul-space-6); }
+
+/* switch: inset track (not glass) + flat capsule thumb + shared lens bubble (shared/lens.css) */
+.ul-switch {
+  --ul-switch-thumb-h: calc(var(--ul-selection-switch-h) - var(--ul-selection-switch-inset) * 2);
+  --ul-switch-thumb-w: calc(var(--ul-switch-thumb-h) * var(--ul-switch-thumb-ratio));
+  position: relative;
+  flex: none;
+  width: var(--ul-selection-switch-w);
+  min-width: var(--ul-control-hit-min);
+  height: var(--ul-control-hit-min);
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: inherit;
+  outline: none;
+  touch-action: pan-y;
+  -webkit-tap-highlight-color: transparent;
+}
+.ul-switch-track {
+  position: absolute;
+  left: 0; right: 0; top: 50%;
+  height: var(--ul-selection-switch-h);
+  translate: 0 -50%;
+  border-radius: var(--ul-radius-capsule);
+  background: var(--ul-selection-track);
+  box-shadow: inset 0 1px 2px rgb(0 0 0 / .45), inset 0 0 0 1px var(--ul-selection-track-rim);
+  overflow: hidden;
+}
+/* accent fill with a fine texture so the lens visibly magnifies it; --ul-switch-p previews the drag position */
+.ul-switch { --ul-switch-p: 0; }
+.ul-switch[data-on] { --ul-switch-p: 1; }
+.ul-switch-fill {
+  position: absolute; inset: 0;
+  background:
+    repeating-linear-gradient(90deg, rgb(var(--ul-color-white-rgb) / .14) 0 1px, transparent 1px 5px),
+    var(--ul-selection-fill);
+  opacity: var(--ul-switch-p);
+  transition: opacity var(--ul-duration-base) var(--ul-ease-standard);
+}
+.ul-switch[data-pressed] .ul-switch-fill { transition-duration: 60ms; }
+.ul-switch-knob {
+  position: absolute;
+  left: var(--ul-selection-switch-inset); top: 50%;
+  display: grid; place-items: center;
+  width: var(--ul-switch-thumb-w); height: var(--ul-switch-thumb-h);
+  border-radius: calc(var(--ul-selection-switch-h) / 2 - var(--ul-selection-switch-inset));
+  translate: 0 -50%;
+  transition: translate var(--ul-ease-snappy-settle) var(--ul-ease-snappy), scale var(--ul-duration-fast) var(--ul-ease-standard);
+}
+.ul-switch[data-on] .ul-switch-knob { translate: calc(var(--ul-selection-switch-w) - var(--ul-switch-thumb-w) - var(--ul-selection-switch-inset) * 2) -50%; }
+/* while the bubble is up the (hidden) knob jumps; the bubble carries the motion */
+.ul-switch[data-lens-live] .ul-switch-knob { transition: none; }
+.ul-switch-knob > .ul-spinner { position: relative; --ul-spinner-size: 14px; color: var(--ul-color-graphite); }
+/* lens off: the flat thumb grows a little while pressed */
+.ul-switch[data-pressed][data-no-lens] .ul-switch-knob { scale: 1.08; }
+.ul-switch-ring { left: calc(-1 * (var(--ul-focus-offset) + var(--ul-focus-width))); right: calc(-1 * (var(--ul-focus-offset) + var(--ul-focus-width))); top: calc(50% - var(--ul-selection-switch-h) / 2 - var(--ul-focus-offset) - var(--ul-focus-width)); bottom: auto; height: calc(var(--ul-selection-switch-h) + 2 * (var(--ul-focus-offset) + var(--ul-focus-width))); border-radius: var(--ul-radius-capsule); box-sizing: border-box; }
+.ul-switch-row[data-invalid] .ul-switch-track { box-shadow: inset 0 1px 2px rgb(0 0 0 / .45), inset 0 0 0 1px var(--ul-color-danger); }
+.ul-switch-row .ul-choice-label { cursor: inherit; }
+
+@media (prefers-reduced-motion: reduce) {
+  .ul-switch-knob, .ul-radio-dot, .ul-check-mark { transition-duration: 1ms; }
+}

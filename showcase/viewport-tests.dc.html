@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<title>UltraLabs Glass · Viewport tests</title>
+<link rel="stylesheet" href="../tokens/tokens.css">
+<style>html,body{margin:0;background:#0b0d12;color:#f3f6fb}body{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text",system-ui,sans-serif;-webkit-font-smoothing:antialiased}a{color:#8fb8ff}a:hover{color:#c4d8ff}</style>
+</helmet>
+<div style="box-sizing:border-box;min-height:100vh;padding:40px;display:flex;flex-direction:column;gap:24px">
+  <header style="display:flex;flex-direction:column;gap:10px;max-width:980px">
+    <span style="font-family:var(--ul-font-mono);font-size:13px;letter-spacing:.08em;color:#c3cbd8">VIEWPORT TESTS · one frame at a time (?frame=1280 | 924 | 375) · demos mount lazily inside the frame · live rAF</span>
+    <h1 style="margin:0;font-size:34px;font-weight:700">Toasts, item radius, narrow date range, layout, chart and batch guards</h1>
+    <p style="margin:0;font-size:15px;line-height:1.6;color:#c3cbd8;text-wrap:pretty">Steps run in order inside the frame: toast stack in the visual viewport (8 toasts, every frame), concentric item radius, date range at this width, nested submenu, layout guards (overflow, icon size, control text), chart guards (everyday + advanced types) and batch 1 / batch 2 guards. Each step loads its demos only when it starts. Keep the frame on screen while it runs (off-screen frames get throttled rAF).</p>
+  </header>
+  <div style="display:flex;flex-wrap:wrap;align-items:center;gap:12px">
+    <button type="button" onClick="{{ runAll }}" style="min-height:44px;padding:0 18px;border-radius:999px;border:1px solid rgb(255 255 255 / .5);background:rgb(255 255 255 / .14);color:#fff;font:600 14px/1 inherit;cursor:pointer">{{ runLabel }}</button>
+    <a href="?frame=1280" style="font-family:var(--ul-font-mono);font-size:13px">?frame=1280</a>
+    <a href="?frame=924" style="font-family:var(--ul-font-mono);font-size:13px">?frame=924</a>
+    <a href="?frame=375" style="font-family:var(--ul-font-mono);font-size:13px">?frame=375</a>
+    <span style="font-family:var(--ul-font-mono);font-size:13px">{{ summary }}</span>
+  </div>
+  <div style="display:flex;flex-wrap:wrap;gap:24px;align-items:flex-start">
+    <sc-for list="{{ frames }}" as="f" hint-placeholder-count="1">
+      <div style="{{ f.colS }}">
+        <strong style="font-family:var(--ul-font-mono);font-size:14px">{{ f.label }} · {{ f.badge }}</strong>
+        <span style="font-family:var(--ul-font-mono);font-size:12px;color:#b9c2d0">{{ f.progress }}</span>
+        <sc-if value="{{ f.on }}" hint-placeholder-val="{{ false }}">
+          <div style="{{ f.boxS }}">
+            <iframe ref="{{ f.ref }}" src="./vt-frame.dc.html" title="{{ f.label }}" width="{{ f.w }}" height="{{ f.h }}" style="{{ f.s }}"></iframe>
+          </div>
+        </sc-if>
+        <sc-for list="{{ f.rows }}" as="r"><div style="display:grid;grid-template-columns:16px minmax(0,1fr);gap:8px;font-size:12.5px;line-height:1.45"><span style="{{ r.ms }}">{{ r.m }}</span><span><span style="color:#dfe5ee">{{ r.l }}</span><br><span style="font-family:var(--ul-font-mono);font-size:11.5px;color:#b9c2d0">{{ r.v }}</span></span></div></sc-for>
+      </div>
+    </sc-for>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+const SIZES = [[1280, 800], [924, 540], [375, 667]];
+class Component extends DCLogic {
+  state = { res: {}, prog: {}, active: null, running: false };
+  ref = React.createRef();
+  only() { const f = new URLSearchParams(location.search).get('frame'); const s = SIZES.find(([w]) => String(w) === f); return s ? [s] : null; }
+  componentDidMount() {
+    window.__vtRunAll = this.runAll;
+    this.onMsg = (e) => { const p = e.data && e.data.vtProgress; if (p && this.state.active) this.setState((s) => ({ prog: { ...s.prog, [s.active]: p }, res: p.partial ? { ...s.res, [s.active]: p.partial } : s.res })); };
+    addEventListener('message', this.onMsg);
+    if (!/[?&]norun\b/.test(location.search)) setTimeout(this.runAll, 1500);
+  }
+  componentWillUnmount() { removeEventListener('message', this.onMsg); }
+  runAll = async () => {
+    if (this.state.running) return; this.setState({ running: true });
+    try {
+      for (const [w, h] of this.only() || SIZES) {
+        const k = `${w}×${h}`;
+        this.setState({ active: k }); await new Promise((r) => setTimeout(r, 400)); // one iframe at a time: mount this one only
+        const fr = this.ref.current; if (fr) { const b = fr.getBoundingClientRect(); window.scrollTo(0, window.scrollY + b.top - 80); }
+        let win = null; for (let j = 0; j < 300 && !(win && win.__vt); j++) { win = this.ref.current && this.ref.current.contentWindow; await new Promise((r) => setTimeout(r, 100)); }
+        let r; try { r = win && win.__vt ? await win.__vt.run() : { size: k, error: 'frame did not load in 30s' }; } catch (e) { r = { size: k, error: String(e) }; }
+        this.setState((s) => ({ res: { ...s.res, [k]: r } }));
+      }
+    } finally { this.setState({ running: false, active: this.only() ? this.state.active : null }); }
+    window.__vtResults = this.state.res;
+    console.info('[viewport-tests] ' + Object.entries(this.state.res).map(([k, r]) => k + ' ' + this.verdict(r)).join(' · '));
+  };
+  verdict(r) {
+    if (!r || r.error) return r ? 'ERROR' : 'not run';
+    const steps = ['radius', 'submenu', 'layout', 'charts', 'batch'].map((k) => r[k]).filter(Boolean);
+    if ([r.toast, ...steps].some((x) => x && x.status === 'timeout')) return 'NEEDS HEALTHY PREVIEW';
+    const ok = r.toast && r.toast.pass && steps.every((x) => x.status !== 'fail' && x.status !== 'error') && (!r.narrow || r.narrow.pass !== false);
+    return ok ? 'PASS' : 'FAIL';
+  }
+  renderVals() {
+    const s = this.state, list = this.only() || SIZES, done = Object.values(s.res);
+    const row = (pass, l, v) => ({ m: pass === true ? '✓' : pass === false ? '✗' : '–', l, v: String(v ?? '') });
+    const stepRows = (r, k, label) => !r[k] ? [] : r[k].status === 'timeout' ? [row(null, label + ' · NEEDS HEALTHY PREVIEW', r[k].note)] : (r[k].checks || []).filter((c) => c.pass !== null && c.pass !== undefined).map((c) => row(c.pass, label + ' · ' + (c.label || c.key), c.value));
+    return {
+      runAll: this.runAll,
+      runLabel: s.running ? 'Running…' : this.only() ? 'Run this frame' : 'Run all sizes (one frame at a time)',
+      summary: s.running ? `running ${s.active || ''}` : done.length ? done.map((r) => r.size + ' ' + this.verdict(r)).join(' · ') : 'starting…',
+      frames: list.map(([w, h]) => {
+        const k = `${w}×${h}`, r = s.res[k], p = s.prog[k], sc = Math.min(1, 420 / w), on = s.active === k;
+        const rows = !r ? [] : r.error ? [row(false, 'error', r.error)] : [
+          ...(r.toast ? [r.toast.status === 'timeout' ? row(null, 'toasts · NEEDS HEALTHY PREVIEW', r.toast.note) : row(r.toast.pass, `toasts inside the visual viewport − ${r.toast.inset}px (≤ 2px overshoot), every frame`, `${r.toast.frames} frames · worst ${(r.toast.worst || 0).toFixed(1)}px (${r.toast.side}) · max visible ${r.toast.maxVis}`)] : []),
+          ...stepRows(r, 'radius', 'radius'),
+          ...(r.narrow && r.narrow.months !== undefined ? [row(r.narrow.pass, 'date range: months / layout / inside viewport', `months ${r.narrow.months} · layout ${r.narrow.layout || 'anchored'} · ${r.narrow.w}px of ${r.narrow.vw} · inside ${r.narrow.inside}`)] : []),
+          ...stepRows(r, 'submenu', 'submenu'), ...stepRows(r, 'layout', 'layout'), ...stepRows(r, 'charts', 'charts'), ...stepRows(r, 'batch', 'batch 1 / 2'),
+        ];
+        return {
+          label: k, w, h, on, ref: this.ref,
+          progress: p ? `step ${p.i} / ${p.n} · ${p.step} ${p.state}` : on ? 'loading frame…' : '',
+          colS: { display: 'flex', flexDirection: 'column', gap: '10px', width: Math.round(w * sc) + 'px', maxWidth: '100%' },
+          boxS: { position: 'relative', overflow: 'hidden', width: Math.round(w * sc) + 'px', height: Math.round(h * sc) + 'px', borderRadius: '12px', boxShadow: '0 0 0 1px rgb(255 255 255 / .2)' },
+          s: { border: 0, transform: `scale(${sc})`, transformOrigin: '0 0', display: 'block' },
+          badge: on && s.running ? 'running' : this.verdict(r),
+          rows: rows.map((x) => ({ ...x, ms: { fontWeight: 700, color: x.m === '✓' ? '#3dff8b' : x.m === '✗' ? '#ff5a8a' : '#8a93a3' } })),
+        };
+      }),
+    };
+  }
+}
+</script>
+</body>
+</html>

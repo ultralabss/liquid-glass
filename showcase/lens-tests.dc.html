@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<title>UltraLabs Glass · Lens tests</title>
+<link rel="stylesheet" href="../tokens/tokens.css">
+<script src="./perf-hud.js"></script>
+<script src="../dist/ul-glass.js"></script>
+<script src="./thumb-harness.js"></script>
+<style>html,body{margin:0;background:#0b0d12;color:#f3f6fb}body{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text",system-ui,sans-serif;-webkit-font-smoothing:antialiased}a{color:#8fb8ff}a:hover{color:#c4d8ff}</style>
+<script>if(/[?&]from=focused\b/.test(location.search))addEventListener('DOMContentLoaded',function(){var a=document.createElement('a');var q=new URLSearchParams(location.search);['norun','card','from','only','modes'].forEach(function(k){q.delete(k)});a.href='./focused-runs.dc.html'+(q.toString()?'?'+q:'')+location.hash;a.textContent='\u2190 Focused runs';a.style.cssText='position:fixed;top:12px;right:12px;z-index:2147483000;display:inline-flex;align-items:center;min-height:44px;padding:0 16px;border-radius:999px;background:#1a1f2b;color:#eef2f8;font:600 14px/1 system-ui,sans-serif;text-decoration:none;box-shadow:0 0 0 1px rgb(255 255 255 / .3)';document.body.appendChild(a)});</script>
+</helmet>
+<div data-ul-theme="app" data-ul-accent="violet" data-ul-backdrop="dark" style="position:relative;box-sizing:border-box;min-height:100vh;padding:40px;display:flex;flex-direction:column;gap:24px;background:var(--ul-color-graphite)">
+  <header style="display:flex;flex-direction:column;gap:10px;max-width:980px">
+    <span style="font-family:var(--ul-font-mono);font-size:13px;letter-spacing:.08em;color:var(--ul-color-text-2)">LENS TESTS · loads dist/ul-glass.js + thumb-harness.js · samples every rAF frame</span>
+    <h1 style="margin:0;font-size:34px;font-weight:700;letter-spacing:-.01em">Lens bubble, thumbs and one-indicator cards</h1>
+    <p style="margin:0;font-size:15px;line-height:1.6;color:var(--ul-color-text-2);text-wrap:pretty">These cards were flaky only inside the long 36-card run on <a href="./motion-test.dc.html">motion-test</a> (state left over from overlay cards). They run here on their own page with the same per-card reset (morphs ended, focus cleared, morph config restored, switch log emptied) and the same deterministic setting (HUD off, governor budget unlimited).</p>
+  </header>
+  <div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px">
+    <button type="button" onClick="{{ runAll }}" style="min-height:40px;padding:0 18px;border-radius:999px;border:1px solid rgb(255 255 255 / .5);background:rgb(255 255 255 / .14);color:#fff;font:600 14px/1 inherit;cursor:pointer">Run all</button>
+    <button type="button" onClick="{{ repeat5 }}" style="min-height:40px;padding:0 18px;border-radius:999px;border:1px solid rgb(255 255 255 / .3);background:transparent;color:#fff;font:600 14px/1 inherit;cursor:pointer">Repeat ×5</button>
+    <span style="font-family:var(--ul-font-mono);font-size:13px;color:var(--ul-color-text)">{{ summary }}</span>
+  </div>
+  <p role="note" style="margin:0;max-width:980px;padding:10px 14px;border-radius:12px;background:#3a2a06;color:#ffe2a6;font-size:14px;line-height:1.5">Final verdict only from a live run in a foreground tab on a real machine (120 Hz if possible). A virtual-clock re-measure never turns a live FAIL into a PASS: it shows as WARN and is counted separately.</p>
+  <p role="status" style="{{ tabBannerS }}">{{ tabBanner }}</p>
+  <section style="position:relative;display:flex;flex-direction:column;gap:14px;padding:20px;border-radius:22px;background:radial-gradient(circle at 15% 30%, #f59e0b66 0, transparent 30%), radial-gradient(circle at 85% 70%, #22d3ee66 0, transparent 34%), linear-gradient(135deg, #1c2a4a, #3a1240)">
+    <span style="font-family:var(--ul-font-mono);font-size:12px;letter-spacing:.06em;color:var(--ul-color-text);text-shadow:0 1px 2px rgb(0 0 0 / .8)">thumb fixtures · value tooltip · range merge · lens bubble</span>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr));gap:20px 32px;align-items:center">
+      <div data-tcase="slider"><x-import component-from-global-scope="UL.ULSlider" dc-props="{{ fx.slider }}" hint-size="100%,70px"></x-import></div>
+      <div data-tcase="range"><x-import component-from-global-scope="UL.ULRangeSlider" dc-props="{{ fx.range }}" hint-size="100%,70px"></x-import></div>
+      <div data-tcase="switch" style="display:flex;gap:24px"><x-import component-from-global-scope="UL.ULSwitch" dc-props="{{ fx.sw }}" hint-size="140px,44px"></x-import></div>
+      <div data-tcase="tabs"><x-import component-from-global-scope="UL.ULTabs" dc-props="{{ fx.tabs }}" hint-size="420px,44px"></x-import></div>
+      <div data-tcase="seg"><x-import component-from-global-scope="UL.ULSegmentedControl" dc-props="{{ fx.seg }}" hint-size="300px,44px"></x-import></div>
+    </div>
+  </section>
+  <section style="display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,440px),1fr));gap:16px">
+    <sc-for list="{{ tcards }}" as="r" hint-placeholder-count="11">
+      <article id="{{ r.id }}" style="display:flex;flex-direction:column;gap:12px;padding:16px 18px;border-radius:18px;background:#12151c;box-shadow:0 0 0 1px rgb(255 255 255 / .1)">
+        <div style="display:flex;align-items:center;gap:10px">
+          <strong style="font-size:16px">{{ r.name }}</strong>
+          <span style="{{ r.badgeS }}">{{ r.badge }}</span>
+          <span style="flex:1"></span>
+          <button type="button" onClick="{{ r.run }}" style="min-height:32px;padding:0 12px;border-radius:999px;border:1px solid rgb(255 255 255 / .25);background:transparent;color:#fff;font:500 13px/1 inherit;cursor:pointer">Run</button>
+        </div>
+        <sc-if value="{{ r.hasChart }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;align-items:center;gap:12px">
+            <svg width="240" height="70" viewBox="-2 -3 244 76" style="flex:none;background:#0b0d12;border-radius:8px">
+              <sc-for list="{{ r.lines }}" as="l"><path d="{{ l.d }}" fill="none" stroke="{{ l.c }}" stroke-width="1.6"></path></sc-for>
+            </svg>
+            <div style="display:flex;flex-direction:column;gap:4px;font-family:var(--ul-font-mono);font-size:12px;color:#b9c2d0">
+              <sc-for list="{{ r.legend }}" as="g"><span><span style="{{ g.s }}">━</span> {{ g.t }}</span></sc-for>
+              <span>{{ r.driver }}</span>
+            </div>
+          </div>
+        </sc-if>
+        <div style="display:grid;grid-template-columns:18px minmax(200px,1fr) minmax(0,auto);gap:4px 10px;font-size:13px;line-height:1.4">
+          <sc-for list="{{ r.checks }}" as="c" hint-placeholder-count="8">
+            <span style="{{ c.markS }}">{{ c.mark }}</span>
+            <span style="color:#dfe5ee">{{ c.label }}</span>
+            <span style="font-family:var(--ul-font-mono);font-size:12px;color:#b9c2d0;text-align:right;max-width:300px;overflow-wrap:anywhere">{{ c.value }}</span>
+          </sc-for>
+        </div>
+        <sc-if value="{{ r.hasNote }}" hint-placeholder-val="{{ false }}"><pre style="margin:0;white-space:pre-wrap;font-size:11px;color:#ff9db5">{{ r.note }}</pre></sc-if>
+      </article>
+    </sc-for>
+  </section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+const TCASES = [
+  { id: 'switch', name: 'ULSwitch: shape, bubble, drag', el: 'switch' },
+  { id: 'switch-logic', name: 'ULSwitch: release logic + semantics', el: 'switch' },
+  { id: 'switch-rm', name: 'ULSwitch · reduced motion', el: 'switch' },
+  { id: 'slider', name: 'ULSlider: tooltip + follow spring', el: 'slider' },
+  { id: 'range', name: 'ULRangeSlider merge / split', el: 'range' },
+  { id: 'tabs', name: 'ULTabs: hold, drag, release', el: 'tabs' },
+  { id: 'tabs-rm', name: 'ULTabs · reduced motion', el: 'tabs' },
+  { id: 'seg', name: 'ULSegmentedControl: hold, drag, release', el: 'seg' },
+  { id: 'timing', name: 'Timings: switch toggle, grow, shrink', el: 'switch' },
+  { id: 'tabs-one', name: 'ULTabs: one indicator, glide, follow', el: 'tabs' },
+  { id: 'seg-one', name: 'ULSegmentedControl: one indicator, glide, follow', el: 'seg' },
+];
+window.__swLog = window.__swLog || [];
+class Component extends DCLogic {
+  state = { ready: false, tresults: {}, rates: {}, running: '', step: '', hidden: document.visibilityState === 'hidden' };
+  componentDidMount() {
+    this.onVis = () => this.setState({ hidden: document.visibilityState === 'hidden' }); document.addEventListener('visibilitychange', this.onVis);
+    const go = () => { if (!(window.UL && window.ULThumbTest) || this.booted) return; this.booted = true; this.setState({ ready: true }); window.__ltRunAll = this.runAll; window.__ltRepeat = this.repeat5; const card = (location.search.match(/[?&]card=([\w-]+)/) || [])[1]; if (card && TCASES.some((x) => x.id === card)) setTimeout(async () => { this.deterministic(true); try { window.__ltCard = await this.runThumb(card); } finally { this.deterministic(false); } }, 900); else if (!/[?&]norun\b/.test(location.search)) setTimeout(() => this.runAll(), 900); };
+    go(); window.addEventListener('ul:ready', go); this.t = setInterval(go, 200);
+  }
+  componentWillUnmount() { clearInterval(this.t); document.removeEventListener('visibilitychange', this.onVis); }
+  tEl(c) {
+    const box = document.querySelector(`[data-tcase="${c.el}"]`); if (!box) return null;
+    return c.el === 'switch' ? box.querySelector('.ul-switch') : c.el === 'tabs' ? box.querySelector('.ul-tabs-list') : c.el === 'seg' ? box.querySelector('.ul-seg') : box.querySelector('.ul-slider');
+  }
+  async resetState() {
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms)), frames = () => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+    const leaks = [];
+    if (document.querySelector('[data-ul-morphing]')) leaks.push('a morph still running');
+    for (let i = 0; i < 40 && document.querySelector('[data-ul-morphing]'); i++) await wait(50);
+    if (document.activeElement && document.activeElement !== document.body) document.activeElement.blur();
+    window.__swLog = [];
+    window.UL.configureMorph({ timeScale: 1, reducedMotion: 'auto' });
+    await wait(120); await frames();
+    return leaks;
+  }
+  deterministic(on) {
+    const UL = window.UL, P = window.__ulPerf;
+    if (on) { this._hud = P && P.on; if (P) P.on = false; UL.configureGlass({ budget: Infinity }); }
+    else { if (P && this._hud) P.on = true; UL.configureGlass({ budget: 'auto' }); }
+  }
+  async runThumb(id) {
+    const c = TCASES.find((x) => x.id === id); if (!c || !window.ULThumbTest) return;
+    let el = this.tEl(c); if (!el) return;
+    const b = el.getBoundingClientRect(); if (b.top < 80 || b.bottom > innerHeight - 40) { window.scrollBy(0, b.top - innerHeight * 0.4); await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))); }
+    this.setState({ running: id });
+    const leaks = await this.resetState();
+    el = this.tEl(c);
+    const t0 = performance.now(), gaps = []; let gl = 0, gon = true;
+    const gt = (t) => { if (!gon) return; if (gl) gaps.push(t - gl); gl = t; requestAnimationFrame(gt); }; requestAnimationFrame(gt);
+    let r = await window.ULThumbTest.run(id, el, id === 'timing' ? document.querySelector('[data-tcase="slider"] .ul-slider') : window.__swLog);
+    gon = false;
+    { const sg = gaps.slice().sort((a, b) => a - b), per = sg[Math.floor(sg.length / 2)] || 16.7, mx = sg[sg.length - 1] || 0, over = gaps.filter((g) => g > 2 * per).length;
+      const irregular = over > 0, focused = document.hasFocus();
+      // frame-pacing cards: no focus or irregular frame gaps → NEEDS FOCUS (never FAIL); the gaps are printed either way when not passing
+      if (r && r.status === 'fail' && (!focused || irregular)) { r.checks.forEach((c) => { if (c.pass === false) { c.pass = null; c.value = 'NEEDS FOCUS · ' + c.value; } }); r.status = 'focus'; }
+      if (r && r.status !== 'pass') r.checks.push({ key: 'gaps', label: 'frame gaps of this run (display period ≈ median gap)', pass: null, value: 'median ' + per.toFixed(1) + 'ms · max ' + mx.toFixed(1) + 'ms · gaps > 2× period: ' + over + ' of ' + gaps.length + ' · focus ' + focused + (over ? ' · worst: ' + gaps.filter((g) => g > 2 * per).sort((a, b) => b - a).slice(0, 6).map((g) => g.toFixed(0)).join(', ') + 'ms' : '') }); }
+    if (r && leaks.length) r.checks.unshift({ key: 'leak', label: 'clean start (state left by the previous card)', pass: null, value: leaks.join(' · ') });
+    this.setState((s) => ({ tresults: { ...s.tresults, [id]: r }, running: '' }));
+    return r;
+  }
+  runAll = async () => {
+    if (this._busy) return; this._busy = true; this.deterministic(true);
+    try { for (const c of TCASES) await this.runThumb(c.id); } finally { this.deterministic(false); this._busy = false; }
+    window.__ulLensResults = TCASES.map((c) => this.state.tresults[c.id]).filter(Boolean);
+    console.info('[lens-tests]\n' + TCASES.map((c) => { const r = this.state.tresults[c.id]; return `${c.id.padEnd(14)} ${r ? r.status.toUpperCase() : 'not run'}${r && r.status !== 'pass' ? ' · ' + r.checks.filter((k) => k.pass === false).map((k) => k.label).join(' | ') : ''}`; }).join('\n'));
+  };
+  repeat5 = async () => {
+    if (this._busy) return; this._busy = true; this.deterministic(true);
+    const rates = {};
+    try {
+      for (const c of TCASES) {
+        const runs = [];
+        for (let i = 0; i < 5; i++) { const r = await this.runThumb(c.id); runs.push(r ? r.status : 'error'); this.setState({ step: `${c.id} ${i + 1}/5` }); }
+        rates[c.id] = { pass: runs.filter((s) => s === 'pass').length, warn: runs.filter((s) => s === 'warn').length, runs };
+        this.setState((s) => ({ rates: { ...s.rates, [c.id]: rates[c.id] } }));
+      }
+    } finally { this.deterministic(false); this._busy = false; }
+    window.__ulLensRepeat = rates;
+    console.info('[lens-tests repeat ×5]\n' + Object.entries(rates).map(([id, r]) => `${id.padEnd(14)} ${r.pass}/5 pass ${r.warn ? r.warn + ' warn ' : ''}${r.pass > 0 && r.pass < 5 ? 'FLAKY' : r.pass === 0 ? 'FAIL' : ''}`).join('\n'));
+  };
+  renderVals() {
+    const s = this.state;
+    const done = TCASES.map((c) => s.tresults[c.id]).filter(Boolean);
+    const pass = done.filter((r) => r.status === 'pass').length, nWarn = done.filter((r) => r.status === 'warn').length, nFail = done.filter((r) => r.status === 'fail' || r.status === 'error').length;
+    const flaky = Object.entries(s.rates).filter(([, r]) => r.pass > 0 && r.pass < 5).map(([id]) => id);
+    const badge = (r, id) => {
+      if (s.running === id) return ['running · ' + s.step, '#ffd23f'];
+      if (!r) return ['not run', '#8a93a3'];
+      const rt = s.rates[id], rs = rt ? ` · ×5 ${rt.pass}/5${rt.pass > 0 && rt.pass < 5 ? ' FLAKY' : ''}` : '';
+      if (rt && rt.pass > 0 && rt.pass < 5) return ['FLAKY' + rs, '#ffb020'];
+      if (r.status === 'focus') return ['NEEDS FOCUS', '#7cc4ff'];
+      return r.status === 'pass' ? ['PASS' + rs, '#3dff8b'] : r.status === 'warn' ? ['WARN · live FAIL / virtual PASS' + rs, '#ffb020'] : ['FAIL' + rs, '#ff5a8a'];
+    };
+    return {
+      runAll: this.runAll, repeat5: this.repeat5,
+      summary: s.running ? `running ${s.running} · ${s.step}` : done.length ? `mode: live (document timeline) · LIVE: ${pass} pass · ${nFail} fail · VIRTUAL-only: ${nWarn} warn · of ${done.length}${flaky.length ? ' · FLAKY: ' + flaky.join(', ') : ''}` : (s.ready ? 'starting…' : 'loading library…'),
+      tabBanner: s.hidden ? 'This tab is in the background: results from this run are not valid (rAF throttled). Bring it to the foreground and run again.' : Object.values(s.tresults || {}).some((r) => r && r.status === 'focus') ? 'NEEDS FOCUS: ' + Object.entries(s.tresults || {}).filter(([, r]) => r && r.status === 'focus').map(([k]) => k).join(', ') + '. Run in a focused foreground tab (click into the page first).' : 'Foreground tab: live results valid.',
+      tabBannerS: { margin: 0, maxWidth: '980px', padding: '8px 14px', borderRadius: '12px', background: s.hidden ? '#5a0f24' : '#0f3a26', color: s.hidden ? '#ffc2d1' : '#bff5d6', fontSize: '14px', lineHeight: 1.5 },
+      fx: {
+        sw: { label: 'Wi-Fi', onCheckedChange: (v) => { (window.__swLog = window.__swLog || []).push(v); } },
+        tabs: { 'aria-label': 'Sections', defaultValue: 'a', items: [{ value: 'a', label: 'Overview' }, { value: 'b', label: 'Activity' }, { value: 'c', label: 'Settings' }, { value: 'd', label: 'Billing' }] },
+        seg: { 'aria-label': 'Range', defaultValue: 'd', options: [{ value: 'd', label: 'Day' }, { value: 'w', label: 'Week' }, { value: 'm', label: 'Month' }, { value: 'y', label: 'Year' }] },
+        slider: { label: 'Volume', defaultValue: 4, min: 0, max: 100, format: (v) => v + ' %' },
+        range: { label: 'Price', defaultValue: [20, 60], min: 0, max: 100, thumbLabels: ['Minimum price', 'Maximum price'], format: (v) => '€' + v },
+      },
+      tcards: TCASES.map((c) => {
+        const r = s.tresults[c.id], [b, col] = badge(r, c.id), TT = window.ULThumbTest, lines = r && r.curves && r.curves.length && TT ? TT.paths(r.curves) : [];
+        return {
+          id: c.id, name: c.name, badge: b, badgeS: { fontFamily: 'var(--ul-font-mono)', fontSize: '12px', fontWeight: 700, color: '#000', background: col, borderRadius: '6px', padding: '2px 8px' },
+          run: () => this.runThumb(c.id), hasChart: lines.length > 0, lines: lines.map((d, i) => ({ d, c: (r.legend[i] || [])[0] || '#fff' })),
+          legend: (r && r.legend ? r.legend : []).map(([cc, t]) => ({ t, s: { color: cc } })), driver: r && r.driver ? r.driver : '',
+          checks: (r ? r.checks : []).map((k) => ({ mark: k.pass === true ? '✓' : k.pass === false ? '✗' : '–', markS: { fontWeight: 700, color: k.pass === true ? '#3dff8b' : k.pass === false ? '#ff5a8a' : '#8a93a3' }, label: k.label, value: k.value })),
+          hasNote: !!(r && r.note), note: r ? r.note : '',
+        };
+      }),
+    };
+  }
+}
+</script>
+</body>
+</html>

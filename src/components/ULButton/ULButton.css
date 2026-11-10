@@ -1,0 +1,115 @@
+/* ULButton family. Material comes from ULGlass (tier sm); this file only sizes, lays out and states. Tokens only. */
+.ul-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--ul-control-gap);
+  box-sizing: border-box;
+  min-height: var(--ul-control-h-md);
+  min-width: var(--ul-control-h-md);
+  margin: 0;
+  padding: 0 var(--ul-control-pad-md);
+  border: 0;
+  color: var(--ul-color-text);
+  font: inherit;
+  font-family: var(--ul-font-sans);
+  font-size: var(--ul-text-md);
+  font-weight: var(--ul-weight-semibold);
+  line-height: 1;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  outline: none;
+  vertical-align: middle;
+}
+.ul-btn[data-size="sm"] { min-height: var(--ul-control-h-sm); min-width: var(--ul-control-h-sm); padding: 0 var(--ul-control-pad-sm); font-size: var(--ul-text-sm); }
+.ul-btn[data-size="lg"] { min-height: var(--ul-control-h-lg); min-width: var(--ul-control-h-lg); padding: 0 var(--ul-control-pad-lg); font-size: var(--ul-text-lg); }
+.ul-btn[data-icon-only] { padding: 0; }
+.ul-btn[data-full] { display: flex; width: 100%; }
+.ul-btn--primary, .ul-btn--destructive { font-weight: var(--ul-weight-bold); }
+
+/* 44px hit area even when the visual is 36px (sm). The glass element owns ::before/::after, so this is a child. */
+/* geometry: shared .ul-hit-layer (shared/hit.css) */
+.ul-btn-icon { position: relative; display: inline-grid; place-items: center; flex: none; width: var(--ul-control-icon); height: var(--ul-control-icon); }
+.ul-btn[data-size="lg"] .ul-btn-icon { width: var(--ul-control-icon-lg); height: var(--ul-control-icon-lg); }
+/* one line, vertically centred; inline icons in the label (ULIcon is display:block) sit on the same axis */
+.ul-btn-label { position: relative; z-index: 1; display: inline-flex; align-items: center; gap: 6px; min-width: 0; white-space: nowrap; }
+.ul-btn > .ul-btn-icon { z-index: 1; }
+/* fx layers (hold fill, success ripple): a direct child of the button, inset 0, clipped to its radius; plain paint under the
+   content, never a second glass surface and never inside the backdrop-filter (that only samples what is BEHIND the button) */
+.ul-btn-fx { position: absolute; inset: 0; z-index: 0; border-radius: inherit; overflow: hidden; pointer-events: none; }
+.ul-btn-fx > * { position: absolute; inset: 0; }
+
+/* hover: a little more body; the engine adds pointer light + elastic pull */
+.ul-btn.ul-glass:hover:not(:disabled):not([aria-disabled="true"]),
+.ul-btn.ul-glass[data-ul-force~="hover"] { --ul-glass-tint: calc(var(--ul-glass-sm-tint) + var(--ul-control-hover-tint)); }
+.ul-btn[data-ul-force~="hover"] { --ul-light: 1; --mx: 50%; --my: 0%; }
+.ul-btn[data-ul-force~="pressed"] { transform: scale(var(--ul-control-press-scale)); --ul-flare: 1; --fx: 50%; --fy: 50%; }
+
+/* focus-visible: accent ring outside the rim. On glass it is a child element, not an outline: an outline is part of the
+   surface's own paint and the refraction filter bends it (dark spot at the capsule end). The child paints above the
+   filtered backdrop, so the ring stays crisp and uniform. Plain buttons (no filter) keep the outline. */
+.ul-btn--plain:focus-visible, .ul-btn--plain[data-ul-force~="focus"] { outline: var(--ul-focus-width) solid var(--ul-focus-color); outline-offset: var(--ul-focus-offset); }
+.ul-btn-ring {
+  position: absolute;
+  inset: calc(-1 * (var(--ul-focus-offset) + var(--ul-focus-width)));
+  border: var(--ul-focus-width) solid var(--ul-focus-color);
+  border-radius: calc(var(--ul-glass-radius) + var(--ul-focus-offset) + var(--ul-focus-width));
+  opacity: 0;
+  pointer-events: none;
+}
+.ul-btn:focus-visible > .ul-btn-ring, .ul-btn[data-ul-force~="focus"] > .ul-btn-ring { opacity: 1; }
+
+/* toggle on */
+.ul-btn[data-active] { --ul-glass-tint: calc(var(--ul-glass-sm-tint) + var(--ul-control-hover-tint) * 2); }
+
+/* disabled + loading */
+.ul-btn:disabled, .ul-btn[aria-disabled="true"]:not([data-loading]) { opacity: var(--ul-control-disabled-opacity); cursor: not-allowed; }
+.ul-btn[data-loading] { cursor: progress; }
+.ul-btn[data-loading] > .ul-btn-icon, .ul-btn[data-loading] > .ul-btn-label { opacity: 0; }
+.ul-btn > .ul-spinner { position: absolute; inset: 0; margin: auto; }
+
+/* plain: no surface, no movement. Only on solid or glass surfaces (contrast comes from what is behind). */
+.ul-btn--plain { background: transparent; transition: background-color var(--ul-duration-fast) var(--ul-ease-standard); }
+.ul-btn--plain:hover:not(:disabled), .ul-btn--plain[data-ul-force~="hover"] { background: var(--ul-control-plain-hover); }
+.ul-btn--plain:active:not(:disabled), .ul-btn--plain[data-ul-force~="pressed"] { background: var(--ul-control-plain-active); transform: none; }
+.ul-btn--plain[data-active] { background: var(--ul-control-plain-active); }
+
+/* group */
+.ul-btn-group { display: inline-flex; align-items: center; gap: var(--ul-space-2); }
+.ul-btn-group[data-orientation="vertical"] { flex-direction: column; align-items: stretch; }
+.ul-btn-group--attached { gap: var(--ul-space-1); padding: var(--ul-space-1); }
+.ul-btn-group--attached > .ul-btn { --ul-glass-radius: var(--ul-radius-capsule); }
+
+/* split: two buttons sharing one silhouette */
+.ul-split { display: inline-flex; align-items: stretch; gap: 2px; }
+/* Per-corner radii: the engine builds the displacement map from all four corners, so the lens follows the squared inner ends. */
+.ul-split > .ul-split-main { border-radius: var(--ul-radius-capsule) var(--ul-radius-xs) var(--ul-radius-xs) var(--ul-radius-capsule); }
+.ul-split > .ul-split-trigger { border-radius: var(--ul-radius-xs) var(--ul-radius-capsule) var(--ul-radius-capsule) var(--ul-radius-xs); }
+.ul-split > .ul-split-main > .ul-btn-ring { border-radius: var(--ul-radius-capsule) calc(var(--ul-radius-xs) + 4px) calc(var(--ul-radius-xs) + 4px) var(--ul-radius-capsule); }
+.ul-split > .ul-split-trigger > .ul-btn-ring { border-radius: calc(var(--ul-radius-xs) + 4px) var(--ul-radius-capsule) var(--ul-radius-capsule) calc(var(--ul-radius-xs) + 4px); }
+
+/* menu inside an anchored surface (flat rows, never glass) */
+.ul-menu { display: flex; flex-direction: column; gap: 2px; min-width: 200px; }
+.ul-menu-item {
+  display: flex; align-items: center; gap: var(--ul-space-3);
+  width: 100%; min-height: var(--ul-control-hit-min); padding: 0 var(--ul-space-3);
+  border: 0; border-radius: var(--ul-item-radius, var(--ul-radius-sm)); background: transparent;
+  color: var(--ul-color-text); font: inherit; font-size: var(--ul-text-md); text-align: left; cursor: pointer; outline: none;
+}
+.ul-menu-item:hover:not(:disabled), .ul-menu-item:focus-visible { background: var(--ul-control-plain-hover); }
+.ul-menu-item:focus-visible { outline: var(--ul-focus-width) solid var(--ul-focus-color); outline-offset: -2px; }
+.ul-menu-item:disabled { opacity: var(--ul-control-disabled-opacity); cursor: not-allowed; }
+.ul-menu-item[data-tone="danger"] { color: var(--ul-color-danger); }
+
+/* FAB */
+.ul-fab { min-height: var(--ul-control-fab); min-width: var(--ul-control-fab); }
+.ul-fab[data-icon-only] { width: var(--ul-control-fab); }
+.ul-fab--bottom-end, .ul-fab--bottom-start, .ul-fab--bottom-center { position: fixed; z-index: calc(var(--ul-z-overlay) - 2); bottom: calc(var(--ul-space-6) + env(safe-area-inset-bottom, 0px)); }
+/* scroll lock: html gets padding-right = scrollbar width; right-pinned / centered fixed chrome adds the gap so nothing jumps */
+.ul-fab--bottom-end { right: calc(var(--ul-space-6) + env(safe-area-inset-right, 0px) + var(--ul-scroll-lock-gap, 0px)); }
+.ul-fab--bottom-start { left: calc(var(--ul-space-6) + env(safe-area-inset-left, 0px)); }
+.ul-fab--bottom-center { left: calc(50% - var(--ul-scroll-lock-gap, 0px) / 2); translate: -50% 0; }

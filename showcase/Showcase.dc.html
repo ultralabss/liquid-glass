@@ -1,0 +1,790 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<title>UltraLabs Glass · Showcase</title>
+<link rel="stylesheet" href="../tokens/tokens.css">
+<script src="./perf-hud.js"></script>
+<script src="../dist/ul-glass.js"></script>
+<script src="./ambient-bg.js"></script>
+<style>
+html,body{margin:0;background:#0b0d12;color:#f3f6fb}
+body{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text",Inter,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+a{color:#8fb8ff}a:hover{color:#eef2f8}
+</style>
+</helmet>
+<div data-ul-reduce-transparency="{{ rt }}" style="position:relative;min-height:100vh;overflow-x:clip">
+  {{ bg }}
+
+  <section id="bench" data-screen-label="Test bench" ref="{{ benchRef }}" style="position:relative;z-index:1;height:720px;overflow:hidden;background:radial-gradient(circle at 12% 22%, #ff5a36 0, transparent 34%), radial-gradient(circle at 46% 8%, #ffd23f 0, transparent 30%), radial-gradient(circle at 84% 24%, #2fd6c4 0, transparent 32%), radial-gradient(circle at 70% 88%, #3b6bff 0, transparent 40%), radial-gradient(circle at 20% 86%, #b44dff 0, transparent 38%), linear-gradient(135deg, #12304d, #2a1240)">
+    <div aria-hidden="true" style="position:absolute;inset:0;background-image:linear-gradient(rgb(255 255 255 / .38) 1px, transparent 1px), linear-gradient(90deg, rgb(255 255 255 / .38) 1px, transparent 1px);background-size:40px 40px"></div>
+    <div aria-hidden="true" style="position:absolute;left:62%;right:0;top:0;bottom:0;background-image:radial-gradient(circle, rgb(10 12 18 / .7) 3px, transparent 3.5px);background-size:22px 22px"></div>
+    <div aria-hidden="true" style="position:absolute;left:46%;top:-10%;width:240px;height:120%;transform:rotate(14deg);background:repeating-linear-gradient(90deg, #ffffff 0 16px, #0b0d12 16px 32px)"></div>
+    <div aria-hidden="true" style="position:absolute;left:-10%;width:120%;top:620px;height:56px;transform:rotate(-3deg);background:repeating-linear-gradient(45deg, #ffd23f 0 14px, #0b0d12 14px 28px)"></div>
+    <div aria-hidden="true" style="position:absolute;left:2%;top:40px;font-size:clamp(120px,17vw,250px);font-weight:900;letter-spacing:-.05em;line-height:.9;color:#ffffff;white-space:nowrap">LIQUID</div>
+    <div aria-hidden="true" style="position:absolute;left:30%;top:330px;font-size:clamp(120px,17vw,250px);font-weight:900;letter-spacing:-.05em;line-height:.9;color:#0b0d12;white-space:nowrap">GLASS</div>
+    <div aria-hidden="true" style="position:absolute;left:82%;top:70px;width:150px;height:150px;border-radius:50%;background:#ffd23f;border:8px solid #0b0d12"></div>
+
+    <div style="position:absolute;left:20px;top:20px;z-index:2;display:flex;flex-direction:column;gap:4px;padding:10px 16px;border-radius:var(--ul-radius-md);background:rgb(var(--ul-color-graphite-rgb) / .86)">
+      <span style="font-family:var(--ul-font-mono);font-size:var(--ul-text-sm);letter-spacing:.08em">00 · REFRACTION TEST BENCH</span>
+      <span style="font-size:var(--ul-text-sm);color:var(--ul-color-text-2)">Drag the pill across the stripes and type. {{ statusText }}</span>
+    </div>
+
+    <sc-if value="{{ ready }}" hint-placeholder-val="{{ false }}">
+      <div style="position:absolute;left:4%;top:170px">
+        <x-import component-from-global-scope="UL.ULGlass" tier="md" debug="{{ debug }}" hint-size="360px,220px">
+          <div style="display:flex;align-items:flex-end;width:360px;height:220px;padding:22px;box-sizing:border-box;text-shadow:0 1px 3px rgb(0 0 0 / .7)"><strong style="font-size:var(--ul-text-lg)">Card 360 × 220</strong></div>
+        </x-import>
+      </div>
+      <div style="position:absolute;left:44%;top:90px">
+        <x-import component-from-global-scope="UL.ULGlass" tier="sm" interactive="{{ yes }}" pressable="{{ yes }}" debug="{{ debug }}" hint-size="96px,96px">
+          <div style="width:96px;height:96px"></div>
+        </x-import>
+      </div>
+      <div style="position:absolute;left:56%;top:300px">
+        <x-import component-from-global-scope="UL.ULGlass" tier="xl" debug="{{ debug }}" hint-size="520px,300px">
+          <div style="display:flex;align-items:flex-end;width:520px;height:300px;padding:28px;box-sizing:border-box;text-shadow:0 1px 3px rgb(0 0 0 / .7)"><strong style="font-size:var(--ul-text-lg)">Panel 520 × 300</strong></div>
+        </x-import>
+      </div>
+      <div ref="{{ pillRef }}" onPointerDown="{{ pillDown }}" onPointerMove="{{ pillMove }}" onPointerUp="{{ pillUp }}" onPointerCancel="{{ pillUp }}" style="position:absolute;left:30%;top:560px;z-index:3;cursor:grab;touch-action:none;user-select:none">
+        <x-import component-from-global-scope="UL.ULGlass" tier="sm" interactive="{{ yes }}" pressable="{{ yes }}" debug="{{ debug }}" hint-size="220px,64px">
+          <div style="display:flex;align-items:center;justify-content:center;width:220px;height:64px;font-size:var(--ul-text-lg);font-weight:var(--ul-weight-semibold);text-shadow:0 1px 3px rgb(0 0 0 / .7)">Drag me</div>
+        </x-import>
+      </div>
+    </sc-if>
+  </section>
+
+  <main style="position:relative;z-index:1;max-width:1180px;margin:0 auto;padding:64px 32px 160px;display:flex;flex-direction:column;gap:88px;text-shadow:0 1px 2px rgb(var(--ul-color-shadow-rgb) / .6)">
+    <header style="display:flex;flex-direction:column;gap:16px;max-width:680px;align-self:flex-start;padding:24px 28px;border-radius:var(--ul-radius-xl);background:rgb(var(--ul-color-graphite-rgb) / .82)">
+      <span style="font-family:var(--ul-font-mono);font-size:var(--ul-text-sm);letter-spacing:.08em;color:var(--ul-color-text-2)">@ultralabs/glass · stage 1 of 5 · lens retune</span>
+      <h1 style="margin:0;font-size:var(--ul-text-4xl);line-height:1.05;font-weight:var(--ul-weight-bold);letter-spacing:-.02em">Chrome glass</h1>
+      <p style="margin:0;font-size:var(--ul-text-lg);line-height:1.55;color:var(--ul-color-text-2);text-wrap:pretty">Refraction first, then a light blur. A fixed-width convex bezel bends the edge, a gentle center gradient magnifies, and the surface follows the pointer with spring elasticity.</p>
+      <div style="display:flex;flex-wrap:wrap;gap:8px">
+        <span style="display:inline-flex;align-items:center;gap:8px;min-height:32px;padding:0 14px;border-radius:var(--ul-radius-capsule);background:rgb(var(--ul-color-graphite-rgb) / .7);border:1px solid rgb(var(--ul-color-white-rgb) / .14);font-family:var(--ul-font-mono);font-size:var(--ul-text-sm)"><span style="width:8px;height:8px;border-radius:50%;background:{{ statusDot }}"></span>{{ statusText }}</span>
+      </div>
+    </header>
+
+    <sc-if value="{{ notReady }}" hint-placeholder-val="{{ true }}">
+      <p role="status" style="margin:0;align-self:flex-start;padding:10px 16px;border-radius:var(--ul-radius-capsule);background:rgb(var(--ul-color-graphite-rgb) / .82);font-family:var(--ul-font-mono);font-size:var(--ul-text-sm);color:var(--ul-color-text-2)">{{ loadText }}</p>
+    </sc-if>
+
+    <sc-if value="{{ ready }}" hint-placeholder-val="{{ false }}">
+      <section id="tune" style="display:flex;flex-direction:column;gap:24px">
+        <div style="display:flex;flex-direction:column;gap:8px;max-width:640px;align-self:flex-start;padding:18px 22px;border-radius:var(--ul-radius-lg);background:rgb(var(--ul-color-graphite-rgb) / .82)">
+          <span style="font-family:var(--ul-font-mono);font-size:var(--ul-text-sm);letter-spacing:.08em;color:var(--ul-color-text-2)">01 · TUNE</span>
+          <h2 style="margin:0;font-size:var(--ul-text-2xl);font-weight:var(--ul-weight-semibold)">Reference parameters vs. tunable</h2>
+          <p style="margin:0;font-size:var(--ul-text-md);line-height:1.55;color:var(--ul-color-text-2);text-wrap:pretty">Left is fixed at blur 1, scale 70, aberration 2, no magnification. Right follows the sliders. Copy the readout when it looks right.</p>
+        </div>
+        <div style="position:relative;overflow:hidden;border-radius:var(--ul-radius-2xl);min-height:320px;display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:40px;padding:40px 24px;box-sizing:border-box;background:radial-gradient(circle at 15% 30%, #ff5a36 0, transparent 36%), radial-gradient(circle at 55% 15%, #ffd23f 0, transparent 30%), radial-gradient(circle at 88% 70%, #2fd6c4 0, transparent 36%), radial-gradient(circle at 40% 95%, #b44dff 0, transparent 40%), linear-gradient(135deg, #12304d, #2a1240)">
+          <div aria-hidden="true" style="position:absolute;inset:0;background-image:linear-gradient(rgb(255 255 255 / .38) 1px, transparent 1px), linear-gradient(90deg, rgb(255 255 255 / .38) 1px, transparent 1px);background-size:40px 40px"></div>
+          <div aria-hidden="true" style="position:absolute;left:-10%;width:120%;top:40%;height:64px;transform:rotate(-4deg);background:repeating-linear-gradient(90deg, #ffffff 0 14px, #0b0d12 14px 28px)"></div>
+          <div aria-hidden="true" style="position:absolute;left:2%;top:4px;font-size:150px;font-weight:900;letter-spacing:-.05em;line-height:1;color:#ffffff;white-space:nowrap">REFRACT</div>
+          <div aria-hidden="true" style="position:absolute;right:2%;bottom:0;font-size:150px;font-weight:900;letter-spacing:-.05em;line-height:1;color:#0b0d12;white-space:nowrap">BEND</div>
+          <x-import component-from-global-scope="UL.ULGlass" tier="md" blur="{{ refP.blur }}" scale="{{ refP.scale }}" aberration="{{ refP.aberration }}" magnify="{{ refP.magnify }}" bezel="{{ refP.bezel }}" debug="{{ debug }}" hint-size="360px,220px">
+            <div style="display:flex;flex-direction:column;justify-content:flex-end;gap:4px;width:360px;height:220px;padding:22px;box-sizing:border-box;text-shadow:0 1px 3px rgb(0 0 0 / .75)"><strong style="font-size:var(--ul-text-lg)">Reference</strong><span style="font-family:var(--ul-font-mono);font-size:var(--ul-text-xs)">blur 1 · scale 70 · ab 2</span></div>
+          </x-import>
+          <x-import component-from-global-scope="UL.ULGlass" tier="md" mode="{{ tune.mode }}" blur="{{ tune.blur }}" scale="{{ tune.scale }}" aberration="{{ tune.aberration }}" magnify="{{ tune.magnify }}" bezel="{{ tune.bezel }}" debug="{{ debug }}" hint-size="360px,220px">
+            <div style="display:flex;flex-direction:column;justify-content:flex-end;gap:4px;width:360px;height:220px;padding:22px;box-sizing:border-box;text-shadow:0 1px 3px rgb(0 0 0 / .75)"><strong style="font-size:var(--ul-text-lg)">Tuned</strong><span style="font-family:var(--ul-font-mono);font-size:var(--ul-text-xs)">{{ tuneLine }}</span></div>
+          </x-import>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));gap:24px;padding:24px;border-radius:var(--ul-radius-xl);background:rgb(var(--ul-color-graphite-rgb) / .9);text-shadow:none">
+          <div style="display:flex;flex-direction:column;gap:14px">
+            <sc-for list="{{ sliders }}" as="s" hint-placeholder-count="5">
+              <label style="display:grid;grid-template-columns:110px minmax(0,1fr) 56px;align-items:center;gap:12px;font-size:var(--ul-text-sm)">
+                <span>{{ s.label }}</span>
+                <input type="range" min="{{ s.min }}" max="{{ s.max }}" step="{{ s.step }}" value="{{ s.value }}" onChange="{{ s.onChange }}" style="width:100%;accent-color:var(--ul-color-ice)">
+                <span style="font-family:var(--ul-font-mono);font-size:var(--ul-text-xs);text-align:right;color:var(--ul-color-text-2)">{{ s.display }}</span>
+              </label>
+            </sc-for>
+            <div style="display:grid;grid-template-columns:110px minmax(0,1fr);align-items:center;gap:12px;font-size:var(--ul-text-sm)">
+              <span>Lens mode</span>
+              <div role="group" aria-label="Lens mode" style="display:flex;flex-wrap:wrap;gap:6px">
+                <sc-for list="{{ modes }}" as="m" hint-placeholder-count="3"><button type="button" onClick="{{ m.go }}" aria-pressed="{{ m.on }}" style="{{ m.s }}">{{ m.t }}</button></sc-for>
+              </div>
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <span style="font-family:var(--ul-font-mono);font-size:var(--ul-text-xs);letter-spacing:.08em;color:var(--ul-color-text-2)">READOUT · glass.md in tokens.json</span>
+            <pre style="margin:0;padding:16px;border-radius:var(--ul-radius-md);background:rgb(var(--ul-color-white-rgb) / .05);border:1px solid rgb(var(--ul-color-white-rgb) / .1);font-family:var(--ul-font-mono);font-size:var(--ul-text-sm);line-height:1.6;white-space:pre-wrap">{{ tuneJson }}</pre>
+            <button type="button" onClick="{{ resetTune }}" style="align-self:flex-start;min-height:40px;padding:0 18px;border-radius:var(--ul-radius-capsule);border:1px solid rgb(var(--ul-color-white-rgb) / .24);background:transparent;color:var(--ul-color-text);font:inherit;font-size:var(--ul-text-sm);font-weight:var(--ul-weight-semibold);cursor:pointer" style-focus="outline:none;box-shadow:var(--ul-focus-ring)">Reset to tokens</button>
+          </div>
+        </div>
+      </section>
+
+
+      <section id="elasticity" style="display:flex;flex-direction:column;gap:24px">
+        <div style="display:flex;flex-direction:column;gap:8px;max-width:640px;align-self:flex-start;padding:18px 22px;border-radius:var(--ul-radius-lg);background:rgb(var(--ul-color-graphite-rgb) / .82)">
+          <span style="font-family:var(--ul-font-mono);font-size:var(--ul-text-sm);letter-spacing:.08em;color:var(--ul-color-text-2)">02 · ELASTICITY</span>
+          <h2 style="margin:0;font-size:var(--ul-text-2xl);font-weight:var(--ul-weight-semibold)">Old vs. new</h2>
+          <p style="margin:0;font-size:var(--ul-text-md);line-height:1.55;color:var(--ul-color-text-2);text-wrap:pretty">New is opt-in for controls and scales with size. Hover pulls a couple of pixels; stretch appears only while pressed or dragged. Tune "Button elasticity" and "Global elasticity" in the Tweaks panel.</p>
+        </div>
+        <div style="position:relative;overflow:hidden;border-radius:var(--ul-radius-2xl);display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,460px),1fr));gap:40px;padding:36px 32px;box-sizing:border-box;background:radial-gradient(circle at 20% 30%, #ff5a36 0, transparent 38%), radial-gradient(circle at 80% 20%, #2fd6c4 0, transparent 36%), radial-gradient(circle at 60% 95%, #3b6bff 0, transparent 40%), linear-gradient(135deg, #12304d, #2a1240)">
+          <div aria-hidden="true" style="position:absolute;inset:0;background-image:linear-gradient(rgb(255 255 255 / .38) 1px, transparent 1px), linear-gradient(90deg, rgb(255 255 255 / .38) 1px, transparent 1px);background-size:40px 40px"></div>
+          <div aria-hidden="true" style="position:absolute;left:-10%;width:120%;top:56%;height:48px;transform:rotate(-3deg);background:repeating-linear-gradient(90deg, #ffffff 0 12px, #0b0d12 12px 24px)"></div>
+          <div style="position:relative;display:flex;flex-direction:column;gap:20px;align-items:flex-start">
+              <div style="display:flex;flex-direction:column;gap:2px;padding:8px 14px;border-radius:var(--ul-radius-md);background:rgb(var(--ul-color-graphite-rgb) / .86)"><strong style="font-size:var(--ul-text-md)">Old</strong><span style="font-family:var(--ul-font-mono);font-size:var(--ul-text-xs);color:var(--ul-color-text-2)">all surfaces · 40px pull · hover stretch</span></div>
+              <div style="display:flex;flex-wrap:wrap;align-items:center;gap:28px">
+              <x-import component-from-global-scope="UL.ULGlass" tier="sm" interactive="{{ yes }}" pressable="{{ yes }}" legacy-elastic="{{ yes }}" hint-size="200px,60px">
+                <div style="display:flex;align-items:center;justify-content:center;width:200px;height:60px;font-size:var(--ul-text-md);font-weight:var(--ul-weight-semibold);text-shadow:0 1px 3px rgb(0 0 0 / .75)">Button</div>
+              </x-import>
+              <x-import component-from-global-scope="UL.ULGlass" tier="sm" interactive="{{ yes }}" pressable="{{ yes }}" legacy-elastic="{{ yes }}" hint-size="64px,64px">
+                <div style="width:64px;height:64px"></div>
+              </x-import>
+              <x-import component-from-global-scope="UL.ULGlass" tier="md" interactive="{{ yes }}" legacy-elastic="{{ yes }}" hint-size="220px,130px">
+                <div style="display:flex;align-items:flex-end;width:220px;height:130px;padding:18px;box-sizing:border-box;font-size:var(--ul-text-sm);text-shadow:0 1px 3px rgb(0 0 0 / .75)">md, same as sm</div>
+              </x-import>
+              </div>
+            </div>
+          <div style="position:relative;display:flex;flex-direction:column;gap:20px;align-items:flex-start">
+              <div style="display:flex;flex-direction:column;gap:2px;padding:8px 14px;border-radius:var(--ul-radius-md);background:rgb(var(--ul-color-graphite-rgb) / .86)"><strong style="font-size:var(--ul-text-md)">New</strong><span style="font-family:var(--ul-font-mono);font-size:var(--ul-text-xs);color:var(--ul-color-text-2)">{{ elasticLine }}</span></div>
+              <div style="display:flex;flex-wrap:wrap;align-items:center;gap:28px">
+              <x-import component-from-global-scope="UL.ULGlass" tier="sm" interactive="{{ yes }}" pressable="{{ yes }}" hint-size="200px,60px">
+                <div style="display:flex;align-items:center;justify-content:center;width:200px;height:60px;font-size:var(--ul-text-md);font-weight:var(--ul-weight-semibold);text-shadow:0 1px 3px rgb(0 0 0 / .75)">Button</div>
+              </x-import>
+              <x-import component-from-global-scope="UL.ULGlass" tier="sm" interactive="{{ yes }}" pressable="{{ yes }}" hint-size="64px,64px">
+                <div style="width:64px;height:64px"></div>
+              </x-import>
+              <x-import component-from-global-scope="UL.ULGlass" tier="md" interactive="{{ yes }}" hint-size="220px,130px">
+                <div style="display:flex;align-items:flex-end;width:220px;height:130px;padding:18px;box-sizing:border-box;font-size:var(--ul-text-sm);text-shadow:0 1px 3px rgb(0 0 0 / .75)">md interactive · 40%</div>
+              </x-import>
+              </div>
+            </div>
+        </div>
+        <pre style="margin:0;align-self:flex-start;padding:16px 20px;border-radius:var(--ul-radius-md);background:rgb(var(--ul-color-graphite-rgb) / .9);border:1px solid rgb(var(--ul-color-white-rgb) / .1);font-family:var(--ul-font-mono);font-size:var(--ul-text-sm);line-height:1.6;white-space:pre-wrap;text-shadow:none">{{ elasticJson }}</pre>
+      </section>
+
+      <section id="anchored" style="display:flex;flex-direction:column;gap:24px">
+        <div style="display:flex;flex-direction:column;gap:8px;max-width:640px;align-self:flex-start;padding:18px 22px;border-radius:var(--ul-radius-lg);background:rgb(var(--ul-color-graphite-rgb) / .82)">
+          <span style="font-family:var(--ul-font-mono);font-size:var(--ul-text-sm);letter-spacing:.08em;color:var(--ul-color-text-2)">03 · ANCHORED MORPH</span>
+          <h2 style="margin:0;font-size:var(--ul-text-2xl);font-weight:var(--ul-weight-semibold)">Overlays pour out of their anchor</h2>
+          <p style="margin:0;font-size:var(--ul-text-md);line-height:1.55;color:var(--ul-color-text-2);text-wrap:pretty">One shared morph for every anchored overlay. Open, then click again mid-animation to see it reverse from the current pose. The surface slides out from behind the anchor and inflates. Overshoot, stretch, duration, goo and slow motion are in the Tweaks panel.</p>
+          <sc-if value="{{ morphDebug }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;flex-direction:column;gap:6px;font-family:var(--ul-font-mono);font-size:var(--ul-text-xs);line-height:1.5">
+              <span style="display:flex;align-items:center;gap:8px"><span style="width:18px;height:0;border-top:2px solid var(--ul-color-warning)"></span>anchor, raised · z = overlay + 2 (top)</span>
+              <span style="display:flex;align-items:center;gap:8px"><span style="width:18px;height:0;border-top:1px dashed var(--ul-color-ice)"></span>surface · z = overlay</span>
+              <span style="display:flex;align-items:center;gap:8px"><span style="width:18px;height:8px;border-radius:4px;background:var(--ul-color-danger)"></span>goo neck · z = overlay − 1 (bottom)</span>
+            </div>
+          </sc-if>
+        </div>
+        <div style="position:relative;overflow:hidden;border-radius:var(--ul-radius-2xl);min-height:460px;padding:36px 32px;box-sizing:border-box;background:radial-gradient(circle at 18% 70%, #ff5a36 0, transparent 38%), radial-gradient(circle at 62% 20%, #ffd23f 0, transparent 30%), radial-gradient(circle at 90% 80%, #2fd6c4 0, transparent 36%), linear-gradient(135deg, #12304d, #2a1240)">
+          <div aria-hidden="true" style="position:absolute;inset:0;background-image:linear-gradient(rgb(255 255 255 / .38) 1px, transparent 1px), linear-gradient(90deg, rgb(255 255 255 / .38) 1px, transparent 1px);background-size:40px 40px"></div>
+          <div aria-hidden="true" style="position:absolute;left:-10%;width:120%;top:52%;height:56px;transform:rotate(-4deg);background:repeating-linear-gradient(90deg, #ffffff 0 14px, #0b0d12 14px 28px)"></div>
+          <div aria-hidden="true" style="position:absolute;right:2%;bottom:-10px;font-size:150px;font-weight:900;letter-spacing:-.05em;line-height:1;color:#ffffff;white-space:nowrap">MORPH</div>
+          <div style="position:relative;display:flex;flex-wrap:wrap;align-items:flex-start;gap:40px">
+
+            <div style="display:flex;flex-direction:column;align-items:flex-start;gap:10px">
+              <span style="font-family:var(--ul-font-mono);font-size:var(--ul-text-xs);color:var(--ul-color-text-2);padding:6px 10px;border-radius:var(--ul-radius-sm);background:rgb(var(--ul-color-graphite-rgb) / .86)">button → menu</span>
+              <div ref="{{ refs.menu }}" onClick="{{ tog.menu }}" style="display:inline-flex">
+                <x-import component-from-global-scope="UL.ULGlass" tier="sm" interactive="{{ yes }}" pressable="{{ yes }}" role="button" tabIndex="0" aria-haspopup="menu" aria-expanded="{{ open.menu }}" hint-size="132px,48px">
+                  <div style="display:flex;align-items:center;justify-content:center;width:132px;height:48px;font-size:var(--ul-text-md);font-weight:var(--ul-weight-semibold);text-shadow:0 1px 3px rgb(0 0 0 / .75)">Actions</div>
+                </x-import>
+              </div>
+              <x-import component-from-global-scope="UL.ULAnchoredSurface" open="{{ open.menu }}" anchor-ref="{{ refs.menu }}" on-close="{{ close.menu }}" side="bottom" align="start" role="menu" hint-size="1px,1px">
+                <div style="display:flex;flex-direction:column;gap:2px;min-width:200px">
+                  <button type="button" role="menuitem" onClick="{{ close.menu }}" style="display:flex;align-items:center;justify-content:space-between;gap:16px;width:100%;min-height:36px;padding:0 12px;border:0;border-radius:calc(var(--ul-glass-lg-radius) - var(--ul-space-2));background:transparent;color:var(--ul-color-text);font:inherit;font-size:var(--ul-text-md);text-align:left;cursor:pointer" style-hover="background:rgb(var(--ul-color-white-rgb) / .1)" style-focus="outline:none;box-shadow:var(--ul-focus-ring)">Rename</button>
+                  <button type="button" role="menuitem" onClick="{{ close.menu }}" style="display:flex;align-items:center;justify-content:space-between;gap:16px;width:100%;min-height:36px;padding:0 12px;border:0;border-radius:calc(var(--ul-glass-lg-radius) - var(--ul-space-2));background:transparent;color:var(--ul-color-text);font:inherit;font-size:var(--ul-text-md);text-align:left;cursor:pointer" style-hover="background:rgb(var(--ul-color-white-rgb) / .1)" style-focus="outline:none;box-shadow:var(--ul-focus-ring)">Duplicate</button>
+                  <button type="button" role="menuitem" onClick="{{ close.menu }}" style="display:flex;align-items:center;justify-content:space-between;gap:16px;width:100%;min-height:36px;padding:0 12px;border:0;border-radius:calc(var(--ul-glass-lg-radius) - var(--ul-space-2));background:transparent;color:var(--ul-color-text);font:inherit;font-size:var(--ul-text-md);text-align:left;cursor:pointer" style-hover="background:rgb(var(--ul-color-white-rgb) / .1)" style-focus="outline:none;box-shadow:var(--ul-focus-ring)">Move to…</button>
+                  <button type="button" role="menuitem" onClick="{{ close.menu }}" style="display:flex;align-items:center;justify-content:space-between;gap:16px;width:100%;min-height:36px;padding:0 12px;border:0;border-radius:calc(var(--ul-glass-lg-radius) - var(--ul-space-2));background:transparent;color:var(--ul-color-danger);font:inherit;font-size:var(--ul-text-md);text-align:left;cursor:pointer" style-hover="background:rgb(var(--ul-color-white-rgb) / .1)" style-focus="outline:none;box-shadow:var(--ul-focus-ring)">Delete</button>
+                </div>
+              </x-import>
+            </div>
+
+            <div style="display:flex;flex-direction:column;align-items:flex-start;gap:10px">
+              <span style="font-family:var(--ul-font-mono);font-size:var(--ul-text-xs);color:var(--ul-color-text-2);padding:6px 10px;border-radius:var(--ul-radius-sm);background:rgb(var(--ul-color-graphite-rgb) / .86)">icon button → popover</span>
+              <div ref="{{ refs.pop }}" onClick="{{ tog.pop }}" style="display:inline-flex">
+                <x-import component-from-global-scope="UL.ULGlass" tier="sm" interactive="{{ yes }}" pressable="{{ yes }}" role="button" tabIndex="0" aria-label="Share" aria-expanded="{{ open.pop }}" hint-size="48px,48px">
+                  <div style="display:flex;align-items:center;justify-content:center;gap:4px;width:48px;height:48px"><span style="width:5px;height:5px;border-radius:50%;background:var(--ul-color-text)"></span><span style="width:5px;height:5px;border-radius:50%;background:var(--ul-color-text)"></span><span style="width:5px;height:5px;border-radius:50%;background:var(--ul-color-text)"></span></div>
+                </x-import>
+              </div>
+              <x-import component-from-global-scope="UL.ULAnchoredSurface" open="{{ open.pop }}" anchor-ref="{{ refs.pop }}" on-close="{{ close.pop }}" side="bottom" align="center" role="dialog" aria-label="Share link" padding="var(--ul-space-4)" hint-size="1px,1px">
+                <strong style="font-size:var(--ul-text-lg)">Share link</strong>
+                <span style="font-size:var(--ul-text-sm);line-height:1.5;color:var(--ul-color-text-2);max-width:240px">Anyone with the link can view this report.</span>
+                <span style="font-family:var(--ul-font-mono);font-size:var(--ul-text-sm);padding:8px 12px;border-radius:var(--ul-radius-md);background:rgb(var(--ul-color-white-rgb) / .08)">ultralabs.app/r/9f2c</span>
+              </x-import>
+            </div>
+
+            <div style="display:flex;flex-direction:column;align-items:flex-start;gap:10px">
+              <span style="font-family:var(--ul-font-mono);font-size:var(--ul-text-xs);color:var(--ul-color-text-2);padding:6px 10px;border-radius:var(--ul-radius-sm);background:rgb(var(--ul-color-graphite-rgb) / .86)">pill → select</span>
+              <div ref="{{ refs.sel }}" onClick="{{ tog.sel }}" style="display:inline-flex">
+                <x-import component-from-global-scope="UL.ULGlass" tier="sm" interactive="{{ yes }}" pressable="{{ yes }}" role="combobox" tabIndex="0" aria-haspopup="listbox" aria-expanded="{{ open.sel }}" hint-size="180px,48px">
+                  <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;width:180px;height:48px;padding:0 18px;box-sizing:border-box;font-size:var(--ul-text-md);text-shadow:0 1px 3px rgb(0 0 0 / .75)"><span>{{ selValue }}</span><span style="font-size:var(--ul-text-xs);color:var(--ul-color-text-2)">▾</span></div>
+                </x-import>
+              </div>
+              <x-import component-from-global-scope="UL.ULAnchoredSurface" open="{{ open.sel }}" anchor-ref="{{ refs.sel }}" on-close="{{ close.sel }}" side="bottom" align="start" role="listbox" hint-size="1px,1px">
+                <sc-for list="{{ selOptions }}" as="o" hint-placeholder-count="4">
+                  <button type="button" role="option" aria-selected="{{ o.on }}" onClick="{{ o.pick }}" style="display:flex;align-items:center;justify-content:space-between;gap:16px;width:100%;min-width:164px;min-height:36px;padding:0 12px;border:0;border-radius:calc(var(--ul-glass-lg-radius) - var(--ul-space-2));background:transparent;color:var(--ul-color-text);font:inherit;font-size:var(--ul-text-md);text-align:left;cursor:pointer" style-hover="background:rgb(var(--ul-color-white-rgb) / .1)" style-focus="outline:none;box-shadow:var(--ul-focus-ring)"><span>{{ o.t }}</span><span style="color:var(--ul-color-ice)">{{ o.mark }}</span></button>
+                </sc-for>
+              </x-import>
+            </div>
+
+            <div style="display:flex;flex-direction:column;align-items:flex-start;gap:10px">
+              <span style="font-family:var(--ul-font-mono);font-size:var(--ul-text-xs);color:var(--ul-color-text-2);padding:6px 10px;border-radius:var(--ul-radius-sm);background:rgb(var(--ul-color-graphite-rgb) / .86)">avatar → tooltip</span>
+              <div ref="{{ refs.tip }}" onPointerEnter="{{ tip.show }}" onPointerLeave="{{ tip.hide }}" onFocus="{{ tip.show }}" onBlur="{{ tip.hide }}" tabIndex="0" aria-describedby="ul-tip-demo" style="display:inline-flex;border-radius:50%;outline:none">
+                <x-import component-from-global-scope="UL.ULGlass" tier="sm" variant="chrome" interactive="{{ yes }}" hint-size="48px,48px">
+                  <div style="display:flex;align-items:center;justify-content:center;width:48px;height:48px;font-size:var(--ul-text-sm);font-weight:var(--ul-weight-bold);text-shadow:0 1px 3px rgb(0 0 0 / .75)">UL</div>
+                </x-import>
+              </div>
+              <x-import component-from-global-scope="UL.ULAnchoredSurface" open="{{ open.tip }}" anchor-ref="{{ refs.tip }}" side="top" align="center" tier="sm" id="ul-tip-demo" role="tooltip" padding="var(--ul-space-2) var(--ul-space-3)" radius="var(--ul-radius-md)" close-on-outside="{{ no }}" hint-size="1px,1px">
+                <span style="font-size:var(--ul-text-sm);white-space:nowrap">Ultra Labs · Admin</span>
+              </x-import>
+            </div>
+
+            <div style="display:flex;flex-direction:column;align-items:flex-start;gap:10px">
+              <span style="font-family:var(--ul-font-mono);font-size:var(--ul-text-xs);color:var(--ul-color-text-2);padding:6px 10px;border-radius:var(--ul-radius-sm);background:rgb(var(--ul-color-graphite-rgb) / .86)">table row action → menu</span>
+              <x-import component-from-global-scope="UL.ULGlass" tier="md" radius="var(--ul-radius-lg)" hint-size="380px,60px">
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;width:380px;height:60px;padding:0 10px 0 18px;box-sizing:border-box;text-shadow:0 1px 3px rgb(0 0 0 / .75)">
+                  <span style="font-size:var(--ul-text-md)">Q3 forecast.xlsx</span>
+                  <div style="display:flex;align-items:center;gap:12px">
+                    <span style="font-family:var(--ul-font-mono);font-size:var(--ul-text-xs);color:var(--ul-color-text-2)">2.4 MB</span>
+                    <div ref="{{ refs.row }}" onClick="{{ tog.row }}" role="button" tabIndex="0" aria-label="Row actions" aria-haspopup="menu" aria-expanded="{{ open.row }}" style="display:flex;align-items:center;justify-content:center;gap:3px;width:40px;height:40px;border-radius:50%;background:rgb(var(--ul-color-white-rgb) / .1);cursor:pointer"><span style="width:4px;height:4px;border-radius:50%;background:var(--ul-color-text)"></span><span style="width:4px;height:4px;border-radius:50%;background:var(--ul-color-text)"></span><span style="width:4px;height:4px;border-radius:50%;background:var(--ul-color-text)"></span></div>
+                  </div>
+                </div>
+              </x-import>
+              <x-import component-from-global-scope="UL.ULAnchoredSurface" open="{{ open.row }}" anchor-ref="{{ refs.row }}" on-close="{{ close.row }}" side="bottom" align="end" role="menu" hint-size="1px,1px">
+                <div style="display:flex;flex-direction:column;gap:2px;min-width:180px">
+                  <button type="button" role="menuitem" onClick="{{ close.row }}" style="display:flex;align-items:center;justify-content:space-between;gap:16px;width:100%;min-height:36px;padding:0 12px;border:0;border-radius:calc(var(--ul-glass-lg-radius) - var(--ul-space-2));background:transparent;color:var(--ul-color-text);font:inherit;font-size:var(--ul-text-md);text-align:left;cursor:pointer" style-hover="background:rgb(var(--ul-color-white-rgb) / .1)" style-focus="outline:none;box-shadow:var(--ul-focus-ring)">Open</button>
+                  <button type="button" role="menuitem" onClick="{{ close.row }}" style="display:flex;align-items:center;justify-content:space-between;gap:16px;width:100%;min-height:36px;padding:0 12px;border:0;border-radius:calc(var(--ul-glass-lg-radius) - var(--ul-space-2));background:transparent;color:var(--ul-color-text);font:inherit;font-size:var(--ul-text-md);text-align:left;cursor:pointer" style-hover="background:rgb(var(--ul-color-white-rgb) / .1)" style-focus="outline:none;box-shadow:var(--ul-focus-ring)">Download</button>
+                  <button type="button" role="menuitem" onClick="{{ close.row }}" style="display:flex;align-items:center;justify-content:space-between;gap:16px;width:100%;min-height:36px;padding:0 12px;border:0;border-radius:calc(var(--ul-glass-lg-radius) - var(--ul-space-2));background:transparent;color:var(--ul-color-danger);font:inherit;font-size:var(--ul-text-md);text-align:left;cursor:pointer" style-hover="background:rgb(var(--ul-color-white-rgb) / .1)" style-focus="outline:none;box-shadow:var(--ul-focus-ring)">Delete</button>
+                </div>
+              </x-import>
+            </div>
+
+          </div>
+        </div>
+      </section>
+
+      <section id="accent" style="display:flex;flex-direction:column;gap:24px">
+        <div style="display:flex;flex-direction:column;gap:8px;max-width:640px;align-self:flex-start;padding:18px 22px;border-radius:var(--ul-radius-lg);background:rgb(var(--ul-color-graphite-rgb) / .82)">
+          <span style="font-family:var(--ul-font-mono);font-size:var(--ul-text-sm);letter-spacing:.08em;color:var(--ul-color-text-2)">04 · ACCENT</span>
+          <h2 style="margin:0;font-size:var(--ul-text-2xl);font-weight:var(--ul-weight-semibold)">Colored glass</h2>
+          <p style="margin:0;font-size:var(--ul-text-md);line-height:1.55;color:var(--ul-color-text-2);text-wrap:pretty">The accent colors the glass body and the refracted backdrop at three strengths: subtle for ambient surfaces, tinted (default once an accent is set) and vivid for hero elements. Over light backdrops a deep accent backing keeps text at 4.5:1. Refraction, bezel, blur and aberration stay neutral.</p>
+        </div>
+        <div ref="{{ accRef }}" data-ul-theme="{{ acc.theme }}" style="display:flex;flex-direction:column;gap:20px;text-shadow:none;font-family:var(--ul-font-sans)">
+          <div style="display:flex;flex-direction:column;gap:16px;padding:20px 24px;border-radius:var(--ul-radius-xl);background:rgb(var(--ul-color-graphite-rgb) / .92)">
+            <div style="display:flex;flex-wrap:wrap;align-items:center;gap:16px 32px">
+              <div style="display:flex;align-items:center;gap:10px"><span style="font-family:var(--ul-font-mono);font-size:var(--ul-text-xs);letter-spacing:.08em;color:var(--ul-color-text-2)">THEME</span>
+                <div role="group" aria-label="Theme" style="display:flex;gap:6px"><sc-for list="{{ acc.themes }}" as="m" hint-placeholder-count="2"><button type="button" onClick="{{ m.go }}" aria-pressed="{{ m.on }}" style="{{ m.s }}">{{ m.t }}</button></sc-for></div>
+              </div>
+              <div style="display:flex;align-items:center;gap:10px"><span style="font-family:var(--ul-font-mono);font-size:var(--ul-text-xs);letter-spacing:.08em;color:var(--ul-color-text-2)">COMPARE</span>
+                <div role="group" aria-label="Before or after" style="display:flex;gap:6px"><sc-for list="{{ acc.compare }}" as="m" hint-placeholder-count="2"><button type="button" onClick="{{ m.go }}" aria-pressed="{{ m.on }}" style="{{ m.s }}">{{ m.t }}</button></sc-for></div>
+              </div>
+            </div>
+            <div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px"><span style="font-family:var(--ul-font-mono);font-size:var(--ul-text-xs);letter-spacing:.08em;color:var(--ul-color-text-2)">ACCENT</span>
+              <div role="group" aria-label="Accent" style="display:flex;flex-wrap:wrap;gap:6px"><sc-for list="{{ acc.swatches }}" as="sw" hint-placeholder-count="6"><button type="button" onClick="{{ sw.go }}" aria-pressed="{{ sw.on }}" style="{{ sw.s }}"><span style="width:18px;height:18px;border-radius:50%;background:{{ sw.color }};box-shadow:inset 0 0 0 1px rgb(255 255 255 / .3)"></span>{{ sw.t }}</button></sc-for></div>
+              <label style="display:flex;align-items:center;gap:8px;font-size:var(--ul-text-sm)"><input type="color" value="{{ acc.custom }}" onChange="{{ acc.onCustom }}" aria-label="Custom accent color" style="width:36px;height:36px;padding:0;border:0;border-radius:50%;background:transparent;cursor:pointer"><span style="font-family:var(--ul-font-mono);font-size:var(--ul-text-xs);color:var(--ul-color-text-2)">{{ acc.custom }}</span></label>
+            </div>
+            <label style="display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:14px;max-width:640px"><span style="font-family:var(--ul-font-mono);font-size:var(--ul-text-xs);letter-spacing:.08em;color:var(--ul-color-text-2)">STRENGTH</span>
+              <input type="range" min="0" max="1" step="0.01" value="{{ acc.k }}" onChange="{{ acc.onK }}" style="width:100%;accent-color:var(--ul-color-ice)">
+              <span style="font-family:var(--ul-font-mono);font-size:var(--ul-text-xs);color:var(--ul-color-text-2);min-width:110px">{{ acc.kLabel }}</span>
+            </label>
+          </div>
+
+          <div data-ul-accent-legacy="{{ acc.legacyAttr }}" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,460px),1fr));gap:16px">
+            <x-import component-from-global-scope="UL.ULAccentScope" accent="{{ acc.live }}" strength="{{ acc.k }}" backdrop="dark" hint-size="100%,200px">
+              <div data-ul-backdrop="dark" style="position:relative;overflow:hidden;display:flex;flex-wrap:wrap;align-items:center;gap:20px;min-height:200px;padding:28px 24px;border-radius:var(--ul-radius-2xl);background:radial-gradient(circle at 78% 20%, #3a1f5e 0 46px, transparent 47px), radial-gradient(circle at 14% 82%, #12403a 0 40px, transparent 41px), #07080c">
+                <div aria-hidden="true" style="position:absolute;inset:0;background-image:linear-gradient(#1c2029 1px, transparent 1px), linear-gradient(90deg, #1c2029 1px, transparent 1px);background-size:28px 28px"></div>
+                    <div aria-hidden="true" style="position:absolute;left:-10%;width:120%;top:44%;height:46px;transform:rotate(-8deg);background:repeating-linear-gradient(90deg, #2e333d 0 12px, transparent 12px 24px)"></div>
+                    <div aria-hidden="true" style="position:absolute;left:4%;top:-6px;font-size:112px;font-weight:900;letter-spacing:-.05em;line-height:1;color:#262b36;white-space:nowrap">GLASS</div>
+                <div style="position:relative;display:flex;flex-wrap:wrap;align-items:center;gap:20px">
+                  <x-import component-from-global-scope="UL.ULGlass" tier="sm" interactive="{{ yes }}" pressable="{{ yes }}" role="button" tabIndex="0" hint-size="150px,52px">
+                    <div style="display:flex;align-items:center;justify-content:center;width:150px;height:52px;font-size:var(--ul-text-md);font-weight:var(--ul-weight-semibold)">Get started</div>
+                  </x-import>
+                  <x-import component-from-global-scope="UL.ULGlass" tier="sm" interactive="{{ yes }}" pressable="{{ yes }}" role="button" tabIndex="0" aria-label="Add" hint-size="52px,52px">
+                    <div style="display:flex;align-items:center;justify-content:center;width:52px;height:52px;font-size:26px;font-weight:300;line-height:1">+</div>
+                  </x-import>
+                  <x-import component-from-global-scope="UL.ULGlass" tier="md" hint-size="240px,140px">
+                    <div style="display:flex;flex-direction:column;justify-content:space-between;gap:10px;width:240px;height:140px;padding:18px;box-sizing:border-box">
+                      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px">
+                        <div style="display:flex;flex-direction:column;gap:2px"><span style="font-size:var(--ul-text-sm);color:var(--ul-color-text-2)">Revenue</span><strong style="font-size:var(--ul-text-2xl);font-weight:var(--ul-weight-semibold);letter-spacing:-.01em">€48.2k</strong></div>
+                        <x-import component-from-global-scope="UL.ULGlass" tier="sm" hint-size="60px,28px"><span style="display:flex;align-items:center;justify-content:center;width:60px;height:28px;font-size:var(--ul-text-xs);font-weight:var(--ul-weight-semibold)">Open</span></x-import>
+                      </div>
+                      <span style="font-size:var(--ul-text-sm);color:var(--ul-color-text-2)">Up 12% this week</span>
+                    </div>
+                  </x-import>
+                  <div ref="{{ refs.acc }}" onClick="{{ tog.acc }}" style="display:inline-flex">
+                    <x-import component-from-global-scope="UL.ULGlass" tier="sm" variant="chrome" interactive="{{ yes }}" pressable="{{ yes }}" role="button" tabIndex="0" aria-haspopup="menu" aria-expanded="{{ open.acc }}" hint-size="130px,52px">
+                      <div style="display:flex;align-items:center;justify-content:center;gap:8px;width:130px;height:52px;font-size:var(--ul-text-md);font-weight:var(--ul-weight-semibold)">Menu <span style="font-size:var(--ul-text-xs);color:var(--ul-color-text-2)">▾</span></div>
+                    </x-import>
+                  </div>
+                  <x-import component-from-global-scope="UL.ULAnchoredSurface" open="{{ open.acc }}" anchor-ref="{{ refs.acc }}" on-close="{{ close.acc }}" side="bottom" align="start" role="menu" hint-size="1px,1px">
+                    <div style="display:flex;flex-direction:column;gap:2px;min-width:190px">
+                      <sc-for list="{{ acc.menu }}" as="mi" hint-placeholder-count="3"><button type="button" role="menuitem" onClick="{{ close.acc }}" style="display:flex;align-items:center;width:100%;min-height:36px;padding:0 12px;border:0;border-radius:calc(var(--ul-glass-lg-radius) - var(--ul-space-2));background:transparent;color:var(--ul-color-text);font:inherit;font-size:var(--ul-text-md);text-align:left;cursor:pointer" style-hover="background:rgb(var(--ul-color-white-rgb) / .1)" style-focus="outline:none;box-shadow:var(--ul-focus-ring)">{{ mi }}</button></sc-for>
+                    </div>
+                  </x-import>
+                </div>
+              </div>
+            </x-import>
+            <x-import component-from-global-scope="UL.ULAccentScope" accent="{{ acc.live }}" strength="{{ acc.k }}" backdrop="light" hint-size="100%,200px">
+              <div data-ul-backdrop="light" style="position:relative;overflow:hidden;display:flex;flex-wrap:wrap;align-items:center;gap:20px;min-height:200px;padding:28px 24px;border-radius:var(--ul-radius-2xl);background:radial-gradient(circle at 84% 22%, #ff5a36 0 40px, transparent 41px), radial-gradient(circle at 10% 80%, #3b6bff 0 34px, transparent 35px), radial-gradient(circle at 56% 96%, #2fd6c4 0 30px, transparent 31px), #f4f1ea">
+                <div aria-hidden="true" style="position:absolute;inset:0;background-image:linear-gradient(rgb(17 20 27 / .14) 1px, transparent 1px), linear-gradient(90deg, rgb(17 20 27 / .14) 1px, transparent 1px);background-size:28px 28px"></div>
+                    <div aria-hidden="true" style="position:absolute;left:-10%;width:120%;top:44%;height:46px;transform:rotate(-8deg);background:repeating-linear-gradient(90deg, #11141b 0 12px, transparent 12px 24px)"></div>
+                    <div aria-hidden="true" style="position:absolute;left:4%;top:-6px;font-size:112px;font-weight:900;letter-spacing:-.05em;line-height:1;color:#11141b;white-space:nowrap">GLASS</div>
+                <div style="position:relative;display:flex;flex-wrap:wrap;align-items:center;gap:20px">
+                  <x-import component-from-global-scope="UL.ULGlass" tier="sm" interactive="{{ yes }}" pressable="{{ yes }}" role="button" tabIndex="0" hint-size="150px,52px">
+                    <div style="display:flex;align-items:center;justify-content:center;width:150px;height:52px;font-size:var(--ul-text-md);font-weight:var(--ul-weight-semibold)">Get started</div>
+                  </x-import>
+                  <x-import component-from-global-scope="UL.ULGlass" tier="sm" interactive="{{ yes }}" pressable="{{ yes }}" role="button" tabIndex="0" aria-label="Add" hint-size="52px,52px">
+                    <div style="display:flex;align-items:center;justify-content:center;width:52px;height:52px;font-size:26px;font-weight:300;line-height:1">+</div>
+                  </x-import>
+                  <x-import component-from-global-scope="UL.ULGlass" tier="md" hint-size="240px,140px">
+                    <div style="display:flex;flex-direction:column;justify-content:space-between;gap:10px;width:240px;height:140px;padding:18px;box-sizing:border-box">
+                      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px">
+                        <div style="display:flex;flex-direction:column;gap:2px"><span style="font-size:var(--ul-text-sm);color:var(--ul-color-text-2)">Revenue</span><strong style="font-size:var(--ul-text-2xl);font-weight:var(--ul-weight-semibold);letter-spacing:-.01em">€48.2k</strong></div>
+                        <x-import component-from-global-scope="UL.ULGlass" tier="sm" hint-size="60px,28px"><span style="display:flex;align-items:center;justify-content:center;width:60px;height:28px;font-size:var(--ul-text-xs);font-weight:var(--ul-weight-semibold)">Open</span></x-import>
+                      </div>
+                      <span style="font-size:var(--ul-text-sm);color:var(--ul-color-text-2)">Up 12% this week</span>
+                    </div>
+                  </x-import>
+                </div>
+              </div>
+            </x-import>
+          </div>
+
+          <div data-ul-accent-legacy="{{ acc.legacyAttr }}" style="display:flex;flex-direction:column;gap:14px">
+            <div style="display:grid;grid-template-columns:84px minmax(0,1fr) minmax(0,1fr);gap:14px;padding:0 4px"><span style="font-family:var(--ul-font-mono);font-size:var(--ul-text-xs);letter-spacing:.08em;color:var(--ul-color-text-2)">PRESET</span><span style="font-family:var(--ul-font-mono);font-size:var(--ul-text-xs);letter-spacing:.08em;color:var(--ul-color-text-2)">DARK BACKDROP · SUBTLE / TINTED / VIVID</span><span style="font-family:var(--ul-font-mono);font-size:var(--ul-text-xs);letter-spacing:.08em;color:var(--ul-color-text-2)">LIGHT BACKDROP · DEEP ACCENT BACKING</span></div>
+            <sc-for list="{{ acc.rows }}" as="r" hint-placeholder-count="6">
+              <x-import component-from-global-scope="UL.ULAccentScope" accent="{{ r.accent }}" hint-size="100%,150px">
+                <div style="display:grid;grid-template-columns:84px minmax(0,1fr) minmax(0,1fr);gap:14px;align-items:stretch">
+                  <div style="display:flex;flex-direction:column;justify-content:center;gap:8px;padding:0 4px"><span style="width:22px;height:22px;border-radius:50%;background:{{ r.color }}"></span><span style="font-size:var(--ul-text-sm);font-weight:var(--ul-weight-semibold)">{{ r.t }}</span></div>
+                  <div data-ul-backdrop="dark" style="position:relative;overflow:hidden;display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:10px;min-height:140px;padding:20px 10px;border-radius:var(--ul-radius-xl);background:radial-gradient(circle at 78% 20%, #3a1f5e 0 46px, transparent 47px), radial-gradient(circle at 14% 82%, #12403a 0 40px, transparent 41px), #07080c">
+                    <div aria-hidden="true" style="position:absolute;inset:0;background-image:linear-gradient(#1c2029 1px, transparent 1px), linear-gradient(90deg, #1c2029 1px, transparent 1px);background-size:28px 28px"></div>
+                    <div aria-hidden="true" style="position:absolute;left:-10%;width:120%;top:44%;height:46px;transform:rotate(-8deg);background:repeating-linear-gradient(90deg, #2e333d 0 12px, transparent 12px 24px)"></div>
+                    <div aria-hidden="true" style="position:absolute;left:4%;top:-6px;font-size:112px;font-weight:900;letter-spacing:-.05em;line-height:1;color:#262b36;white-space:nowrap">GLASS</div>
+                    <div style="position:relative;display:flex;flex-wrap:nowrap;justify-content:center;gap:10px">
+                    <x-import component-from-global-scope="UL.ULGlass" tier="md" accent-strength="subtle" radius="var(--ul-radius-lg)" hint-size="112px,96px">
+                      <div style="display:flex;flex-direction:column;justify-content:space-between;width:112px;height:96px;padding:12px;box-sizing:border-box">
+                        <span style="font-family:var(--ul-font-mono);font-size:var(--ul-text-xs);letter-spacing:.06em;color:var(--ul-color-text-2)">SUBTLE</span>
+                        <div style="display:flex;flex-direction:column;gap:1px"><strong style="font-size:var(--ul-text-lg);font-weight:var(--ul-weight-semibold);letter-spacing:-.01em">€48.2k</strong><span style="font-size:var(--ul-text-xs);color:var(--ul-color-text-2)">Up 12%</span></div>
+                      </div>
+                    </x-import>
+                    <x-import component-from-global-scope="UL.ULGlass" tier="md" accent-strength="tinted" radius="var(--ul-radius-lg)" hint-size="112px,96px">
+                      <div style="display:flex;flex-direction:column;justify-content:space-between;width:112px;height:96px;padding:12px;box-sizing:border-box">
+                        <span style="font-family:var(--ul-font-mono);font-size:var(--ul-text-xs);letter-spacing:.06em;color:var(--ul-color-text-2)">TINTED</span>
+                        <div style="display:flex;flex-direction:column;gap:1px"><strong style="font-size:var(--ul-text-lg);font-weight:var(--ul-weight-semibold);letter-spacing:-.01em">€48.2k</strong><span style="font-size:var(--ul-text-xs);color:var(--ul-color-text-2)">Up 12%</span></div>
+                      </div>
+                    </x-import>
+                    <x-import component-from-global-scope="UL.ULGlass" tier="md" accent-strength="vivid" radius="var(--ul-radius-lg)" hint-size="112px,96px">
+                      <div style="display:flex;flex-direction:column;justify-content:space-between;width:112px;height:96px;padding:12px;box-sizing:border-box">
+                        <span style="font-family:var(--ul-font-mono);font-size:var(--ul-text-xs);letter-spacing:.06em;color:var(--ul-color-text-2)">VIVID</span>
+                        <div style="display:flex;flex-direction:column;gap:1px"><strong style="font-size:var(--ul-text-lg);font-weight:var(--ul-weight-semibold);letter-spacing:-.01em">€48.2k</strong><span style="font-size:var(--ul-text-xs);color:var(--ul-color-text-2)">Up 12%</span></div>
+                      </div>
+                    </x-import>
+                    </div>
+                  </div>
+                  <div data-ul-backdrop="light" style="position:relative;overflow:hidden;display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:10px;min-height:140px;padding:20px 10px;border-radius:var(--ul-radius-xl);background:radial-gradient(circle at 84% 22%, #ff5a36 0 40px, transparent 41px), radial-gradient(circle at 10% 80%, #3b6bff 0 34px, transparent 35px), radial-gradient(circle at 56% 96%, #2fd6c4 0 30px, transparent 31px), #f4f1ea">
+                    <div aria-hidden="true" style="position:absolute;inset:0;background-image:linear-gradient(rgb(17 20 27 / .14) 1px, transparent 1px), linear-gradient(90deg, rgb(17 20 27 / .14) 1px, transparent 1px);background-size:28px 28px"></div>
+                    <div aria-hidden="true" style="position:absolute;left:-10%;width:120%;top:44%;height:46px;transform:rotate(-8deg);background:repeating-linear-gradient(90deg, #11141b 0 12px, transparent 12px 24px)"></div>
+                    <div aria-hidden="true" style="position:absolute;left:4%;top:-6px;font-size:112px;font-weight:900;letter-spacing:-.05em;line-height:1;color:#11141b;white-space:nowrap">GLASS</div>
+                    <div style="position:relative;display:flex;flex-wrap:nowrap;justify-content:center;gap:10px">
+                    <x-import component-from-global-scope="UL.ULGlass" tier="md" accent-strength="subtle" radius="var(--ul-radius-lg)" hint-size="112px,96px">
+                      <div style="display:flex;flex-direction:column;justify-content:space-between;width:112px;height:96px;padding:12px;box-sizing:border-box">
+                        <span style="font-family:var(--ul-font-mono);font-size:var(--ul-text-xs);letter-spacing:.06em;color:var(--ul-color-text-2)">SUBTLE</span>
+                        <div style="display:flex;flex-direction:column;gap:1px"><strong style="font-size:var(--ul-text-lg);font-weight:var(--ul-weight-semibold);letter-spacing:-.01em">€48.2k</strong><span style="font-size:var(--ul-text-xs);color:var(--ul-color-text-2)">Up 12%</span></div>
+                      </div>
+                    </x-import>
+                    <x-import component-from-global-scope="UL.ULGlass" tier="md" accent-strength="tinted" radius="var(--ul-radius-lg)" hint-size="112px,96px">
+                      <div style="display:flex;flex-direction:column;justify-content:space-between;width:112px;height:96px;padding:12px;box-sizing:border-box">
+                        <span style="font-family:var(--ul-font-mono);font-size:var(--ul-text-xs);letter-spacing:.06em;color:var(--ul-color-text-2)">TINTED</span>
+                        <div style="display:flex;flex-direction:column;gap:1px"><strong style="font-size:var(--ul-text-lg);font-weight:var(--ul-weight-semibold);letter-spacing:-.01em">€48.2k</strong><span style="font-size:var(--ul-text-xs);color:var(--ul-color-text-2)">Up 12%</span></div>
+                      </div>
+                    </x-import>
+                    <x-import component-from-global-scope="UL.ULGlass" tier="md" accent-strength="vivid" radius="var(--ul-radius-lg)" hint-size="112px,96px">
+                      <div style="display:flex;flex-direction:column;justify-content:space-between;width:112px;height:96px;padding:12px;box-sizing:border-box">
+                        <span style="font-family:var(--ul-font-mono);font-size:var(--ul-text-xs);letter-spacing:.06em;color:var(--ul-color-text-2)">VIVID</span>
+                        <div style="display:flex;flex-direction:column;gap:1px"><strong style="font-size:var(--ul-text-lg);font-weight:var(--ul-weight-semibold);letter-spacing:-.01em">€48.2k</strong><span style="font-size:var(--ul-text-xs);color:var(--ul-color-text-2)">Up 12%</span></div>
+                      </div>
+                    </x-import>
+                    </div>
+                  </div>
+                </div>
+              </x-import>
+            </sc-for>
+          </div>
+
+          <div style="display:flex;flex-direction:column;gap:12px;padding:20px 24px;border-radius:var(--ul-radius-xl);background:rgb(var(--ul-color-graphite-rgb) / .92)">
+            <div style="display:flex;flex-direction:column;gap:4px">
+              <strong style="font-size:var(--ul-text-md)">Contrast guard · {{ acc.theme }} theme · {{ acc.passLine }}</strong>
+              <span style="font-size:var(--ul-text-sm);line-height:1.5;color:var(--ul-color-text-2)">Worst case per backdrop class: secondary text at rest / primary text under full pointer light, with the deep-accent backing the CSS applies. Target 4.5:1.</span>
+            </div>
+            <div role="table" aria-label="Contrast per accent, strength and backdrop" style="display:grid;grid-template-columns:128px repeat(3, minmax(0,1fr));gap:5px 12px;font-family:var(--ul-font-mono);font-size:var(--ul-text-xs)">
+              <span role="columnheader" style="color:var(--ul-color-text-2)">accent · strength</span>
+              <sc-for list="{{ acc.cols }}" as="hc" hint-placeholder-count="3"><span role="columnheader" style="color:var(--ul-color-text-2)">{{ hc }}</span></sc-for>
+              <sc-for list="{{ acc.report }}" as="rr" hint-placeholder-count="24"><span role="cell" style="{{ rr.s }}">{{ rr.t }}</span></sc-for>
+            </div>
+          </div>
+        </div>
+      </section>
+      <section id="island" style="display:flex;flex-direction:column;gap:24px">
+        <div style="display:flex;flex-direction:column;gap:8px;max-width:640px;align-self:flex-start;padding:18px 22px;border-radius:var(--ul-radius-lg);background:rgb(var(--ul-color-graphite-rgb) / .82)">
+          <span style="font-family:var(--ul-font-mono);font-size:var(--ul-text-sm);letter-spacing:.08em;color:var(--ul-color-text-2)">05 · ISLAND</span>
+          <h2 style="margin:0;font-size:var(--ul-text-2xl);font-weight:var(--ul-weight-semibold)">ULIsland</h2>
+          <p style="margin:0;font-size:var(--ul-text-md);line-height:1.55;color:var(--ul-color-text-2);text-wrap:pretty">One interactive pill. Compact and expanded swap content and size on the overshoot spring; the notification pours out of the pill with the shared anchored morph. Accented islands default to vivid (--ul-island-accent-strength). Shown in the marketing theme, as on the landing.</p>
+        </div>
+        <div data-ul-theme="marketing" style="display:flex;flex-direction:column;gap:16px;text-shadow:none;font-family:var(--ul-font-sans)">
+          <div style="display:flex;flex-wrap:wrap;align-items:center;gap:16px 32px;padding:18px 24px;border-radius:var(--ul-radius-xl);background:rgb(var(--ul-color-graphite-rgb) / .92)">
+            <div style="display:flex;align-items:center;gap:10px"><span style="font-family:var(--ul-font-mono);font-size:var(--ul-text-xs);letter-spacing:.08em;color:var(--ul-color-text-2)">STATE</span>
+              <div role="group" aria-label="Island state" style="display:flex;gap:6px"><sc-for list="{{ isl.states }}" as="m" hint-placeholder-count="3"><button type="button" onClick="{{ m.go }}" aria-pressed="{{ m.on }}" style="{{ m.s }}">{{ m.t }}</button></sc-for></div>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px"><span style="font-family:var(--ul-font-mono);font-size:var(--ul-text-xs);letter-spacing:.08em;color:var(--ul-color-text-2)">VARIANT</span>
+              <div role="group" aria-label="Header variant" style="display:flex;gap:6px"><sc-for list="{{ isl.variants }}" as="m" hint-placeholder-count="3"><button type="button" onClick="{{ m.go }}" aria-pressed="{{ m.on }}" style="{{ m.s }}">{{ m.t }}</button></sc-for></div>
+            </div>
+            <button type="button" onClick="{{ isl.toggleSlow }}" aria-pressed="{{ isl.slow }}" style="{{ isl.slowS }}">slow motion ×0.25</button>
+            <div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px"><span style="font-family:var(--ul-font-mono);font-size:var(--ul-text-xs);letter-spacing:.08em;color:var(--ul-color-text-2)">ACCENT</span>
+              <div role="group" aria-label="Island accent" style="display:flex;flex-wrap:wrap;gap:6px"><sc-for list="{{ isl.accents }}" as="sw" hint-placeholder-count="10"><button type="button" onClick="{{ sw.go }}" aria-pressed="{{ sw.on }}" style="{{ sw.s }}"><span style="width:16px;height:16px;border-radius:50%;background:{{ sw.color }};box-shadow:inset 0 0 0 1px rgb(255 255 255 / .3)"></span>{{ sw.t }}</button></sc-for></div>
+            </div>
+          </div>
+          <div style="position:relative;overflow:hidden;min-height:440px;border-radius:var(--ul-radius-2xl);background:radial-gradient(circle at 80% 30%, #3a1f5e 0 90px, transparent 91px), radial-gradient(circle at 14% 78%, #12403a 0 70px, transparent 71px), #060509">
+            <div aria-hidden="true" style="position:absolute;inset:0;background-image:linear-gradient(#1a1622 1px, transparent 1px), linear-gradient(90deg, #1a1622 1px, transparent 1px);background-size:32px 32px"></div>
+            <div aria-hidden="true" style="position:absolute;left:-10%;width:120%;top:30px;height:44px;transform:rotate(-2deg);background:repeating-linear-gradient(90deg, #ffffff 0 12px, transparent 12px 24px);opacity:.5"></div>
+            <div aria-hidden="true" style="position:absolute;left:4%;top:120px;font-size:150px;font-weight:900;letter-spacing:-.05em;line-height:.9;color:#f4f2f8;white-space:nowrap">Websites,</div>
+            <div aria-hidden="true" style="position:absolute;left:12%;top:260px;font-size:150px;font-weight:900;letter-spacing:-.05em;line-height:.9;color:#8b5cf6;white-space:nowrap">apps</div>
+            <div style="position:relative;display:flex;justify-content:center;padding-top:20px">
+              <x-import component-from-global-scope="UL.ULIsland" state="{{ isl.state }}" accent="{{ isl.accent }}" config="{{ isl.config }}" current="{{ isl.current }}" label="Main" on-dismiss="{{ isl.dismiss }}" hint-size="640px,56px">
+                <div data-slot="compact" style="display:flex;align-items:center;gap:12px;padding:0 12px 0 8px;color:var(--ul-color-text)"><svg viewBox="0 0 32 32" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" aria-hidden="true"><path d="M4 12 10 5h12l6 7-12 16z M4 12h24 M10 5l6 7 6-7 M16 12v16"></path></svg><span style="font-size:var(--ul-text-md);font-weight:var(--ul-weight-semibold)">Ultra Labs</span><span style="width:8px;height:8px;border-radius:50%;background:var(--ul-color-success)"></span></div>
+                <div data-slot="notification" style="display:flex;flex-direction:column;gap:8px;width:300px;padding:var(--ul-space-2)">
+                  <strong style="font-size:var(--ul-text-lg)">Brief received</strong>
+                  <span style="font-size:var(--ul-text-sm);line-height:1.5;color:var(--ul-color-text-2)">We reply within one business day. You can add files any time.</span>
+                  <button type="button" onClick="{{ isl.dismiss }}" style="align-self:flex-start;min-height:40px;padding:0 16px;border-radius:var(--ul-radius-capsule);border:1px solid rgb(var(--ul-color-white-rgb) / .3);background:transparent;color:var(--ul-color-text);font:inherit;font-size:var(--ul-text-sm);font-weight:var(--ul-weight-semibold);cursor:pointer" style-focus="outline:none;box-shadow:var(--ul-focus-ring)">Got it</button>
+                </div>
+              </x-import>
+            </div>
+          </div>
+        </div>
+      </section>
+      <section id="header-tools" style="display:flex;flex-direction:column;gap:24px">
+        <div style="display:flex;flex-direction:column;gap:8px;max-width:640px;align-self:flex-start;padding:18px 22px;border-radius:var(--ul-radius-lg);background:rgb(var(--ul-color-graphite-rgb) / .82)">
+          <span style="font-family:var(--ul-font-mono);font-size:var(--ul-text-sm);letter-spacing:.08em;color:var(--ul-color-text-2)">05b · HEADER TOOLS</span>
+          <h2 style="margin:0;font-size:var(--ul-text-2xl);font-weight:var(--ul-weight-semibold)">Language popper and studio link</h2>
+          <p style="margin:0;font-size:var(--ul-text-md);line-height:1.55;color:var(--ul-color-text-2);text-wrap:pretty">The language popper is one row of four flag links. The floating indicator glides between them on hover and with ←/→, Home and End. The name shows in the shared anchored tooltip. Next to it, the studio button is a plain link to Studio with its own tooltip. Both use the anchored morph. Turn on slow motion to see the enter and exit.</p>
+        </div>
+        <div data-ul-theme="marketing" style="display:flex;flex-direction:column;gap:16px;text-shadow:none;font-family:var(--ul-font-sans)">
+          <div style="display:flex;flex-wrap:wrap;align-items:center;gap:16px 32px;padding:18px 24px;border-radius:var(--ul-radius-xl);background:rgb(var(--ul-color-graphite-rgb) / .92)">
+            <button type="button" onClick="{{ isl.toggleSlow }}" aria-pressed="{{ isl.slow }}" style="{{ isl.slowS }}">slow motion ×0.25</button>
+            <span style="font-family:var(--ul-font-mono);font-size:var(--ul-text-xs);letter-spacing:.06em;color:var(--ul-color-text-2)">current: {{ hdr.curT }}</span>
+          </div>
+          <div ref="{{ hdr.stageRef }}" style="position:relative;overflow:hidden;min-height:340px;border-radius:var(--ul-radius-2xl);background:radial-gradient(circle at 78% 70%, #3a1f5e 0 90px, transparent 91px), radial-gradient(circle at 14% 30%, #12403a 0 70px, transparent 71px), #060509">
+            <div aria-hidden="true" style="position:absolute;inset:0;background-image:linear-gradient(#1a1622 1px, transparent 1px), linear-gradient(90deg, #1a1622 1px, transparent 1px);background-size:32px 32px"></div>
+            <div aria-hidden="true" style="position:absolute;left:-10%;width:120%;top:120px;height:44px;transform:rotate(-2deg);background:repeating-linear-gradient(90deg, #ffffff 0 12px, transparent 12px 24px);opacity:.5"></div>
+            <div aria-hidden="true" style="position:absolute;left:6%;top:150px;font-size:120px;font-weight:900;letter-spacing:-.05em;line-height:.9;color:#8b5cf6;white-space:nowrap">Sprache</div>
+            <div style="position:relative;display:flex;justify-content:flex-end;gap:10px;padding:24px 48px 0">
+              <div ref="{{ hdr.langRef }}" style="position:relative">
+                <x-import component-from-global-scope="UL.ULIslandTool" aria-label="{{ hdr.langAria }}" aria-expanded="{{ hdr.exp }}" active="{{ hdr.open }}" onClick="{{ hdr.toggle }}" hint-size="56px,56px"><span style="font-family:var(--ul-font-mono);font-size:13px;font-weight:600;letter-spacing:.08em">{{ hdr.curU }}</span></x-import>
+              </div>
+              <x-import component-from-global-scope="UL.ULIslandTool" href="https://studio.ultralabs.app" tip="Go to studio" aria-label="Go to studio" hint-size="56px,56px"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="7" height="7" x="3" y="3" rx="1.5"></rect><rect width="7" height="7" x="14" y="3" rx="1.5"></rect><rect width="7" height="7" x="14" y="14" rx="1.5"></rect><rect width="7" height="7" x="3" y="14" rx="1.5"></rect></svg></x-import>
+            </div>
+            <x-import component-from-global-scope="UL.ULAnchoredSurface" open="{{ hdr.open }}" anchor-ref="{{ hdr.langRef }}" on-close="{{ hdr.close }}" side="bottom" align="end" tier="lg" role="region" aria-label="Language" padding="6px" hint-size="248px,72px">
+              <div ref="{{ hdr.rowRef }}" role="group" aria-label="Language" onKeyDown="{{ hdr.onKey }}" style="position:relative;display:flex;gap:4px">
+                <span ref="{{ hdr.lensRef }}" class="ul-glass" data-tier="sm" aria-hidden="true" style="position:absolute;left:0;top:0;width:0;height:0;z-index:0;border-radius:14px;pointer-events:none;opacity:0;background:color-mix(in srgb, var(--ul-glass-tint-color, #fff) 14%, transparent);box-shadow:inset 0 0 0 1px color-mix(in srgb, var(--ul-glass-rim-color, #fff) 40%, transparent), inset 0 2px 6px rgb(0 0 0 / .28)"></span>
+                <sc-for list="{{ hdr.langs }}" as="m"><a href="#header-tools" lang="{{ m.code }}" hreflang="{{ m.code }}" aria-current="{{ m.cur }}" aria-label="{{ m.name }}" data-ul-tip="{{ m.name }}" onClick="{{ m.pick }}" style="position:relative;z-index:1;flex:none;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;width:56px;height:60px;border-radius:14px;color:var(--ul-color-text);text-decoration:none" style-focus="outline:2px solid var(--ul-accent, #8b5cf6);outline-offset:2px"><span style="position:relative;display:block;width:32px;height:32px"><sc-if value="{{ m.flag }}" hint-placeholder-val="{{ false }}"><img src="{{ m.flag }}" alt="" width="32" height="32" style="display:block;width:32px;height:32px;border-radius:50%;box-shadow:0 0 0 1px rgb(255 255 255 / .18)"></sc-if><sc-if value="{{ m.on }}"><span aria-hidden="true" style="position:absolute;right:-2px;bottom:-2px;width:10px;height:10px;border-radius:50%;background:var(--ul-accent, #8b5cf6);box-shadow:0 0 0 2px #0b0912"></span></sc-if></span><span style="font-family:var(--ul-font-mono);font-size:11px;font-weight:600;line-height:1;letter-spacing:.08em">{{ m.codeU }}</span></a></sc-for>
+              </div>
+            </x-import>
+          </div>
+        </div>
+      </section>
+      <section id="tiers" style="display:flex;flex-direction:column;gap:28px">
+        <div style="display:flex;flex-direction:column;gap:8px;max-width:640px;align-self:flex-start;padding:18px 22px;border-radius:var(--ul-radius-lg);background:rgb(var(--ul-color-graphite-rgb) / .82)">
+          <span style="font-family:var(--ul-font-mono);font-size:var(--ul-text-sm);letter-spacing:.08em;color:var(--ul-color-text-2)">06 · MATERIAL TIERS</span>
+          <h2 style="margin:0;font-size:var(--ul-text-2xl);font-weight:var(--ul-weight-semibold)">Larger surfaces are thicker material</h2>
+          <p style="margin:0;font-size:var(--ul-text-md);line-height:1.55;color:var(--ul-color-text-2);text-wrap:pretty">Each tier raises displacement scale, bezel width, blur and shadow depth. sm for controls, md for cards, lg for menus and sidebars, xl for sheets.</p>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:32px;align-items:flex-end">
+          <x-import component-from-global-scope="UL.ULGlass" tier="sm" interactive="{{ yes }}" pressable="{{ yes }}" debug="{{ debug }}" hint-size="260px,64px">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;width:260px;height:64px;padding:0 24px;box-sizing:border-box"><strong style="font-size:var(--ul-text-lg)">sm</strong><span style="font-family:var(--ul-font-mono);font-size:var(--ul-text-xs);color:var(--ul-color-text-2)">{{ specs.sm }}</span></div>
+          </x-import>
+          <x-import component-from-global-scope="UL.ULGlass" tier="md" debug="{{ debug }}" hint-size="260px,170px">
+            <div style="display:flex;flex-direction:column;justify-content:space-between;width:260px;height:170px;padding:22px;box-sizing:border-box"><div style="display:flex;flex-direction:column;gap:4px"><strong style="font-size:var(--ul-text-xl)">md</strong><span style="font-size:var(--ul-text-sm);color:var(--ul-color-text-2)">Cards, tiles</span></div><span style="font-family:var(--ul-font-mono);font-size:var(--ul-text-xs);color:var(--ul-color-text-2)">{{ specs.md }}</span></div>
+          </x-import>
+          <x-import component-from-global-scope="UL.ULGlass" tier="lg" debug="{{ debug }}" hint-size="300px,230px">
+            <div style="display:flex;flex-direction:column;justify-content:space-between;width:300px;height:230px;padding:26px;box-sizing:border-box"><div style="display:flex;flex-direction:column;gap:4px"><strong style="font-size:var(--ul-text-xl)">lg</strong><span style="font-size:var(--ul-text-sm);color:var(--ul-color-text-2)">Menus, popovers, sidebars</span></div><span style="font-family:var(--ul-font-mono);font-size:var(--ul-text-xs);color:var(--ul-color-text-2)">{{ specs.lg }}</span></div>
+          </x-import>
+          <x-import component-from-global-scope="UL.ULGlass" tier="xl" debug="{{ debug }}" hint-size="340px,280px">
+            <div style="display:flex;flex-direction:column;justify-content:space-between;width:340px;height:280px;padding:30px;box-sizing:border-box"><div style="display:flex;flex-direction:column;gap:4px"><strong style="font-size:var(--ul-text-xl)">xl</strong><span style="font-size:var(--ul-text-sm);color:var(--ul-color-text-2)">Sheets, modals</span></div><span style="font-family:var(--ul-font-mono);font-size:var(--ul-text-xs);color:var(--ul-color-text-2)">{{ specs.xl }}</span></div>
+          </x-import>
+        </div>
+      </section>
+
+      <section id="variants" style="display:flex;flex-direction:column;gap:28px">
+        <div style="display:flex;flex-direction:column;gap:8px;max-width:640px;align-self:flex-start;padding:18px 22px;border-radius:var(--ul-radius-lg);background:rgb(var(--ul-color-graphite-rgb) / .82)">
+          <span style="font-family:var(--ul-font-mono);font-size:var(--ul-text-sm);letter-spacing:.08em;color:var(--ul-color-text-2)">07 · VARIANTS</span>
+          <h2 style="margin:0;font-size:var(--ul-text-2xl);font-weight:var(--ul-weight-semibold)">Clear and chrome</h2>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:32px">
+          <x-import component-from-global-scope="UL.ULGlass" tier="lg" variant="clear" debug="{{ debug }}" hint-size="340px,200px">
+            <div style="display:flex;flex-direction:column;gap:6px;width:340px;height:200px;padding:26px;box-sizing:border-box"><strong style="font-size:var(--ul-text-xl)">Clear</strong><span style="font-size:var(--ul-text-md);line-height:1.5;color:var(--ul-color-text-2)">Neutral white tint. Default for content surfaces.</span></div>
+          </x-import>
+          <x-import component-from-global-scope="UL.ULGlass" tier="lg" variant="chrome" debug="{{ debug }}" hint-size="340px,200px">
+            <div style="display:flex;flex-direction:column;gap:6px;width:340px;height:200px;padding:26px;box-sizing:border-box"><strong style="font-size:var(--ul-text-xl)">Chrome</strong><span style="font-size:var(--ul-text-md);line-height:1.5;color:var(--ul-color-text-2)">Cold silver to steel gradient with an ice-blue sheen and rim.</span></div>
+          </x-import>
+        </div>
+      </section>
+
+      <section id="nesting" style="display:flex;flex-direction:column;gap:28px">
+        <div style="display:flex;flex-direction:column;gap:8px;max-width:640px;align-self:flex-start;padding:18px 22px;border-radius:var(--ul-radius-lg);background:rgb(var(--ul-color-graphite-rgb) / .82)">
+          <span style="font-family:var(--ul-font-mono);font-size:var(--ul-text-sm);letter-spacing:.08em;color:var(--ul-color-text-2)">08 · GLASS NEVER SAMPLES GLASS</span>
+          <h2 style="margin:0;font-size:var(--ul-text-2xl);font-weight:var(--ul-weight-semibold)">Nested surfaces flatten automatically</h2>
+          <p style="margin:0;font-size:var(--ul-text-md);line-height:1.55;color:var(--ul-color-text-2);text-wrap:pretty">A ULGlass inside a ULGlass drops its backdrop filter and keeps tint and rim only. Inner radius is concentric: outer 36 minus padding 12.</p>
+        </div>
+        <x-import component-from-global-scope="UL.ULGlass" tier="xl" padding="var(--ul-space-3)" debug="{{ debug }}" hint-size="560px,212px">
+          <div style="display:flex;flex-wrap:wrap;gap:12px;max-width:536px">
+            <x-import component-from-global-scope="UL.ULGlass" tier="md" radius="calc(var(--ul-glass-xl-radius) - var(--ul-space-3))" hint-size="262px,188px">
+              <div style="display:flex;flex-direction:column;gap:6px;width:262px;height:188px;padding:22px;box-sizing:border-box"><strong style="font-size:var(--ul-text-lg)">Concentric</strong><span style="font-size:var(--ul-text-sm);line-height:1.5;color:var(--ul-color-text-2)">radius 24 = 36 − 12. Flattened.</span></div>
+            </x-import>
+            <x-import component-from-global-scope="UL.ULGlass" tier="md" radius="var(--ul-glass-xl-radius)" hint-size="262px,188px">
+              <div style="display:flex;flex-direction:column;gap:6px;width:262px;height:188px;padding:22px;box-sizing:border-box"><strong style="font-size:var(--ul-text-lg)">Same radius</strong><span style="font-size:var(--ul-text-sm);line-height:1.5;color:var(--ul-color-text-2)">radius 36 inside 36. Corners pinch. Don't.</span></div>
+            </x-import>
+          </div>
+        </x-import>
+      </section>
+
+      <section id="materialize" style="display:flex;flex-direction:column;gap:28px">
+        <div style="display:flex;flex-direction:column;gap:8px;max-width:640px;align-self:flex-start;padding:18px 22px;border-radius:var(--ul-radius-lg);background:rgb(var(--ul-color-graphite-rgb) / .82)">
+          <span style="font-family:var(--ul-font-mono);font-size:var(--ul-text-sm);letter-spacing:.08em;color:var(--ul-color-text-2)">09 · MATERIALIZE</span>
+          <h2 style="margin:0;font-size:var(--ul-text-2xl);font-weight:var(--ul-weight-semibold)">The lens forms, then fades in</h2>
+          <p style="margin:0;font-size:var(--ul-text-md);line-height:1.55;color:var(--ul-color-text-2);text-wrap:pretty">Refraction scale animates from 0 with a smooth spring alongside opacity. Hiding collapses the lens first.</p>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;align-items:center;gap:32px">
+          <button type="button" onClick="{{ toggle }}" aria-pressed="{{ shown }}" style="min-height:44px;padding:0 22px;border-radius:var(--ul-radius-capsule);border:1px solid rgb(var(--ul-color-white-rgb) / .24);background:rgb(var(--ul-color-graphite-rgb) / .7);color:var(--ul-color-text);font:inherit;font-size:var(--ul-text-md);font-weight:var(--ul-weight-semibold);cursor:pointer" style-focus="outline:none;box-shadow:var(--ul-focus-ring)">{{ toggleLabel }}</button>
+          <x-import component-from-global-scope="UL.ULGlass" tier="lg" variant="chrome" visible="{{ shown }}" hint-size="320px,200px">
+            <div style="display:flex;flex-direction:column;gap:6px;width:320px;height:200px;padding:26px;box-sizing:border-box"><strong style="font-size:var(--ul-text-xl)">Popover-sized surface</strong><span style="font-size:var(--ul-text-sm);line-height:1.5;color:var(--ul-color-text-2)">Stage 3 adds FLIP morphing from the trigger on top of this.</span></div>
+          </x-import>
+        </div>
+      </section>
+    </sc-if>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;strength&quot;:{&quot;editor&quot;:&quot;range&quot;,&quot;default&quot;:1,&quot;min&quot;:0,&quot;max&quot;:2,&quot;step&quot;:0.1,&quot;tsType&quot;:&quot;number&quot;,&quot;section&quot;:&quot;Glass&quot;},&quot;forceFallback&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Glass&quot;},&quot;debugMaps&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Glass&quot;},&quot;buttonElasticity&quot;:{&quot;editor&quot;:&quot;range&quot;,&quot;default&quot;:1,&quot;min&quot;:0,&quot;max&quot;:1,&quot;step&quot;:0.05,&quot;tsType&quot;:&quot;number&quot;,&quot;section&quot;:&quot;Elasticity&quot;},&quot;globalElasticity&quot;:{&quot;editor&quot;:&quot;range&quot;,&quot;default&quot;:0.6,&quot;min&quot;:0,&quot;max&quot;:1,&quot;step&quot;:0.05,&quot;tsType&quot;:&quot;number&quot;,&quot;section&quot;:&quot;Elasticity&quot;},&quot;popOvershoot&quot;:{&quot;editor&quot;:&quot;range&quot;,&quot;default&quot;:0.05,&quot;min&quot;:0,&quot;max&quot;:0.15,&quot;step&quot;:0.005,&quot;tsType&quot;:&quot;number&quot;,&quot;section&quot;:&quot;Anchored morph&quot;},&quot;popStretch&quot;:{&quot;editor&quot;:&quot;range&quot;,&quot;default&quot;:0.06,&quot;min&quot;:0,&quot;max&quot;:0.15,&quot;step&quot;:0.005,&quot;tsType&quot;:&quot;number&quot;,&quot;section&quot;:&quot;Anchored morph&quot;},&quot;popDuration&quot;:{&quot;editor&quot;:&quot;range&quot;,&quot;default&quot;:500,&quot;min&quot;:150,&quot;max&quot;:900,&quot;step&quot;:10,&quot;unit&quot;:&quot;ms&quot;,&quot;tsType&quot;:&quot;number&quot;,&quot;section&quot;:&quot;Anchored morph&quot;},&quot;popGoo&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Anchored morph&quot;},&quot;slowMotion&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Anchored morph&quot;},&quot;morphDebug&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Anchored morph&quot;},&quot;reduceTransparency&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Accessibility&quot;},&quot;animateBackground&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Background&quot;}}">
+class Component extends DCLogic {
+  state = { open: { menu: false, pop: false, sel: false, tip: false, row: false, acc: false }, acc: { theme: 'app', live: 'violet', custom: '#ff7a59', k: 0.64, legacy: false }, report: [], selValue: 'Weekly', ready: !!window.UL, supported: null, shown: true, specs: {}, error: '', tune: null, defaults: null };
+  benchRef = React.createRef();
+  refs = { menu: React.createRef(), pop: React.createRef(), sel: React.createRef(), tip: React.createRef(), row: React.createRef(), acc: React.createRef() };
+  accRef = React.createRef();
+  setAcc(patch) { this.setState((s) => ({ acc: { ...s.acc, ...patch } })); }
+  updateReport() {
+    const el = this.accRef.current, UL = window.UL;
+    if (!el || !UL || !UL.accentContrastReport) return;
+    const cs = getComputedStyle(el);
+    const list = Object.fromEntries(UL.ACCENT_PRESETS.map((n) => [n, cs.getPropertyValue('--ul-accent-' + n).trim()]));
+    list.custom = this.state.acc.custom;
+    const rows = UL.accentContrastReport(el, list);
+    const key = this.state.acc.theme + this.state.acc.custom + rows.map((r) => r.text2.toFixed(2) + r.textLit.toFixed(2)).join('|');
+    if (key !== this.reportKey) { this.reportKey = key; this.setState({ report: rows }); }
+  }
+  setOpen(k, v) { this.setState((s) => ({ open: { ...s.open, [k]: typeof v === 'function' ? v(s.open[k]) : v } })); }
+  pillRef = React.createRef();
+  drag = null;
+  componentDidMount() {
+    const go = () => { const d = this.readDefaults(); this.setState({ ready: true, specs: this.readSpecs(), defaults: d, tune: this.state.tune || d }); this.sync(); };
+    if (window.UL) go(); else window.addEventListener('ul:ready', go, { once: true });
+    this.onErr = (e) => this.setState({ error: e.detail });
+    window.addEventListener('ul:error', this.onErr);
+  }
+  componentWillUnmount() { window.removeEventListener('ul:error', this.onErr); this._hInd && this._hInd.destroy(); this._hTip && this._hTip.destroy(); }
+  componentDidUpdate() { this.sync(); requestAnimationFrame(() => this.updateReport()); requestAnimationFrame(() => this.wireHdr()); }
+  sync() {
+    const UL = window.UL; if (!UL) return;
+    UL.configureGlass({ strength: this.props.strength ?? 1, forceFallback: !!this.props.forceFallback });
+    const g = this.props.globalElasticity ?? 0.6, b = this.props.buttonElasticity ?? 1;
+    if (g !== this.lastG || b !== this.lastB) {
+      this.lastG = g; this.lastB = b;
+      const root = document.documentElement.style;
+      root.setProperty('--ul-elasticity', String(g));
+      root.setProperty('--ul-elasticity-sm', String(b));
+      UL.refreshGlass();
+    }
+    const pp = this.props;
+    const pm = [pp.popOvershoot ?? 0.05, pp.popStretch ?? 0.06, pp.popDuration ?? 500, pp.popGoo ?? true, !!pp.slowMotion, !!pp.morphDebug].join('|');
+    if (pm !== this.lastPm) {
+      this.lastPm = pm;
+      const root = document.documentElement.style;
+      const d = this.props.popDuration ?? 500;
+      root.setProperty('--ul-pop-overshoot', String(this.props.popOvershoot ?? 0.05));
+      root.setProperty('--ul-pop-stretch', String(this.props.popStretch ?? 0.06));
+      root.setProperty('--ul-pop-enter-duration', `${d}ms`);
+      root.setProperty('--ul-pop-exit-duration', `${Math.round(d * 0.7)}ms`);
+      root.setProperty('--ul-pop-goo', (this.props.popGoo ?? true) ? '1' : '0');
+      UL.configureMorph({ timeScale: this.props.slowMotion ? 4 : 1 });
+      root.setProperty('--ul-pop-goo-opacity', pp.morphDebug ? '0.6' : '0.22');
+      document.documentElement.toggleAttribute('data-ul-morph-debug', !!pp.morphDebug);
+    }
+    const sup = UL.supportsRefraction();
+    if (sup !== this.state.supported) this.setState({ supported: sup });
+  }
+  readDefaults() {
+    const cs = getComputedStyle(document.documentElement);
+    const n = (v, f) => { const x = parseFloat(cs.getPropertyValue(v)); return Number.isFinite(x) ? x : f; };
+    return { blur: n('--ul-glass-md-blur', 2), bezel: n('--ul-glass-md-bezel', 32), scale: n('--ul-glass-md-refraction', 70), aberration: n('--ul-glass-md-aberration', 2), magnify: n('--ul-glass-magnify', 1.04), mode: 'standard' };
+  }
+  readSpecs() {
+    const cs = getComputedStyle(document.documentElement);
+    const v = (n) => parseFloat(cs.getPropertyValue(n));
+    const o = {};
+    for (const t of ['sm', 'md', 'lg', 'xl']) o[t] = `scale ${v(`--ul-glass-${t}-refraction`)} · bezel ${v(`--ul-glass-${t}-bezel`)} · blur ${v(`--ul-glass-${t}-blur`)}`;
+    return o;
+  }
+  setTune(k, v) { this.setState((s) => ({ tune: { ...s.tune, [k]: v } })); }
+  pillDown = (e) => {
+    const el = this.pillRef.current; if (!el) return;
+    e.preventDefault();
+    el.setPointerCapture?.(e.pointerId);
+    this.drag = { sx: e.clientX, sy: e.clientY, x: el.offsetLeft, y: el.offsetTop };
+    el.style.cursor = 'grabbing';
+  };
+  pillMove = (e) => {
+    const d = this.drag, el = this.pillRef.current, bench = this.benchRef.current;
+    if (!d || !el || !bench) return;
+    const x = Math.max(0, Math.min(bench.clientWidth - el.offsetWidth, d.x + e.clientX - d.sx));
+    const y = Math.max(0, Math.min(bench.clientHeight - el.offsetHeight, d.y + e.clientY - d.sy));
+    el.style.left = `${x}px`; el.style.top = `${y}px`;
+  };
+  pillUp = () => { this.drag = null; if (this.pillRef.current) this.pillRef.current.style.cursor = 'grab'; };
+  background() {
+    // Shared pausable backdrop (showcase/ambient-bg.js): transform-only, pauses when hidden / fast scroll / idle / many glass surfaces visible.
+    return React.createElement('ul-ambient-bg', { animate: (this.props.animateBackground ?? true) ? 'true' : 'false' });
+  }
+  hdrRefs = { stageRef: React.createRef(), langRef: React.createRef(), rowRef: React.createRef(), lensRef: React.createRef() };
+  wireHdr() {
+    const UL = window.UL, row = this.hdrRefs.rowRef.current, lens = this.hdrRefs.lensRef.current, stage = this.hdrRefs.stageRef.current;
+    if (!UL || row === this._hRow) return;
+    this._hInd && this._hInd.destroy(); this._hTip && this._hTip.destroy(); this._hInd = this._hTip = null;
+    this._hRow = row;
+    if (!row || !lens || !stage) return;
+    UL.attachGlass(lens, { light: true });
+    this._hInd = UL.createNavIndicator({ container: row, lens, items: 'a[href]' });
+    this._hTip = UL.createAnchoredTooltip({ container: row, layer: stage, clear: () => row.closest('[role="region"]') });
+  }
+  hdrVals() {
+    const cur = (this.state.hdr && this.state.hdr.cur) || 'en', open = !!(this.state.hdr && this.state.hdr.open);
+    const set = (patch) => this.setState((s) => ({ hdr: { cur: 'en', open: false, ...(s.hdr || {}), ...patch } }));
+    const N = [['en', 'English'], ['sk', 'Slovenčina'], ['de', 'Deutsch'], ['cs', 'Čeština']];
+    const close = () => { this._hTip && this._hTip.hide(); set({ open: false }); };
+    return { ...this.hdrRefs, open, exp: open ? 'true' : 'false', curU: cur.toUpperCase(), curT: N.find((n) => n[0] === cur)[1], langAria: 'Language: ' + N.find((n) => n[0] === cur)[1],
+      toggle: () => (open ? close() : set({ open: true })), close,
+      langs: N.map(([code, name]) => ({ code, name, codeU: code.toUpperCase(), flag: '../icons/flags/' + code + '.svg', on: code === cur, cur: code === cur ? 'true' : undefined, pick: (e) => { e.preventDefault(); set({ cur: code }); } })),
+      onKey: (e) => {
+        const f = [...e.currentTarget.querySelectorAll('a[href]')], i = f.indexOf(document.activeElement), k = e.key;
+        if (k === ' ' && i >= 0) { e.preventDefault(); f[i].click(); return; }
+        if (!/^(ArrowLeft|ArrowRight|Home|End)$/.test(k)) return;
+        e.preventDefault();
+        const n = k === 'Home' ? 0 : k === 'End' ? f.length - 1 : i < 0 ? 0 : k === 'ArrowRight' ? Math.min(f.length - 1, i + 1) : Math.max(0, i - 1);
+        f[n] && f[n].focus();
+      } };
+  }
+  islVals() {
+    const D0 = { state: 'expanded', accent: 'violet', variant: 'landing', slow: false };
+    const st = { ...D0, ...(this.state.isl || {}) };
+    const set = (patch) => this.setState((s) => ({ isl: { ...D0, ...(s.isl || {}), ...patch } }));
+    const CFG = {
+      landing: { variant: 'landing', leading: { kind: 'logo', href: '#island', label: 'Ultra Labs, home' }, nav: [{ key: 'solutions', label: 'Solutions', menu: true }, { key: 'work', label: 'Our work', menu: true }, { key: 'company', label: 'Company', menu: true }], megamenu: true, cta: { label: 'Start a project', href: '#island' }, poppers: ['lang'], studioLink: true, accent: null, sticky: false, indicatorRest: false, legibility: 'high' },
+      docs: { variant: 'docs', leading: { kind: 'back', href: '#island', label: 'Back to the website' }, nav: [{ key: 'legal', label: 'Legal', href: '#island' }, { key: 'releases', label: 'Releases', href: '#island' }, { key: 'api', label: 'API', href: '#island' }, { key: 'guides', label: 'Guides', href: '#island' }], megamenu: false, cta: false, poppers: ['lang'], studioLink: true, accent: null, sticky: false, indicatorRest: true, legibility: 'high' },
+    };
+    const pill = (on, pad = 14) => `display:inline-flex;align-items:center;gap:8px;min-height:36px;padding:0 14px 0 ${pad}px;border-radius:var(--ul-radius-capsule);border:1px solid rgb(var(--ul-color-white-rgb) / ${on ? '.5' : '.18'});background:rgb(var(--ul-color-white-rgb) / ${on ? '.14' : '0'});color:var(--ul-color-text);font:inherit;font-size:var(--ul-text-sm);cursor:pointer`;
+    const ACC = [['none', null, 'transparent'], ['violet', 'violet', 'var(--ul-accent-violet)'], ['ice', 'ice', 'var(--ul-accent-ice)'], ['emerald', 'emerald', 'var(--ul-accent-emerald)'], ['amber', 'amber', 'var(--ul-accent-amber)'], ['rose', 'rose', 'var(--ul-accent-rose)'], ['sky', '#0ea5e9', '#0ea5e9'], ['blue', '#3b82f6', '#3b82f6'], ['pink', '#ec4899', '#ec4899'], ['orange', '#f97316', '#f97316']];
+    return {
+      state: st.state, accent: st.accent,
+      states: ['compact', 'expanded', 'notification'].map((t) => ({ t, on: st.state === t, s: pill(st.state === t), go: () => set({ state: t }) })),
+      accents: ACC.map(([t, a, color]) => ({ t, color, on: st.accent === a, s: pill(st.accent === a, 9), go: () => set({ accent: a }) })),
+      dismiss: () => set({ state: 'compact' }),
+      config: CFG[st.variant], current: st.variant === 'docs' ? 'legal' : 'solutions',
+      variants: Object.keys(CFG).map((t) => ({ t, on: st.variant === t, s: pill(st.variant === t), go: () => set({ variant: t, state: 'expanded' }) })),
+      slow: st.slow, slowS: pill(st.slow),
+      toggleSlow: () => { const v = !st.slow; window.UL && window.UL.configureMorph({ timeScale: v ? 4 : 1 }); set({ slow: v }); },
+    };
+  }
+  accVals() {
+    const a = this.state.acc;
+    const presets = (window.UL && window.UL.ACCENT_PRESETS) || ['ice', 'violet', 'emerald', 'amber', 'rose'];
+    const pill = (on, pad = 14) => `display:inline-flex;align-items:center;gap:8px;min-height:36px;padding:0 14px 0 ${pad}px;border-radius:var(--ul-radius-capsule);border:1px solid rgb(var(--ul-color-white-rgb) / ${on ? '.5' : '.18'});background:rgb(var(--ul-color-white-rgb) / ${on ? '.14' : '0'});color:var(--ul-color-text);font:inherit;font-size:var(--ul-text-sm);cursor:pointer`;
+    const all = [...presets.map((n) => ({ n, color: `var(--ul-accent-${n})`, accent: n })), { n: 'custom', color: a.custom, accent: a.custom }];
+    const isLive = (x) => (x.n === 'custom' ? !presets.includes(a.live) : a.live === x.n);
+    const lv = [['subtle', 0.22], ['tinted', 0.64], ['vivid', 1]];
+    const near = lv.reduce((b, l) => (Math.abs(l[1] - a.k) < Math.abs(b[1] - a.k) ? l : b));
+    const cols = ['dark', 'mid', 'light'];
+    const by = {};
+    for (const r of this.state.report) by[`${r.accent}|${r.strength}|${r.backdrop}`] = r;
+    const report = [];
+    let pass = 0, total = 0;
+    for (const x of all) for (const [s] of lv) {
+      report.push({ t: `${x.n} · ${s}`, s: 'color:var(--ul-color-text)' });
+      for (const bd of cols) {
+        const r = by[`${x.n}|${s}|${bd}`];
+        if (r) { total++; if (r.pass) pass++; }
+        report.push(r
+          ? { t: `${r.pass ? '✓' : '✗'} ${r.text2.toFixed(1)} / ${r.textLit.toFixed(1)} · ${r.scrim.toFixed(2)}`, s: `color:${r.pass ? 'var(--ul-color-success)' : 'var(--ul-color-danger)'}` }
+          : { t: '…', s: 'color:var(--ul-color-text-3)' });
+      }
+    }
+    return {
+      theme: a.theme, custom: a.custom, live: a.live, k: a.k,
+      kLabel: `k ${a.k.toFixed(2)} · ≈ ${near[0]}`,
+      legacyAttr: a.legacy ? '' : undefined,
+      themes: ['app', 'marketing'].map((t) => ({ t, on: a.theme === t, s: pill(a.theme === t), go: () => this.setAcc({ theme: t }) })),
+      compare: [['after', false], ['before (stage B)', true]].map(([t, v]) => ({ t, on: a.legacy === v, s: pill(a.legacy === v), go: () => this.setAcc({ legacy: v }) })),
+      swatches: all.map((x) => ({ t: x.n, color: x.color, on: isLive(x), s: pill(isLive(x), 9), go: () => this.setAcc({ live: x.accent }) })),
+      onCustom: (e) => { const v = e.target.value; this.setState((s) => ({ acc: { ...s.acc, custom: v, live: presets.includes(s.acc.live) ? s.acc.live : v } })); },
+      onK: (e) => this.setAcc({ k: parseFloat(e.target.value) }),
+      rows: all.map((x) => ({ t: x.n, color: x.color, accent: x.accent })),
+      menu: ['Rename', 'Duplicate', 'Share'],
+      cols: cols.map((cc) => `${cc} backdrop`),
+      report,
+      passLine: total ? `${pass}/${total} pass` : 'computing…',
+    };
+  }
+  renderVals() {
+    const { ready, supported, shown, specs, error } = this.state;
+    const p = this.props;
+    const t = this.state.tune || { blur: 2, bezel: 32, scale: 70, aberration: 2, magnify: 1.04, mode: 'standard' };
+    let statusText = 'Loading library…', statusDot = 'var(--ul-color-text-3)';
+    if (supported === true) { statusText = 'Refraction on · Chromium'; statusDot = 'var(--ul-color-success)'; }
+    else if (supported === false) { statusText = p.forceFallback ? 'Fallback forced · blur + saturate' : 'Fallback · blur + saturate (non-Chromium)'; statusDot = 'var(--ul-color-warning)'; }
+    if (p.reduceTransparency) statusText += ' · reduced transparency preview';
+    const sl = (key, label, min, max, step, fmt) => ({ label, min, max, step, value: t[key], display: fmt(t[key]), onChange: (e) => this.setTune(key, parseFloat(e.target.value)) });
+    const btn = (on) => `min-height:36px;padding:0 14px;border-radius:var(--ul-radius-capsule);border:1px solid rgb(var(--ul-color-white-rgb) / ${on ? '.5' : '.18'});background:rgb(var(--ul-color-white-rgb) / ${on ? '.16' : '0'});color:var(--ul-color-text);font:inherit;font-size:var(--ul-text-sm);cursor:pointer`;
+    return {
+      ready, notReady: !ready,
+      loadText: error ? `Library failed to load: ${error}` : 'Transpiling src/ in the browser…',
+      rt: p.reduceTransparency ? 'true' : 'false',
+      bg: this.background(),
+      benchRef: this.benchRef, pillRef: this.pillRef,
+      pillDown: this.pillDown, pillMove: this.pillMove, pillUp: this.pillUp,
+      debug: !!p.debugMaps, yes: true,
+      refP: { blur: 1, scale: 70, aberration: 2, magnify: 1, bezel: 32 },
+      tune: t,
+      tuneLine: `${t.mode} · blur ${t.blur} · scale ${t.scale} · ab ${t.aberration}`,
+      sliders: [
+        sl('blur', 'Blur', 0, 8, 0.5, (v) => `${v}px`),
+        sl('bezel', 'Bezel width', 8, 60, 1, (v) => `${v}px`),
+        sl('scale', 'Displacement', 0, 140, 1, (v) => `${v}`),
+        sl('aberration', 'Aberration', 0, 4, 0.1, (v) => v.toFixed(1)),
+        sl('magnify', 'Magnify', 1, 1.08, 0.005, (v) => `${v.toFixed(3)}×`),
+      ],
+      modes: ['standard', 'polar', 'prominent'].map((m) => ({ t: m, on: t.mode === m, s: btn(t.mode === m), go: () => this.setTune('mode', m) })),
+      tuneJson: JSON.stringify({ blur: `${t.blur}px`, bezel: `${t.bezel}px`, refraction: t.scale, aberration: t.aberration, magnify: t.magnify, mode: t.mode }, null, 2),
+      resetTune: () => this.setState((s) => ({ tune: s.defaults })),
+      elasticLine: `controls only · sm ${p.buttonElasticity ?? 1} · md .4 · global ${p.globalElasticity ?? 0.6}`,
+      elasticJson: JSON.stringify({ elasticity: { DEFAULT: p.globalElasticity ?? 0.6, sm: p.buttonElasticity ?? 1, md: 0.4, lg: 0, xl: 0 } }, null, 2),
+      refs: this.refs, open: this.state.open, no: false, morphDebug: !!p.morphDebug,
+      accRef: this.accRef,
+      acc: this.accVals(),
+      isl: this.islVals(),
+      hdr: this.hdrVals(),
+      tog: Object.fromEntries(Object.keys(this.refs).map((k) => [k, () => this.setOpen(k, (v) => !v)])),
+      close: Object.fromEntries(Object.keys(this.refs).map((k) => [k, () => this.setOpen(k, false)])),
+      tip: { show: () => this.setOpen('tip', true), hide: () => this.setOpen('tip', false) },
+      selValue: this.state.selValue,
+      selOptions: ['Daily', 'Weekly', 'Monthly', 'Quarterly'].map((t) => ({ t, on: t === this.state.selValue, mark: t === this.state.selValue ? '✓' : '', pick: () => this.setState((s) => ({ selValue: t, open: { ...s.open, sel: false } })) })),
+      statusText, statusDot, specs: specs || { sm: '', md: '', lg: '', xl: '' }, shown,
+      toggleLabel: shown ? 'Dematerialize' : 'Materialize',
+      toggle: () => this.setState((s) => ({ shown: !s.shown })),
+    };
+  }
+}
+</script>
+</body>
+</html>

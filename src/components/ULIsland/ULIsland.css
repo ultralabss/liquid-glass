@@ -1,0 +1,71 @@
+.ul-island {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ul-island-gap);
+  font-family: var(--ul-font-sans);
+  color: var(--ul-color-text);
+}
+.ul-glass.ul-island-pill {
+  height: var(--ul-island-height);
+  overflow: hidden;
+  padding: 0 var(--ul-space-2);
+}
+.ul-island-track {
+  position: relative;
+  height: 100%;
+  display: flex;
+  align-items: center;
+}
+.ul-island-face {
+  display: flex;
+  align-items: center;
+  gap: var(--ul-space-1);
+  height: 100%;
+  white-space: nowrap;
+  transition: opacity var(--ul-duration-base) var(--ul-ease-standard) 40ms;
+}
+.ul-island-face[data-active="false"] {
+  position: absolute;
+  left: 0;
+  top: 0;
+  opacity: 0;
+  pointer-events: none;
+  transition-delay: 0ms;
+  transition-duration: var(--ul-duration-fast);
+}
+.ul-glass.ul-island-tool {
+  width: var(--ul-island-height);
+  height: var(--ul-island-height);
+  display: grid;
+  place-items: center;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+.ul-glass.ul-island-tool[data-active] { outline: 1px solid color-mix(in srgb, var(--ul-glass-rim-color) 60%, transparent); outline-offset: -1px; }
+.ul-glass.ul-island-tool:focus-visible,
+.ul-island-face :focus-visible { outline: none; box-shadow: var(--ul-focus-ring); }
+
+/* Config face: leading · nav (floating lens below the text) · CTA */
+.ul-island-config { display: flex; align-items: center; gap: var(--ul-space-1); padding: 0 var(--ul-space-1); }
+.ul-island-logo { display: grid; place-items: center; width: 40px; height: 44px; color: inherit; }
+.ul-glass.ul-island-back { display: grid; place-items: center; width: 44px; height: 44px; color: inherit; text-decoration: none; }
+.ul-island-nav { position: relative; display: flex; padding: 0 var(--ul-space-2); }
+.ul-island-nav ul { position: relative; z-index: 1; display: flex; align-items: center; gap: 2px; margin: 0; padding: 0; list-style: none; }
+.ul-island-nav a, .ul-island-nav button {
+  display: inline-flex; align-items: center; gap: 5px; height: 44px; padding: 0 14px; border: 0; border-radius: var(--ul-radius-capsule);
+  background: transparent; color: var(--ul-color-text); font: inherit; font-size: var(--ul-text-sm); font-weight: var(--ul-weight-semibold);
+  letter-spacing: .04em; text-transform: uppercase; text-decoration: none; white-space: nowrap; cursor: pointer; outline: none;
+}
+.ul-island[data-variant="docs"] .ul-island-nav a, .ul-island[data-variant="docs"] .ul-island-nav button { text-transform: none; letter-spacing: 0; font-size: var(--ul-text-md); }
+.ul-island-nav :focus-visible { box-shadow: var(--ul-focus-ring); }
+.ul-glass.ul-island-lens {
+  position: absolute; left: 0; top: 0; width: 0; height: 0; z-index: 0; pointer-events: none; opacity: 0;
+  background: color-mix(in srgb, var(--ul-glass-tint-color) calc(var(--ul-island-lens-tint) * 100%), transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ul-glass-rim-color) 40%, transparent), inset 0 2px 6px rgb(0 0 0 / .28), inset 0 -1px 0 rgb(255 255 255 / .08);
+}
+.ul-island-chev { font-size: var(--ul-text-xs); opacity: .7; }
+.ul-island-cta { display: inline-flex; align-items: center; height: 40px; padding: 0 18px; border-radius: var(--ul-radius-capsule); background: var(--ul-color-text); color: var(--ul-color-graphite); font-size: var(--ul-text-sm); font-weight: var(--ul-weight-bold); letter-spacing: .05em; text-transform: uppercase; text-decoration: none; white-space: nowrap; }
+.ul-island-code { font-family: var(--ul-font-mono); font-size: var(--ul-text-sm); font-weight: var(--ul-weight-semibold); letter-spacing: .08em; }

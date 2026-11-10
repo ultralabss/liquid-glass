@@ -1,0 +1,19 @@
+# Accessibility and size sweep (v0.1 pre-freeze, item 8)
+
+## (a) Static a11y card `a11ystatic` (showcase/demos-kbd.js; probe-charts `?cards=a11ystatic`, motion-test `?norun&card=a11ystatic`)
+12 sections + up to 4 opened overlays each, 1,730 controls scanned (shot docs/shots/8-a11y-static.jpg).
+- Accessible names (icon-only controls): 0 missing.
+- Inputs with label / aria-label: 0 missing.
+- Duplicate ids (per section, open overlays included): 0. tabindex > 0: 0.
+- Roles: 1 failure, fixed: ULTabs set `aria-controls` to a panel that is never rendered when a tab has no `content` → only set when the panel exists. Indeterminate progressbars without aria-valuenow: 2 (allowed by ARIA).
+- Hit areas ≥ 44px: 267 elements below. Breakdown: 72 showcase pill buttons (demo chrome, not library); library: ULButton size sm 36px (46), glass icon / chip buttons 36px (19), feed filter chips 36px (11), calendar day cells 43px (42), tabs 38px (9), segmented items 30 / 38px (17), carousel dots 28px (8), slider thumbs 24px (track is the target), calendar month / year selects 36px, select trigger 40px, menu trigger 36px. Visually hidden native choice inputs and field inputs inside a ≥ 44px well are exempt (label / well is the target).
+  Not fixed in this audit (decision needed): a shared invisible hit layer (`::before` inset to 44px) for sm buttons, chips, tabs, segmented items and carousel dots. They are adjacent targets ≥ 24px (WCAG 2.2 AA 2.5.8 passes); the BRIEF's 44px rule is not met. Recommended for v0.1: add the hit layer in ULButton (sm), chips and carousel dots (no visual change); keep tabs / segmented at 38px (the lens bubble geometry depends on the item box).
+- Reduced motion: every source file with animations or transitions has a reduced path (tokens → 1ms / 150ms crossfade, isMorphReduced, useReducedMotion, useDrawOnce). One literal transition: link underline colour 120ms (typography.css; a colour fade, not motion).
+
+## (b) Bundle
+- dist/ul-glass.js 1,621,301 B (gzip 395,022) · ul-glass.min.js 1,048,620 B (gzip 288,284) · ul-glass.css 268,517 B (gzip 48,936). Production names unchanged.
+- Source by folder: charts 247k · ULContainers 142k · glass 130k · dashboard 124k · ULData 110k · motion 103k · ULPickers 83k · ULBatch2 79k · actions 78k · ULStructure 45k · live 36k · ULField 33k · ULSlider 27k · ULForms 26k · ULIsland 25k · ULSelection 25k · ULListbox 24k · ULButton 21k · index.ts 17k · ULAnchoredSurface 16k · shared 16k · ULSegmented 13k · ULTabs 9k · ULTooltip 6k · island 5k · hooks 4k · ULSpinner 1k.
+- Removed (provably dead): 18 CSS classes / 50 selectors with no reference in src, showcase, landing or apps (old ULChartV1 chart classes ul-chart-title / -plot / -series / -cross / -tip-pos / -toggle / -table / -panel / -chip / -stop / -bar-hi / -bead-body, old pagination ul-page-btn / -gap, ul-modal-head / -title, ul-stat-delta-label, ul-checkmark). ULChartV1 + niceMax (item 1).
+- Kept, listed: 43 tokens not referenced by the library (docs/_unused-tokens.txt: scale steps such as --ul-space-0/8/12/16, rgb triplets, --ul-elasticity-sm…xl, island menu tokens, 3 locked lens / tabs names, --ul-chart-h, --ul-kpi-reveal-delay, …) — public scale API or locked, so not removable without a decision. 69 exports not imported internally (37 stories, 16 types, 16 helpers for tests).
+- Duplicated behaviour: none found beyond the documented debt (landing megamenu outside ULNavigationMenu). The value-tooltip exception (slider / chart) is by rule.
+- Tree-shaking: ESM named exports only, no `export *`. Module-level side effects now: CSS imports, `initGlassDebug()` (reads ?glass / ?glassdebug / ?transparency). Moved out of module scope in this audit: ULTimeAgo's visibilitychange listener (bound on first subscribe), the chart test hook `window.__ulChartStats` (set on first chart). Proposal for package.json (not published): `"sideEffects": ["*.css", "./src/glass/glassDebug.ts", "./dist/*"]`.

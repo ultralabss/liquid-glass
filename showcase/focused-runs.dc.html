@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<title>UltraLabs Glass · Focused runs</title>
+<link rel="stylesheet" href="../tokens/tokens.css">
+<style>html,body{margin:0;background:#0b0d12;color:#f3f6fb}body{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text",system-ui,sans-serif;-webkit-font-smoothing:antialiased}a{color:#8fb8ff}a:hover{color:#c4d8ff}</style>
+</helmet>
+<div style="box-sizing:border-box;min-height:100vh;padding:40px;display:flex;flex-direction:column;gap:24px;max-width:1100px">
+  <header style="display:flex;flex-direction:column;gap:10px">
+    <span style="font-family:var(--ul-font-mono);font-size:13px;letter-spacing:.08em;color:#c3cbd8">FOCUSED RUNS · one card per tab · ?norun&amp;card=&lt;id&gt;</span>
+    <h1 style="margin:0;font-size:32px;font-weight:700">Owner launcher</h1>
+    <p style="margin:0;font-size:15px;line-height:1.6;color:#c3cbd8;text-wrap:pretty">Each button runs one card on its own page in the frame below (one frame at a time; the preview cannot open a new tab). Keep this tab in front, do not touch the pointer while it runs, and read the result on the card. Timing cards need a display at 100 Hz or more (120 Hz expected); run them ×5 and count passes.</p>
+  </header>
+  <div style="{{ rateBox }}">
+    <strong style="font-size:15px">{{ rateTitle }}</strong>
+    <span style="font-size:13.5px;line-height:1.5;color:#dfe5ee">{{ rateText }}</span>
+    <button type="button" onClick="{{ measure }}" style="align-self:flex-start;min-height:44px;padding:0 18px;border-radius:999px;border:1px solid rgb(255 255 255 / .45);background:rgb(255 255 255 / .12);color:#fff;font:600 14px/1 inherit;cursor:pointer">Measure again</button>
+  </div>
+  <sc-if value="{{ hasRun }}" hint-placeholder-val="{{ false }}">
+    <section style="display:flex;flex-direction:column;gap:10px">
+      <div style="display:flex;flex-wrap:wrap;align-items:center;gap:12px">
+        <strong style="font:600 15px/1.3 var(--ul-font-mono)">{{ runLabel }}</strong>
+        <button type="button" onClick="{{ reload }}" style="min-height:44px;padding:0 16px;border-radius:999px;border:1px solid rgb(255 255 255 / .45);background:rgb(255 255 255 / .12);color:#fff;font:600 13.5px/1 inherit;cursor:pointer">Run again</button>
+        <button type="button" onClick="{{ close }}" style="min-height:44px;padding:0 16px;border-radius:999px;border:1px solid rgb(255 255 255 / .3);background:transparent;color:#dfe5ee;font:600 13.5px/1 inherit;cursor:pointer">Close</button>
+      </div>
+      <iframe key="{{ runKey }}" src="{{ runSrc }}" title="{{ runLabel }}" style="width:100%;height:78vh;border:0;border-radius:14px;box-shadow:0 0 0 1px rgb(255 255 255 / .2);background:#0b0d12"></iframe>
+    </section>
+  </sc-if>
+  <sc-for list="{{ groups }}" as="g" hint-placeholder-count="3">
+    <section style="display:flex;flex-direction:column;gap:12px">
+      <h2 style="margin:0;font-size:18px;font-weight:650">{{ g.title }}</h2>
+      <p style="margin:0;font-size:13.5px;color:#c3cbd8">{{ g.note }}</p>
+      <div style="display:flex;flex-wrap:wrap;gap:10px">
+        <sc-for list="{{ g.cards }}" as="c" hint-placeholder-count="6">
+          <button type="button" onClick="{{ c.open }}" aria-pressed="{{ c.on }}" style="{{ c.s }}"><span>{{ c.id }}</span><span style="font:500 12px/1 inherit;color:#b9c2d0">{{ c.page }}</span></button>
+        </sc-for>
+      </div>
+    </section>
+  </sc-for>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+const MT = './motion-test.dc.html', LT = './lens-tests.dc.html';
+const GROUPS = [
+  { title: 'Open items (rerun after the nested-menu / feed / select fixes)', note: 'feed = Activity feed (soft insert, queue pill, chips, details), ×1. select = ULSelect morph, ×5 at ≥ 100 Hz. nested3 = 3-level menu hover / close order / Esc, ×1.', page: MT, ids: ['feed', 'select', 'nested3'] },
+  { title: 'Guards (frame-independent, ×1)', note: 'Must PASS at any frame rate.', page: MT, ids: ['hitarea', 'kbdaudit', 'material', 'otplayout'] },
+  { title: 'Overlays + morph (×5, ≥ 100 Hz)', note: 'covered: also run with &only=modal,cmd and &modes=cold,warm,interrupt. ctx = the context menu morph case.', page: MT, ids: ['covered', 'ctx', 'ctxmenu', 'coveredanchor', 'collheight', 'tglide'] },
+  { title: 'Charts timing (×5, ≥ 100 Hz)', note: 'Frame timing limits are relative to the measured refresh period.', page: MT, ids: ['chartperf', 'streamperf', 'charttip', 'chartdraw', 'zoomsmooth', 'advtip'] },
+  { title: 'Batch 2 components (×1, timing ones ×5)', note: 'f3d* cards.', page: MT, ids: ['f3dhovercard', 'f3dmenubar', 'f3dnavmenu', 'f3dnativeselect', 'f3dcalendar', 'f3daspect', 'f3dresizable', 'f3dcarousel', 'f3dtypography', 'f3dcontrast3d'] },
+  { title: 'Lens / thumb (lens-tests, ×5, ≥ 100 Hz)', note: 'switch = drag + flick release; slider = drag follow; seg = segmented hold, drag, release.', page: LT, ids: ['switch', 'switch-logic', 'slider', 'range', 'seg', 'tabs', 'timing'] },
+];
+class Component extends DCLogic {
+  state = { hz: null, p50: null, gaps: 0, n: 0, run: null, runN: 0 };
+  open = (page, id) => { this.setState((s) => ({ run: { page, id }, runN: s.runN + 1 })); requestAnimationFrame(() => window.scrollTo({ top: 0 })); };
+  componentDidMount() { this.measure(); }
+  // keep this page's query + hash (the preview host's access token travels there) and add norun + card
+  href(page, id) {
+    const u = new URL(page, location.href), cur = new URLSearchParams(location.search);
+    cur.forEach((v, k) => { if (k !== 'card' && k !== 'norun') u.searchParams.set(k, v); });
+    // same frame on purpose: a new tab has no preview access ("preview token required")
+    u.searchParams.set('norun', ''); u.searchParams.set('card', id); u.hash = location.hash;
+    return u.toString().replace('norun=&', 'norun&');
+  }
+  measure = () => {
+    const ts = []; this.setState({ hz: null });
+    const step = (t) => { ts.push(t); if (ts.length < 121) requestAnimationFrame(step); else {
+      const d = ts.slice(1).map((x, i) => x - ts[i]).sort((a, b) => a - b), p50 = d[Math.floor(d.length / 2)];
+      this.setState({ hz: Math.round(1000 / p50), p50, gaps: d.filter((x) => x > p50 * 2).length, n: d.length });
+    } };
+    requestAnimationFrame(step);
+  };
+  renderVals() {
+    const s = this.state, low = s.hz != null && s.hz < 100;
+    return {
+      measure: this.measure,
+      rateTitle: s.hz == null ? 'Measuring the refresh rate…' : `Measured ${s.hz} Hz (median frame ${s.p50.toFixed(1)} ms, ${s.gaps} gaps > 2× in ${s.n} frames) · expected 120 Hz`,
+      rateText: s.hz == null ? 'Keep this tab in front.' : low ? 'Below 100 Hz: timing cards report NEEDS HEALTHY PREVIEW or fail. Close other tabs, plug in power, use the 120 Hz display, then measure again.' : 'OK for timing cards. Limits scale with this period (p95 ≤ 1.15 × period, fps ≥ 0.9 × rate).',
+      rateBox: { display: 'flex', flexDirection: 'column', gap: '8px', padding: '16px 18px', borderRadius: '14px', background: low ? 'rgb(255 90 138 / .12)' : 'rgb(255 255 255 / .05)', boxShadow: `inset 0 0 0 1px ${low ? 'rgb(255 90 138 / .55)' : 'rgb(255 255 255 / .16)'}` },
+      hasRun: !!s.run,
+      runLabel: s.run ? `${s.run.id} · ${s.run.page === LT ? 'lens-tests' : 'motion-test'}` : '',
+      runSrc: s.run ? this.href(s.run.page, s.run.id) : 'about:blank',
+      runKey: 'run' + s.runN,
+      reload: () => this.setState((x) => ({ runN: x.runN + 1 })),
+      close: () => this.setState({ run: null }),
+      groups: GROUPS.map((g) => ({ title: g.title, note: g.note, cards: g.ids.map((id) => {
+        const on = !!s.run && s.run.id === id && s.run.page === g.page;
+        return { id, on: String(on), page: g.page === LT ? 'lens' : 'motion', open: () => this.open(g.page, id),
+          s: { display: 'inline-flex', alignItems: 'center', gap: '8px', minHeight: '44px', padding: '0 16px', borderRadius: '999px', border: 0, cursor: 'pointer', background: on ? 'rgb(143 184 255 / .22)' : 'rgb(255 255 255 / .08)', boxShadow: `inset 0 0 0 1px ${on ? 'rgb(143 184 255 / .8)' : 'rgb(255 255 255 / .22)'}`, color: '#f3f6fb', font: '600 13.5px/1 var(--ul-font-mono)' } };
+      }) })),
+    };
+  }
+}
+</script>
+</body>
+</html>

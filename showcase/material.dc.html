@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<title>Material: glass and flat</title>
+<link rel="stylesheet" href="../tokens/tokens.css">
+<script src="../dist/ul-glass.min.js"></script>
+<script src="./ul-contrast.js"></script>
+<script src="./demos-material.js"></script>
+<style>html,body{margin:0;background:#0b0d12;color:#f3f6fb;font-family:system-ui,sans-serif}a{color:#8fb8ff}a:hover{color:#eef2f8}</style>
+</helmet>
+<div data-ul-theme="app" data-ul-accent="violet" data-ul-backdrop="dark" style="box-sizing:border-box;min-height:100vh;padding:32px;display:flex;flex-direction:column;gap:20px;background:radial-gradient(circle at 85% 0%, #3b2a6b 0, transparent 45%), radial-gradient(circle at 0% 70%, #12304d 0, transparent 42%), #0b0d12">
+  <header style="display:flex;flex-direction:column;gap:8px;max-width:900px">
+    <span style="font-family:var(--ul-font-mono);font-size:13px;letter-spacing:.08em;color:#c3cbd8">SHOWCASE · MATERIAL</span>
+    <h1 style="margin:0;font-size:30px;font-weight:700">Material: glass and flat</h1>
+    <p style="margin:0;font-size:15px;line-height:1.6;color:#c3cbd8;text-wrap:pretty">The same form four times. Mixed is the default (inputs flat, everything else glass). Before = <code>{ inputs: "glass" }</code>, the look before the material prop. Open the date picker in Flat: its popover stays glass unless the overlays category is flat too.</p>
+  </header>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px;align-items:start">
+    <section data-screen-label="Mixed" style="display:flex;flex-direction:column;gap:12px;padding:20px;border-radius:20px;background:#12151c;box-shadow:inset 0 0 0 1px rgb(255 255 255 / .08);min-width:0">
+      <h2 style="margin:0;font-size:16px;font-weight:600">Mixed (default)</h2>
+      <x-import component-from-global-scope="ULDemos.MaterialForm" from="./demos-material.js" mode="mixed" hint-size="100%,620px"></x-import>
+    </section>
+    <section data-screen-label="Glass" style="display:flex;flex-direction:column;gap:12px;padding:20px;border-radius:20px;background:#12151c;box-shadow:inset 0 0 0 1px rgb(255 255 255 / .08);min-width:0">
+      <h2 style="margin:0;font-size:16px;font-weight:600">Glass · material="glass"</h2>
+      <x-import component-from-global-scope="ULDemos.MaterialForm" from="./demos-material.js" mode="glass" hint-size="100%,620px"></x-import>
+    </section>
+    <section data-screen-label="Flat" style="display:flex;flex-direction:column;gap:12px;padding:20px;border-radius:20px;background:#12151c;box-shadow:inset 0 0 0 1px rgb(255 255 255 / .08);min-width:0">
+      <h2 style="margin:0;font-size:16px;font-weight:600">Flat · material="flat"</h2>
+      <x-import component-from-global-scope="ULDemos.MaterialForm" from="./demos-material.js" mode="flat" hint-size="100%,620px"></x-import>
+    </section>
+    <section data-screen-label="Before" style="display:flex;flex-direction:column;gap:12px;padding:20px;border-radius:20px;background:#12151c;box-shadow:inset 0 0 0 1px rgb(255 255 255 / .08);min-width:0">
+      <h2 style="margin:0;font-size:16px;font-weight:600">Before · inputs glass</h2>
+      <x-import component-from-global-scope="ULDemos.MaterialForm" from="./demos-material.js" mode="before" hint-size="100%,620px"></x-import>
+    </section>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

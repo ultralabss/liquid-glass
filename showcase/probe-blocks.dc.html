@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<title>probe blocks</title>
+<link rel="stylesheet" href="../tokens/tokens.css">
+<script src="../dist/ul-glass.min.js"></script>
+<script src="./demo-lazy.js"></script>
+<style>html,body{margin:0;background:#0b0d12;color:#f3f6fb;font-family:system-ui,sans-serif}a{color:#8fb8ff}a:hover{color:#eef2f8}</style>
+</helmet>
+<div data-ul-theme="app" data-ul-accent="violet" data-ul-backdrop="dark" style="padding:32px;display:flex;flex-direction:column;gap:16px;max-width:1280px">
+  <sc-if value="{{ a }}" hint-placeholder-val="{{ false }}"><x-import component-from-global-scope="ULDemos.Blocks" from="./demos-2l.js" hint-size="100%,1600px"></x-import></sc-if>
+  <sc-if value="{{ b }}" hint-placeholder-val="{{ false }}"><x-import component-from-global-scope="ULDemos.Blocks2" from="./demos-2n.js" hint-size="100%,2400px"></x-import></sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { ready: !!window.UL };
+  componentDidMount() { if (!this.state.ready) window.addEventListener('ul:ready', () => this.setState({ ready: true }), { once: true }); }
+  renderVals() {
+    const w = new URLSearchParams(location.search).get('which') || 'a';
+    return { a: this.state.ready && w.includes('a'), b: this.state.ready && w.includes('b') };
+  }
+}
+</script>
+</body>
+</html>

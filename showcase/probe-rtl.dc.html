@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<title>probe rtl</title>
+<link rel="stylesheet" href="../tokens/tokens.css">
+<script src="../dist/ul-glass.min.js"></script>
+<style>html,body{margin:0;background:#0b0d12;color:#f3f6fb;font-family:system-ui,sans-serif}a{color:#8fb8ff}a:hover{color:#eef2f8}</style>
+</helmet>
+<div data-ul-theme="app" data-ul-accent="violet" data-ul-backdrop="dark" style="padding:24px;display:flex;flex-direction:column;gap:16px;max-width:1320px;box-sizing:border-box;">
+  <h1 style="margin:0;font-size:20px;font-weight:600">RTL audit probe (Task 3D item 8)</h1>
+  <p style="margin:0;font-size:13px;color:var(--ul-color-text-2)">Ten components inside dir="rtl". ?ltr renders the same set left to right for comparison. RTL is not supported in v0.1; findings: docs/rtl-audit.md.</p>
+  <x-import component-from-global-scope="ULDemos.Rtl" from="./demos-rtl.js" hint-size="100%,1200px"></x-import>
+</div>
+
+</x-dc>
+</body>
+</html>

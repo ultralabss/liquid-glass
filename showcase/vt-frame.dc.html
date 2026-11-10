@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<title>UltraLabs Glass · viewport test frame</title>
+<link rel="stylesheet" href="../tokens/tokens.css">
+<script src="../dist/ul-glass.min.js"></script>
+<script src="./demo-lazy.js"></script>
+<script src="./viewport-harness.js"></script>
+<style>html,body{margin:0;background:#0b0d12;color:#f3f6fb}body{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text",system-ui,sans-serif}a{color:#8fb8ff}a:hover{color:#c4d8ff}</style>
+</helmet>
+<div data-ul-theme="app" data-ul-accent="violet" data-ul-backdrop="dark" style="box-sizing:border-box;min-height:100vh;padding:16px;display:flex;flex-direction:column;gap:16px;background:radial-gradient(circle at 80% 20%, #8b5cf6 0, transparent 34%), linear-gradient(135deg, #12304d, #2a1240)">
+  <div data-case="select" style="width:220px"><x-import component-from-global-scope="UL.ULSelect" dc-props="{{ sel }}" hint-size="220px,72px"></x-import></div>
+  <div id="vt-progress" style="font:12px/1.4 ui-monospace,monospace;color:#cfe3ff">waiting · demos mount lazily per step</div>
+  <div id="vt-fixtures"></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    return { sel: { label: 'Country', defaultValue: 'sk', options: [['sk', 'Slovakia'], ['cz', 'Czechia'], ['de', 'Germany'], ['at', 'Austria'], ['pl', 'Poland']].map(([value, label]) => ({ value, label })) } };
+  }
+}
+</script>
+</body>
+</html>

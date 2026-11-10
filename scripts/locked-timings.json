@@ -1,0 +1,385 @@
+{
+ "$description": "Every locked timing (DESIGN.md \"Locked timings\", approved 2026-11-07). Checked by scripts/check-locked.mjs against tokens.json, tokens.css and DESIGN.md. Never edit values without owner sign-off.",
+ "total": 42,
+ "groups": {
+  "lens": 23,
+  "switch": 3,
+  "selection-switch": 4,
+  "tabs": 2,
+  "slider": 1,
+  "pop": 6,
+  "spring": 3
+ },
+ "locked": [
+  {
+   "group": "lens",
+   "name": "--ul-lens-scale",
+   "value": "1.3",
+   "design": {
+    "row": "`--ul-lens-scale`"
+   }
+  },
+  {
+   "group": "lens",
+   "name": "--ul-lens-scale-switch",
+   "value": "1.55",
+   "design": {
+    "row": "`--ul-lens-scale-switch`"
+   }
+  },
+  {
+   "group": "lens",
+   "name": "--ul-lens-overshoot",
+   "value": "0.04",
+   "design": {
+    "row": "`--ul-lens-overshoot`"
+   }
+  },
+  {
+   "group": "lens",
+   "name": "--ul-lens-zeta-min",
+   "value": "0.64",
+   "design": {
+    "row": "`--ul-lens-zeta-min`"
+   }
+  },
+  {
+   "group": "lens",
+   "name": "--ul-lens-grow-duration",
+   "value": "570ms",
+   "design": {
+    "row": "`--ul-lens-grow-duration`"
+   }
+  },
+  {
+   "group": "lens",
+   "name": "--ul-lens-shrink-duration",
+   "value": "600ms",
+   "design": {
+    "row": "`--ul-lens-shrink-duration`"
+   }
+  },
+  {
+   "group": "lens",
+   "name": "--ul-lens-settle-hold",
+   "value": "60ms",
+   "design": {
+    "row": "`--ul-lens-settle-hold`"
+   }
+  },
+  {
+   "group": "lens",
+   "name": "--ul-lens-settle-duration",
+   "value": "420ms",
+   "design": {
+    "row": "`--ul-lens-settle-duration`"
+   }
+  },
+  {
+   "group": "lens",
+   "name": "--ul-lens-shrink-start",
+   "value": "0.45",
+   "design": {
+    "row": "`--ul-lens-shrink-start`"
+   }
+  },
+  {
+   "group": "lens",
+   "name": "--ul-lens-release-linger",
+   "value": "570ms",
+   "design": {
+    "row": "`--ul-lens-release-linger`"
+   }
+  },
+  {
+   "group": "lens",
+   "name": "--ul-lens-follow",
+   "value": "80ms",
+   "design": {
+    "row": "`--ul-lens-follow`"
+   }
+  },
+  {
+   "group": "lens",
+   "name": "--ul-lens-lead",
+   "value": "70ms",
+   "design": {
+    "row": "`--ul-lens-lead` / `--ul-lens-trail`",
+    "part": 0
+   }
+  },
+  {
+   "group": "lens",
+   "name": "--ul-lens-trail",
+   "value": "150ms",
+   "design": {
+    "row": "`--ul-lens-lead` / `--ul-lens-trail`",
+    "part": 1
+   }
+  },
+  {
+   "group": "lens",
+   "name": "--ul-lens-stretch",
+   "value": "0.06",
+   "design": {
+    "row": "`--ul-lens-stretch` / `--ul-lens-drag-stretch`",
+    "part": 0
+   }
+  },
+  {
+   "group": "lens",
+   "name": "--ul-lens-drag-stretch",
+   "value": "0.14",
+   "design": {
+    "row": "`--ul-lens-stretch` / `--ul-lens-drag-stretch`",
+    "part": 1
+   }
+  },
+  {
+   "group": "lens",
+   "name": "--ul-lens-magnify",
+   "value": "1.06",
+   "design": {
+    "row": "`--ul-lens-magnify`"
+   }
+  },
+  {
+   "group": "lens",
+   "name": "--ul-lens-rubber",
+   "value": "0.55",
+   "design": {
+    "row": "`--ul-lens-rubber`"
+   }
+  },
+  {
+   "group": "lens",
+   "name": "--ul-lens-flick",
+   "value": "140ms",
+   "design": {
+    "row": "`--ul-lens-flick`"
+   }
+  },
+  {
+   "group": "lens",
+   "name": "--ul-lens-overgrow-switch",
+   "value": "5px",
+   "design": {
+    "row": "`--ul-lens-overgrow-switch` / `-slider` / `-tabs`",
+    "part": 0
+   }
+  },
+  {
+   "group": "lens",
+   "name": "--ul-lens-overgrow-slider",
+   "value": "6px",
+   "design": {
+    "row": "`--ul-lens-overgrow-switch` / `-slider` / `-tabs`",
+    "part": 1
+   }
+  },
+  {
+   "group": "lens",
+   "name": "--ul-lens-overgrow-tabs",
+   "value": "2px",
+   "design": {
+    "row": "`--ul-lens-overgrow-switch` / `-slider` / `-tabs`",
+    "part": 2
+   }
+  },
+  {
+   "group": "lens",
+   "name": "--ul-lens-radius-mode",
+   "value": "concentric",
+   "design": {
+    "row": "`--ul-lens-radius-mode` / `--ul-lens-radius`",
+    "part": 0
+   }
+  },
+  {
+   "group": "lens",
+   "name": "--ul-lens-radius",
+   "value": "12px",
+   "design": {
+    "row": "`--ul-lens-radius-mode` / `--ul-lens-radius`",
+    "part": 1
+   }
+  },
+  {
+   "group": "switch",
+   "name": "--ul-switch-thumb-ratio",
+   "value": "1.57",
+   "design": {
+    "row": "`--ul-switch-thumb-ratio`"
+   }
+  },
+  {
+   "group": "switch",
+   "name": "--ul-switch-toggle-duration",
+   "value": "560ms",
+   "design": {
+    "row": "`--ul-switch-toggle-duration`"
+   }
+  },
+  {
+   "group": "switch",
+   "name": "--ul-switch-drag-threshold",
+   "value": "4px",
+   "design": {
+    "row": "`--ul-switch-drag-threshold`"
+   }
+  },
+  {
+   "group": "selection-switch",
+   "name": "--ul-selection-switch-w",
+   "value": "62px",
+   "design": {
+    "row": "switch geometry",
+    "contains": "62 ×"
+   }
+  },
+  {
+   "group": "selection-switch",
+   "name": "--ul-selection-switch-h",
+   "value": "27px",
+   "design": {
+    "row": "switch geometry",
+    "contains": "× 27"
+   }
+  },
+  {
+   "group": "selection-switch",
+   "name": "--ul-selection-switch-inset",
+   "value": "2px",
+   "design": {
+    "row": "switch geometry",
+    "contains": "inset 2"
+   }
+  },
+  {
+   "group": "selection-switch",
+   "name": "--ul-selection-switch-thumb",
+   "value": "23px",
+   "design": {
+    "row": "switch geometry",
+    "contains": "thumb 23"
+   }
+  },
+  {
+   "group": "tabs",
+   "name": "--ul-tabs-glide",
+   "value": "300ms",
+   "design": {
+    "row": "`--ul-tabs-glide`"
+   }
+  },
+  {
+   "group": "tabs",
+   "name": "--ul-tabs-press-glide",
+   "value": "280ms",
+   "design": {
+    "row": "`--ul-tabs-press-glide`"
+   }
+  },
+  {
+   "group": "slider",
+   "name": "--ul-slider-follow",
+   "value": "75ms",
+   "design": {
+    "row": "`--ul-slider-follow`"
+   }
+  },
+  {
+   "group": "pop",
+   "name": "--ul-pop-enter-duration",
+   "value": "500ms",
+   "design": {
+    "row": "`--ul-pop-*`",
+    "contains": "enter 500ms"
+   }
+  },
+  {
+   "group": "pop",
+   "name": "--ul-pop-exit-duration",
+   "value": "350ms",
+   "design": {
+    "row": "`--ul-pop-*`",
+    "contains": "exit 350ms"
+   }
+  },
+  {
+   "group": "pop",
+   "name": "--ul-pop-lag",
+   "value": "50ms",
+   "design": {
+    "row": "`--ul-pop-*`",
+    "contains": "lag 50ms"
+   }
+  },
+  {
+   "group": "pop",
+   "name": "--ul-pop-overshoot",
+   "value": "0.05",
+   "design": {
+    "row": "`--ul-pop-*`",
+    "contains": "overshoot 0.05"
+   }
+  },
+  {
+   "group": "pop",
+   "name": "--ul-pop-stretch",
+   "value": "0.06",
+   "design": {
+    "row": "`--ul-pop-*`",
+    "contains": "stretch 0.06"
+   }
+  },
+  {
+   "group": "pop",
+   "name": "--ul-pop-offset",
+   "value": "8px",
+   "design": {
+    "row": "`--ul-pop-*`",
+    "contains": "offset 8px"
+   }
+  },
+  {
+   "group": "spring",
+   "name": "spring.bouncy",
+   "value": {
+    "stiffness": 220,
+    "damping": 14,
+    "mass": 1
+   },
+   "design": {
+    "row": "spring `bouncy`",
+    "contains": "k 220, c 14, m 1"
+   }
+  },
+  {
+   "group": "spring",
+   "name": "spring.smooth",
+   "value": {
+    "stiffness": 170,
+    "damping": 26,
+    "mass": 1
+   },
+   "design": {
+    "row": "spring `smooth`",
+    "contains": "k 170, c 26, m 1"
+   }
+  },
+  {
+   "group": "spring",
+   "name": "spring.snappy",
+   "value": {
+    "stiffness": 380,
+    "damping": 30,
+    "mass": 1
+   },
+   "design": {
+    "row": "spring `snappy`",
+    "contains": "k 380, c 30, m 1"
+   }
+  }
+ ]
+}

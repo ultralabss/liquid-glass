@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<title>probe forms</title>
+<link rel="stylesheet" href="../tokens/tokens.css">
+<script src="../dist/ul-glass.min.js"></script>
+<script src="./demo-lazy.js"></script>
+<script src="./ul-contrast.js"></script>
+<script src="./demos-2o.js"></script>
+<style>html,body{margin:0;background:#0b0d12;color:#f3f6fb;font-family:system-ui,sans-serif}a{color:#8fb8ff}a:hover{color:#eef2f8}</style>
+</helmet>
+<div data-ul-theme="app" data-ul-accent="violet" data-ul-backdrop="dark" style="padding:24px;display:flex;flex-direction:column;gap:16px;max-width:1320px;box-sizing:border-box;background:radial-gradient(circle at 80% 0%, #3b2a6b 0, transparent 45%), radial-gradient(circle at 0% 60%, #12304d 0, transparent 40%), #0b0d12;min-height:100vh">
+  <h1 style="margin:0;font-size:20px;font-weight:600">Forms + feedback probe</h1>
+  <p style="margin:0;font-size:13px;color:var(--ul-color-text-2)">Modes: ?only=forms|feedback|batch2 · ?cards=&lt;ids&gt;|all · ?guard (1280×800, 924×540, 375×667 iframes) · ?guardframe · ?contrast</p>
+  <sc-if value="{{ outOn }}" hint-placeholder-val="{{ false }}"><pre style="margin:0;white-space:pre-wrap;font:12px/1.5 ui-monospace,monospace;color:#cfe3ff">{{ outText }}</pre></sc-if>
+  <sc-if value="{{ forms }}" hint-placeholder-val="{{ false }}">
+    <h2 style="margin:8px 0 0;font-size:16px;font-weight:600">Forms</h2>
+    <x-import component-from-global-scope="ULDemos.Lazy" from="./demo-lazy.js" min-height="{{ minH }}" label="forms" hint-size="100%,900px"><x-import component-from-global-scope="ULDemos.Forms" from="./demos-3e.js" hint-size="100%,900px"></x-import></x-import>
+  </sc-if>
+  <sc-if value="{{ batch2 }}" hint-placeholder-val="{{ false }}">
+    <h2 style="margin:8px 0 0;font-size:16px;font-weight:600">Batch 2 (Task 3D)</h2>
+    <x-import component-from-global-scope="ULDemos.Lazy" from="./demo-lazy.js" min-height="{{ minH }}" label="batch2" hint-size="100%,900px"><x-import component-from-global-scope="ULDemos.Batch2" from="./demos-3h.js" hint-size="100%,900px"></x-import></x-import>
+  </sc-if>
+  <sc-if value="{{ feedback }}" hint-placeholder-val="{{ false }}">
+    <h2 style="margin:8px 0 0;font-size:16px;font-weight:600">Feedback + structure</h2>
+    <x-import component-from-global-scope="ULDemos.Lazy" from="./demo-lazy.js" min-height="{{ minH }}" label="feedback" hint-size="100%,900px"><x-import component-from-global-scope="ULDemos.Feedback" from="./demos-3f.js" hint-size="100%,900px"></x-import></x-import>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { ready: !!window.UL, outText: '' };
+  componentDidMount() {
+    const go = () => { this.setState({ ready: true }); this.mode(); };
+    if (window.UL) setTimeout(go, 0); else window.addEventListener('ul:ready', go, { once: true });
+  }
+  async mode() {
+    const q = new URLSearchParams(location.search);
+    const load = (src) => new Promise((res, rej) => { if (document.querySelector(`script[data-probe="${src}"]`)) return res(); const s = document.createElement('script'); s.src = src; s.dataset.probe = src; s.onload = res; s.onerror = rej; document.head.appendChild(s); });
+    const waitFor = async (k) => { for (let i = 0; i < 150 && !(window.ULDemos && window.ULDemos[k]); i++) await new Promise((r) => setTimeout(r, 100)); };
+    if (!(q.has('cards') || q.has('guard') || q.has('guardframe') || q.has('contrast'))) return;
+    await load('./demos-3e.js'); await load('./demos-3f.js'); await load('./demos-3g.js'); await load('./demos-3h.js'); await load('./demos-3i.js');
+    await waitFor('formsTests'); await waitFor('batch2Tests');
+    const T = window.ULDemos.formsTests;
+    const fmt = (rs) => rs.map(({ id, r }) => `${id} ${String(r.status).toUpperCase()}${r.driver ? ' · mode: ' + r.driver : ''}\n` + (r.checks || []).map((c) => (c.pass === false ? '  FAIL ' : c.pass ? '  pass ' : '   –   ') + c.label + ' · ' + c.value).join('\n')).join('\n\n');
+    try {
+      if (q.has('contrast')) { const r = await T.contrast(); window.__formsContrast = r; this.setState({ outText: `contrast: ${r.checked} rows · ${r.fails} fail\n` + Object.entries(r.worst).map(([k, w]) => `${w.pass ? 'pass ' : 'FAIL '}${k}: ${w.v} · ${w.combo}`).join('\n') }); }
+      if (q.get('cards')) {
+        const ids = q.get('cards') === 'all' ? Object.keys(T.cards) : q.get('cards').split(',');
+        const out = []; window.__cards = out;
+        for (const id of ids) { let r; try { r = await T.cards[id](); } catch (e) { r = { status: 'error', checks: [{ label: String(e && e.message || e), pass: false, value: '' }] }; } out.push({ id, r }); this.setState({ outText: fmt(out) }); }
+      }
+      if (q.has('guardframe')) { await waitFor('__scanControls'); const r = await T.guard(); window.__guard = r; parent !== window && parent.postMessage({ formsGuard: r }, '*'); this.setState({ outText: fmt([{ id: r.size, r }]) }); }
+      if (q.has('guard')) {
+        const out = [];
+        for (const [w, hh] of [[1280, 800], [924, 540], [375, 667]]) {
+          const fr = document.createElement('iframe'); const k = Math.min(1, (innerWidth - 20) / w, (innerHeight - 20) / hh);
+          fr.style.cssText = `position:fixed;left:10px;top:10px;width:${w}px;height:${hh}px;border:0;z-index:2000;transform:scale(${k});transform-origin:0 0;background:#0b0d12`;
+          fr.src = location.pathname + '?guardframe';
+          const r = await new Promise((res) => { const on = (e) => { if (e.source === fr.contentWindow && e.data && e.data.formsGuard) { removeEventListener('message', on); res(e.data.formsGuard); } }; addEventListener('message', on); document.body.appendChild(fr); setTimeout(() => res({ size: w + '×' + hh, status: 'timeout', checks: [] }), 120000); });
+          fr.remove(); out.push({ id: r.size, r }); this.setState({ outText: fmt(out) });
+        }
+        window.__guardAll = out;
+      }
+    } catch (e) { this.setState({ outText: 'ERROR ' + (e && e.message || e) }); }
+  }
+  renderVals() {
+    const q = new URLSearchParams(location.search);
+    const test = q.has('cards') || q.has('guard') || q.has('guardframe') || q.has('contrast');
+    const only = q.get('only');
+    return { forms: this.state.ready && !test && (!only || only === 'forms'), feedback: this.state.ready && !test && (!only || only === 'feedback'), batch2: this.state.ready && !test && (!only || only === 'batch2'), outOn: !!this.state.outText, outText: this.state.outText, minH: 900 };
+  }
+}
+</script>
+</body>
+</html>

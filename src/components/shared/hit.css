@@ -1,0 +1,26 @@
+/* Shared hit layer (pre-freeze fixes, item 1). ONE geometry for every control below 44px:
+   an invisible absolutely positioned layer that grows the hit box to --ul-control-hit-min without changing the visual box,
+   layout, getBoundingClientRect or the focus ring (the ring is painted on the control itself).
+   Hosts: ::after on plain controls (.ul-hit / .ul-hit-y or the component list below); a .ul-hit-layer child where the
+   glass material owns ::before / ::after (ULButton). Insets are min(0, (100% - 44px) / 2), so controls already >= 44px
+   on an axis get no extension on that axis.
+   .ul-hit = both axes (icon-only / isolated controls). .ul-hit-y = vertical only (controls in a row: tabs, segmented and
+   toggle-group items, chips, carousel dots, pagination, buttons in a toolbar / group), so no layer takes pointer area from
+   a neighbour. html[data-ul-hit="off"] disables the layer (test hook: card hitarea compares geometry on / off). */
+:where(:has(> .ul-hit-layer)) { position: relative; }
+:where(.ul-hit, .ul-hit-y, .ul-cell-more, .ul-chip-x, .ul-bulk-more, .ul-cols-btn, .ul-tab, .ul-seg-item, .ul-car-dot, .ul-feed-chip, .ul-feed-pill, .ul-filter-chip > button) { position: relative; }
+:is(.ul-hit, .ul-hit-y, .ul-cell-more, .ul-chip-x, .ul-bulk-more, .ul-cols-btn, .ul-tab, .ul-seg-item, .ul-car-dot, .ul-feed-chip, .ul-feed-pill, .ul-filter-chip > button)::after,
+.ul-hit-layer {
+  content: ""; position: absolute; pointer-events: auto;
+  inset: min(0px, calc((100% - var(--ul-hit-size, var(--ul-control-hit-min))) / 2));
+  border-radius: 0; background: none; /* square: hit testing follows border-radius, the 44px box includes its corners */
+}
+/* row items: vertical only */
+:is(.ul-hit-y, .ul-cell-more, .ul-tab, .ul-seg-item, .ul-car-dot, .ul-feed-chip, .ul-filter-chip > button)::after,
+:is(.ul-hit-y, [role="toolbar"] > *, [role="group"] > *, .ul-btn-row > *, .ul-copyfield-well > *, .ul-pagination *) > .ul-hit-layer,
+.ul-hit-y > .ul-hit-layer { inset-inline: 0; }
+html[data-ul-hit="off"] :is(.ul-hit, .ul-hit-y, .ul-cell-more, .ul-chip-x, .ul-bulk-more, .ul-cols-btn, .ul-tab, .ul-seg-item, .ul-car-dot, .ul-feed-chip, .ul-feed-pill, .ul-filter-chip > button)::after,
+html[data-ul-hit="off"] .ul-hit-layer { display: none; }
+/* table cells: the layer never grows past the row height (compact rows are 40px), so it never reaches the control in the
+   next or previous row; compact density stays the documented 24px exception */
+.ul-table td { --ul-hit-size: min(var(--ul-control-hit-min), var(--row, var(--ul-control-hit-min))); }

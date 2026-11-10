@@ -1,0 +1,17 @@
+/* Live status: dot + label (+ pause). Accent by state; never glass (sits on any surface). */
+.ul-live-status { --c: var(--ul-color-text-3); display: inline-flex; align-items: center; gap: 8px; font: 500 var(--ul-text-sm) / 1.2 var(--ul-font-sans); color: var(--ul-color-text); }
+.ul-live-status[data-status="live"] { --c: var(--ul-color-success); }
+.ul-live-status[data-status="connecting"], .ul-live-status[data-status="reconnecting"] { --c: var(--ul-color-warning); }
+.ul-live-status[data-status="stale"] { --c: color-mix(in oklab, var(--ul-color-warning) 70%, var(--ul-color-text-3)); }
+.ul-live-status[data-status="error"] { --c: var(--ul-color-danger); }
+.ul-live-status[data-status="paused"] { --c: var(--ul-accent); }
+.ul-live-dot { position: relative; width: 8px; height: 8px; border-radius: 50%; background: var(--c); box-shadow: 0 0 0 3px color-mix(in srgb, var(--c) 22%, transparent); flex: none; }
+.ul-live-status[data-status="live"] .ul-live-dot::after { content: ""; position: absolute; inset: 0; border-radius: inherit; background: var(--c); animation: ul-live-pulse var(--ul-kpi-live-pulse) ease-out infinite; }
+.ul-live-status[data-status="reconnecting"] .ul-live-dot, .ul-live-status[data-status="connecting"] .ul-live-dot { animation: ul-live-blink 1000ms ease-in-out infinite; }
+@keyframes ul-live-pulse { 0% { scale: 1; opacity: .7; } 70%, 100% { scale: 2.6; opacity: 0; } }
+@keyframes ul-live-blink { 50% { opacity: .35; } }
+.ul-live-label { font-variant-numeric: tabular-nums; }
+.ul-live-pause { display: inline-flex; align-items: center; gap: 6px; min-height: var(--ul-control-hit-min); padding: 0 12px; border: 0; border-radius: var(--ul-radius-capsule); background: rgb(var(--ul-color-white-rgb) / .07); box-shadow: inset 0 1px 0 rgb(var(--ul-color-white-rgb) / .16), inset 0 0 0 1px rgb(var(--ul-color-white-rgb) / .1); color: var(--ul-color-text); font: inherit; cursor: pointer; }
+.ul-live-pause:hover { background: rgb(var(--ul-color-white-rgb) / .12); }
+.ul-live-pause:focus-visible { outline: var(--ul-focus-width) solid var(--ul-focus-color); outline-offset: var(--ul-focus-offset); }
+@media (prefers-reduced-motion: reduce) { .ul-live-dot, .ul-live-dot::after { animation: none !important; } }

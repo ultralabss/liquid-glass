@@ -1,0 +1,97 @@
+/* Async action buttons (src/components/actions). Tokens --ul-action-*; the button material is ULButton's glass. */
+.ul-act { position: relative; }
+.ul-act-body { display: inline-flex; align-items: center; justify-content: center; gap: var(--ul-control-gap, 8px); min-width: 0; max-width: 100%; }
+.ul-act[data-act-icon] { padding-inline: 0; min-width: var(--ul-control-hit-min); }
+.ul-act[data-act-icon] .ul-act-body { width: 100%; }
+/* icon cell: four stacked slots, the old one exits (fade + scale .7), the new one enters */
+.ul-act-icon { position: relative; display: inline-grid; flex: none; width: var(--ul-control-icon, 18px); height: var(--ul-control-icon, 18px); transition: width var(--ul-action-swap) var(--ul-ease-smooth), margin var(--ul-action-swap) var(--ul-ease-smooth); }
+.ul-act-icon[data-empty] { width: 0; margin-inline-end: calc(-1 * var(--ul-control-gap, 8px)); }
+.ul-act-ic { grid-area: 1 / 1; display: grid; place-items: center; width: 100%; height: 100%; opacity: 0; transform: scale(.7); transition: opacity var(--ul-action-swap) var(--ul-ease-standard), transform var(--ul-action-swap) var(--ul-ease-smooth); pointer-events: none; }
+.ul-act-ic[data-on] { opacity: 1; transform: none; }
+.ul-act-ic > svg, .ul-act-ic .ul-spinner { width: 100%; height: 100%; }
+.ul-act-ic .ul-check { width: 100%; height: 100%; }
+/* label cell: exactly one glyph row, clipped; the swap slides inside it (no half text at rest) */
+.ul-act-labels { display: inline-grid; min-width: 0; }
+.ul-act-labels > * { grid-area: 1 / 1; }
+.ul-act-reserve { display: inline-grid; visibility: hidden; height: var(--ul-action-label-h); overflow: hidden; }
+.ul-act-reserve > span { grid-area: 1 / 1; white-space: nowrap; }
+.ul-act-label { position: relative; display: inline-grid; height: var(--ul-action-label-h); line-height: var(--ul-action-label-h); overflow: hidden; white-space: nowrap; justify-items: start; }
+.ul-act-reserve + .ul-act-label { justify-self: center; }
+.ul-act-text { grid-area: 1 / 1; display: block; height: var(--ul-action-label-h); white-space: nowrap; }
+.ul-act-text[data-in] { animation: ul-act-in var(--ul-action-swap) var(--ul-ease-smooth) both; }
+.ul-act-text[data-out] { position: absolute; left: 0; top: 0; animation: ul-act-out var(--ul-action-swap) var(--ul-ease-standard) both; }
+.ul-act-label[data-dir="-1"] .ul-act-text[data-in] { animation-name: ul-act-in-down; }
+.ul-act-label[data-dir="-1"] .ul-act-text[data-out] { animation-name: ul-act-out-down; }
+@keyframes ul-act-in { from { transform: translateY(100%); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes ul-act-out { from { transform: none; opacity: 1; } to { transform: translateY(-100%); opacity: 0; } }
+@keyframes ul-act-in-down { from { transform: translateY(-100%); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes ul-act-out-down { from { transform: none; opacity: 1; } to { transform: translateY(100%); opacity: 0; } }
+/* success ring: one soft accent pulse just outside the rim (WAAPI drives opacity / scale) */
+.ul-act-ring { position: absolute; inset: -3px; border-radius: inherit; pointer-events: none; opacity: 0; box-shadow: 0 0 0 2px color-mix(in oklab, var(--ul-accent) 70%, var(--ul-color-white)), 0 0 14px 2px color-mix(in srgb, var(--ul-accent) 45%, transparent); }
+.ul-act[data-status="loading"] { cursor: progress; }
+/* reduced motion: opacity only, --ul-action-reduced */
+.ul-act[data-reduced] .ul-act-ic, .ul-act[data-reduced] .ul-act-icon { transition-duration: var(--ul-action-reduced); transform: none; }
+.ul-act[data-reduced] .ul-act-text[data-in], .ul-act[data-reduced] .ul-act-text[data-out] { animation-duration: var(--ul-action-reduced); animation-name: ul-act-fade; }
+.ul-act[data-reduced] .ul-act-text[data-out] { animation-direction: reverse; }
+@keyframes ul-act-fade { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+  .ul-act-ic, .ul-act-icon { transition-duration: var(--ul-action-reduced); transform: none !important; }
+  .ul-act-text[data-in], .ul-act-text[data-out] { animation-duration: var(--ul-action-reduced); animation-name: ul-act-fade; }
+  .ul-act-text[data-out] { animation-direction: reverse; }
+}
+/* spinning refresh icon, countdown / progress rings */
+.ul-act-spin { animation: ul-act-rot 900ms linear infinite; }
+@keyframes ul-act-rot { to { rotate: 360deg; } }
+.ul-act-ringwrap { position: relative; display: grid; place-items: center; width: 100%; height: 100%; }
+.ul-act-ringwrap > svg { grid-area: 1 / 1; }
+.ul-act-count { position: absolute; inset: -4px; width: calc(100% + 8px) !important; height: calc(100% + 8px) !important; rotate: -90deg; overflow: visible; }
+.ul-act-count circle { fill: none; stroke-width: 2; }
+.ul-act-count .ul-act-count-track { stroke: rgb(var(--ul-color-white-rgb) / .16); }
+.ul-act-count .ul-act-count-fill { stroke: currentColor; stroke-linecap: round; stroke-dasharray: 100; stroke-dashoffset: 0; animation: ul-act-count var(--ul-act-count-ms, 3000ms) linear forwards; }
+@keyframes ul-act-count { to { stroke-dashoffset: 100; } }
+.ul-act-progress .ul-act-count-fill { animation: none; transition: stroke-dashoffset 160ms linear; }
+[data-ul-paused] .ul-act-count-fill, .ul-toast-surface:hover .ul-act-count-fill, .ul-toast-surface:focus-within .ul-act-count-fill { animation-play-state: paused; }
+@media (prefers-reduced-motion: reduce) { .ul-act-spin { animation-duration: 2400ms; } }
+/* fx layers live in .ul-btn-fx (inset 0, clipped to the radius, under the content; see ULButton.css) */
+.ul-act .ul-act-body { position: relative; z-index: 1; }
+/* hold to confirm: the WHOLE button fills from the left edge (transform only). A darkening tone, so the white label only gains contrast. */
+.ul-act-holdfill { transform-origin: 0 50%; transform: scaleX(0); background: rgb(0 0 0 / .34); box-shadow: inset -1px 0 0 rgb(var(--ul-color-white-rgb) / .35); }
+.ul-act[data-holding] { -webkit-touch-callout: none; user-select: none; -webkit-user-select: none; touch-action: none; }
+/* success wave: registered radii so the gradient stops move in px (constant ring thickness, no scale distortion) */
+@property --ul-wave-r { syntax: "<length>"; inherits: false; initial-value: 0px; }
+@property --ul-wave-r2 { syntax: "<length>"; inherits: false; initial-value: 0px; }
+@property --ul-wave-r3 { syntax: "<length>"; inherits: false; initial-value: 0px; }
+.ul-act { --ul-wave-tone: var(--ul-success-soft); }
+.ul-act[data-tone="accent"] { --ul-wave-tone: color-mix(in oklab, var(--ul-accent) 55%, #000); }
+.ul-act-ripple { pointer-events: none; }
+.ul-wave { position: absolute; inset: 0; pointer-events: none;
+  --t: var(--ul-wave-tone); --b: var(--ul-wave-band, 16px); --f: var(--ul-wave-feather, 10px);
+  background:
+    /* trailing wavelet 2: thinnest, weakest */
+    radial-gradient(circle at var(--wx) var(--wy), transparent calc(var(--ul-wave-r3) - var(--b) * .35), color-mix(in srgb, var(--t) 22%, transparent) calc(var(--ul-wave-r3) - var(--b) * .15), transparent var(--ul-wave-r3)),
+    /* trailing wavelet 1 */
+    radial-gradient(circle at var(--wx) var(--wy), transparent calc(var(--ul-wave-r2) - var(--b) * .5), color-mix(in srgb, var(--t) 40%, transparent) calc(var(--ul-wave-r2) - var(--b) * .22), transparent var(--ul-wave-r2)),
+    /* leading wave: gentle interior, brighter feathered front */
+    radial-gradient(circle at var(--wx) var(--wy), color-mix(in srgb, var(--t) 46%, transparent) 0, color-mix(in srgb, var(--t) 52%, transparent) max(0px, calc(var(--ul-wave-r) - var(--b))), var(--t) max(0px, calc(var(--ul-wave-r) - var(--b) * .25)), color-mix(in srgb, var(--t) 70%, transparent) var(--ul-wave-r), transparent calc(var(--ul-wave-r) + var(--f))); }
+.ul-wave[data-reduced] { background: var(--t); }
+/* icon swap + label slide start at the ripple front */
+.ul-act[data-fx="ripple"][data-status="success"] .ul-act-ic[data-on] { transition-delay: var(--ul-action-ripple-delay); }
+/* the bundle injects this file through JS: @property rules above are global and harmless if repeated */
+.ul-act[data-fx="ripple"][data-status="success"] .ul-act-text[data-in] { animation-delay: var(--ul-action-ripple-delay); }
+/* success tone: check, ring */
+/* success check: the label ink on a --ul-success-soft disc. A bare green stroke fell to 1.97:1 on light secondary glass over a
+   mid backdrop (measured); ink on the deep success disc stays ≥ 6.5:1 in every theme / accent / variant. */
+.ul-act[data-tone="success"][data-status="success"] .ul-act-icon .ul-act-ic[data-on] { color: inherit; border-radius: 50%; background: var(--ul-success-soft); box-shadow: 0 0 0 2px var(--ul-success-soft); }
+/* success ring: green band + success-ink edge (green alone is 1.5:1 on light / mid backdrops; the pair keeps ≥ 4.7:1 on light / mid, 11.7:1 on dark) */
+.ul-act[data-tone="success"] .ul-act-ring { box-shadow: var(--ul-success-ring), 0 0 14px 2px color-mix(in srgb, var(--ul-success) 45%, transparent); }
+/* toggle icon: fill + small elastic pop (2-3px on an 18px icon) */
+.ul-tg-icon svg path { fill: transparent; transition: fill var(--ul-action-swap) var(--ul-ease-standard); }
+.ul-act[aria-pressed="true"] .ul-tg-icon svg path { fill: currentColor; }
+/* status line (save status, refresh "updated …") */
+.ul-act-status { display: inline-flex; align-items: center; gap: 8px; min-height: var(--ul-control-hit-min); font-size: var(--ul-text-sm); color: var(--ul-color-text-2); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.ul-act-status[data-tone="error"] { color: var(--ul-field-error-text); }
+.ul-act-status .ul-act-icon { width: 16px; height: 16px; }
+.ul-act-status .ul-act-labels .ul-act-reserve, .ul-act-status .ul-act-label { justify-items: start; }
+.ul-act-group { display: inline-flex; align-items: center; gap: 6px; }
+.ul-act-undo { display: inline-flex; align-items: center; gap: 10px; }
+.ul-act-undo .ul-act-count { position: static; inset: auto; width: 18px !important; height: 18px !important; flex: none; }

@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<title>probe context menu</title>
+<link rel="stylesheet" href="../tokens/tokens.css">
+<script src="../dist/ul-glass.js"></script>
+<style>html,body{margin:0;background:#0b0d12;color:#f3f6fb;font-family:system-ui,sans-serif}a{color:#8fb8ff}a:hover{color:#eef2f8}</style>
+</helmet>
+<div data-ul-theme="app" data-ul-accent="violet" data-ul-backdrop="dark" style="padding:24px;display:flex;flex-direction:column;gap:16px;max-width:1100px;box-sizing:border-box;min-height:100vh;background:radial-gradient(circle at 80% 20%, #6d4bd6 0, transparent 40%), linear-gradient(135deg, #12304d, #2a1240)">
+  <h1 style="margin:0;font-size:20px;font-weight:600">Context menu probe</h1>
+  <p style="margin:0;font-size:13px;color:#c3cbd8">Mounts only ULContextMenu (+ a ULMenu on a button for comparison). ?run=interrupt (open, Esc at 40 %, reopen at 60 %) · ?run=cycles (30 open / close cycles, then count visible surfaces) · &amp;case=menu for the button menu.</p>
+  <div style="display:flex;gap:24px;align-items:center;flex-wrap:wrap">
+    <div id="ctx-host"></div>
+    <div id="menu-host"></div>
+  </div>
+  <pre style="margin:0;white-space:pre-wrap;font:11.5px/1.45 ui-monospace,monospace;color:#cfe3ff">{{ out }}</pre>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { out: 'loading…' };
+  componentDidMount() { const go = () => this.run(); if (window.UL) setTimeout(go, 0); else window.addEventListener('ul:ready', go, { once: true }); }
+  mountAll() {
+    const UL = window.UL, h = React.createElement;
+    const MENU = [{ id: 'copy', label: 'Copy' }, { id: 'paste', label: 'Paste' }, { id: 'dup', label: 'Duplicate' }, { type: 'separator' }, { id: 'del', label: 'Delete', destructive: true }];
+    window.ReactDOM.createRoot(document.getElementById('ctx-host')).render(h(UL.ULContextMenu, { items: MENU, label: 'Canvas' }, h('div', { 'data-probe': 'ctx', tabIndex: 0, style: { display: 'grid', placeItems: 'center', width: '320px', height: '120px', borderRadius: '16px', border: '1px dashed rgb(255 255 255 / .4)', color: '#cfd6e2', fontSize: '13px' } }, 'right-click here')));
+    function MenuBtn() { const [o, setO] = React.useState(false), r = React.useRef(null); window.__menuSet = setO; return h(React.Fragment, null, h('button', { ref: r, type: 'button', 'data-probe': 'menu', onClick: () => setO(!o), style: { minHeight: '44px', padding: '0 16px', borderRadius: '999px', border: '1px solid rgb(255 255 255 / .4)', background: 'rgb(255 255 255 / .1)', color: '#fff' } }, 'Menu'), h(UL.ULMenu, { open: o, onOpenChange: setO, anchorRef: r, items: MENU, label: 'Menu' })); }
+    window.ReactDOM.createRoot(document.getElementById('menu-host')).render(h(MenuBtn));
+  }
+  surfaces() { return [...document.querySelectorAll('.ul-anchored')].filter((s) => s.getClientRects().length && getComputedStyle(s).visibility !== 'hidden'); }
+  rec(ms) {
+    return new Promise((res) => { const f = [], t0 = performance.now(); const step = () => { const t = performance.now() - t0; const s = this.surfaces(); f.push({ t: Math.round(t), n: s.length, r: s.map((x) => { const b = x.getBoundingClientRect(); return [Math.round(b.left), Math.round(b.top), Math.round(b.width), Math.round(b.height), x.hasAttribute('data-closing') ? 'c' : '', getComputedStyle(x).opacity.slice(0, 4)]; }) }); if (t < ms) requestAnimationFrame(step); else res(f); }; requestAnimationFrame(step); });
+  }
+  open(kind) { if (kind === 'menu') { window.__menuSet(true); return; } const t = document.querySelector('[data-probe="ctx"]'), b = t.getBoundingClientRect(); t.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: b.left + 60, clientY: b.top + 30, button: 2 })); }
+  close(kind) { if (kind === 'menu') { window.__menuSet(false); return; } (document.activeElement || document.body).dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true })); }
+  async run() {
+    this.mountAll(); await new Promise((r) => setTimeout(r, 800));
+    const p = new URLSearchParams(location.search), kind = p.get('case') || 'ctx', wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    const enter = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--ul-pop-enter-duration')) || 500;
+    if (p.get('run') === 'interrupt') {
+      this.open(kind); const a = await this.rec(900); const first = a[a.length - 1].r[0];
+      this.close(kind); await wait(700);
+      this.open(kind); const pr = this.rec(1700); await wait(enter * 0.4); this.close(kind); await wait(enter * 0.6 * 0.6); this.open(kind); const f = await pr;
+      const last = f[f.length - 1].r[0]; let maxJ = 0, at = 0; for (let i = 1; i < f.length; i++) { const A = f[i - 1].r[0], B = f[i].r[0]; if (!A || !B) continue; const j = Math.max(...[0, 1, 2, 3].map((k) => Math.abs(B[k] - A[k]))); if (j > maxJ) { maxJ = j; at = i; } }
+      const lines = [`${kind} interrupt · first open settled ${JSON.stringify(first)} · after interrupt settled ${JSON.stringify(last)} · max jump ${maxJ}px at frame ${at} (t ${f[at] && f[at].t} ms)`, ...f.map((x) => `${String(x.t).padStart(5)} n${x.n} ${x.r.map((r) => r.join(',')).join(' | ')}`)];
+      window.__probe = lines; this.setState({ out: lines.slice(0, 120).join('\n') }); return;
+    }
+    if (p.get('run') === 'esc') {
+      // Esc during the enter (before focus has moved into the menu): must start the exit
+      const ev = [], t0 = performance.now(); const on = (e) => ev.push(`${Math.round(performance.now() - t0)}ms ${e.detail.phase} ${e.detail.state}`); document.addEventListener('ul:morph', on);
+      const lines = [];
+      for (const d of [0, 16, 60, 150]) {
+        ev.length = 0; this.open(kind); await wait(d);
+        const ae = document.activeElement; lines.push(`Esc after ${d} ms · focus ${ae ? ae.tagName.toLowerCase() + '.' + String(ae.className).split(' ')[0] + (ae.closest('.ul-anchored') ? ' (in menu)' : '') : '–'} · top overlay ${window.UL.isTopOverlay ? '' : ''}`);
+        this.close(kind); await wait(900);
+        lines.push('   events: ' + ev.join(' · ') + ' · visible after: ' + this.surfaces().length);
+        if (this.surfaces().length) { this.close(kind); await wait(700); }
+      }
+      document.removeEventListener('ul:morph', on); window.__probe = lines; this.setState({ out: lines.join('\n') }); return;
+    }
+    if (p.get('run') === 'reopen') {
+      // reopen during the exit: does the enter start within two macrotasks (what the virtual driver waits for)?
+      const ev = [], t0 = performance.now(); const on = (e) => ev.push(`${(performance.now() - t0).toFixed(1)}ms ${e.detail.phase} ${e.detail.state}`); document.addEventListener('ul:morph', on);
+      const anims = () => [...document.querySelectorAll('.ul-anchored')].flatMap((s) => s.getAnimations()).filter((a) => a.playState === 'running').length;
+      this.open(kind); await wait(200); this.close(kind); await wait(0); await wait(0); const a1 = anims(); await wait(80);
+      ev.push('--- reopen at ' + (performance.now() - t0).toFixed(1)); this.open(kind); await wait(0); await wait(0);
+      const ph = ev.filter((x) => /enter start/.test(x)).length; ev.push(`after 2 macrotasks: running anims ${anims()} · enter starts so far ${ph}`); await wait(40); ev.push(`after 40 ms: running anims ${anims()}`); await wait(800);
+      document.removeEventListener('ul:morph', on); window.__probe = ev; this.setState({ out: `close → running anims after 2 macrotasks: ${a1}\n` + ev.join('\n') }); return;
+    }
+    if (p.get('run') === 'cycles') {
+      for (let i = 0; i < 30; i++) { this.open(kind); await wait(90 + (i % 3) * 60); this.close(kind); await wait(60 + (i % 4) * 40); }
+      await wait(1200); const s = this.surfaces();
+      const out = `${kind} 30 cycles · visible surfaces after 1.2 s: ${s.length} ${s.map((x) => x.className.split(' ').slice(0, 3).join('.') + (x.hasAttribute('data-closing') ? ' closing' : '') + ' op ' + getComputedStyle(x).opacity).join(' | ')}`;
+      window.__probe = out; this.setState({ out }); return;
+    }
+    this.setState({ out: 'ready' });
+  }
+  renderVals() { return { out: this.state.out }; }
+}
+</script>
+</body>
+</html>

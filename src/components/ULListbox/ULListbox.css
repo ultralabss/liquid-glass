@@ -1,0 +1,72 @@
+/* Select / combobox. Trigger = glass control; list = anchored surface with one flattened glass lens. Tokens only. */
+.ul-select { display: inline-flex; flex-direction: column; gap: var(--ul-space-2); min-width: 220px; font-family: var(--ul-font-sans); color: var(--ul-color-text); }
+.ul-select[data-full] { display: flex; width: 100%; }
+.ul-select-label { font-size: var(--ul-text-sm); font-weight: var(--ul-weight-medium); color: var(--ul-color-text-2); }
+/* trigger = the field well (not glass): same well, rim, inset, hover and focus as text fields */
+.ul-select:not([data-in-group]) .ul-select-trigger[data-plain] { min-height: var(--ul-field-h-compact); padding: 0 var(--ul-space-3) 0 var(--ul-field-pad); border-radius: var(--ul-field-radius);
+  background: var(--ul-fw, var(--ul-field-well)); box-shadow: var(--ul-field-inset), inset 0 0 0 1px var(--ul-fr, var(--ul-field-rim)); transition: box-shadow var(--ul-duration-fast) var(--ul-ease-standard), background-color var(--ul-duration-fast) var(--ul-ease-standard); }
+.ul-select:not([data-in-group]) .ul-select-trigger[data-plain]:hover:not(:disabled), .ul-select:not([data-in-group]) .ul-select-trigger[data-plain][data-ul-force~="hover"] { background: var(--ul-fwh, var(--ul-field-well-hover)); box-shadow: var(--ul-field-inset), inset 0 0 0 1px var(--ul-frh, var(--ul-field-rim-hover)); }
+.ul-select:not([data-in-group]) .ul-select-trigger[data-plain]:focus-visible, .ul-select:not([data-in-group]) .ul-select-trigger[data-plain][data-open], .ul-select:not([data-in-group]) .ul-select-trigger[data-plain][data-ul-force~="focus"] {
+  background: var(--ul-fwh, var(--ul-field-well-hover)); box-shadow: var(--ul-field-inset), inset 0 0 0 var(--ul-focus-width) var(--ul-focus-color), 0 0 0 4px color-mix(in srgb, var(--ul-focus-color) 22%, transparent); }
+.ul-select[data-invalid]:not([data-in-group]) .ul-select-trigger[data-plain] { box-shadow: var(--ul-field-inset), inset 0 0 0 var(--ul-focus-width) var(--ul-color-danger); }
+/* custom picker triggers (date, date range, colour; time range = select + range) in flat: the SAME field well as text / select
+   (well, rim, inset, hover, focus, invalid). Glass picker triggers and every popover are unchanged. */
+.ul-picker .ul-select-trigger.ul-glass:is([data-ul-material="flat"], [data-ul-flat]) { min-height: var(--ul-field-h-compact); padding: 0 var(--ul-space-3) 0 var(--ul-field-pad); border-radius: var(--ul-field-radius);
+  background: var(--ul-fw, var(--ul-field-well)); box-shadow: var(--ul-field-inset), inset 0 0 0 1px var(--ul-fr, var(--ul-field-rim)); transition: box-shadow var(--ul-duration-fast) var(--ul-ease-standard), background-color var(--ul-duration-fast) var(--ul-ease-standard); }
+.ul-picker .ul-select-trigger.ul-glass:is([data-ul-material="flat"], [data-ul-flat]):is(:hover:not(:disabled):not(:has(:disabled)), [data-ul-force~="hover"]) { background: var(--ul-fwh, var(--ul-field-well-hover)); box-shadow: var(--ul-field-inset), inset 0 0 0 1px var(--ul-frh, var(--ul-field-rim-hover)); }
+.ul-picker .ul-select-trigger.ul-glass:is([data-ul-material="flat"], [data-ul-flat]):is(:focus-visible, :has(:focus-visible), [data-open], [data-ul-force~="focus"]) {
+  background: var(--ul-fwh, var(--ul-field-well-hover)); box-shadow: var(--ul-field-inset), inset 0 0 0 var(--ul-focus-width) var(--ul-focus-color), 0 0 0 4px color-mix(in srgb, var(--ul-focus-color) 22%, transparent); }
+.ul-picker[data-invalid] .ul-select-trigger.ul-glass:is([data-ul-material="flat"], [data-ul-flat]) { box-shadow: var(--ul-field-inset), inset 0 0 0 var(--ul-focus-width) var(--ul-color-danger); }
+.ul-picker .ul-range-trigger.ul-glass:is([data-ul-material="flat"], [data-ul-flat]) { padding: 0; }
+.ul-picker .ul-select-trigger.ul-glass:is([data-ul-material="flat"], [data-ul-flat]) > .ul-btn-ring { display: none; } /* the well's own focus ring replaces the glass ring */
+.ul-select-trigger {
+  position: relative;
+  display: flex; align-items: center; gap: var(--ul-space-2);
+  width: 100%; min-height: var(--ul-control-h-md);
+  padding: 0 var(--ul-space-3) 0 var(--ul-space-4);
+  border: 0; margin: 0;
+  color: var(--ul-color-text); font: inherit; font-size: var(--ul-text-md); text-align: left;
+  cursor: pointer; outline: none;
+}
+.ul-select-trigger:disabled { cursor: not-allowed; opacity: var(--ul-control-disabled-opacity); }
+.ul-select-trigger:hover:not(:disabled), .ul-select-trigger[data-ul-force~="hover"] { --ul-glass-tint: calc(var(--ul-glass-sm-tint) + var(--ul-control-hover-tint)); }
+.ul-select-value { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ul-select-value[data-placeholder] { color: var(--ul-color-text-2); }
+.ul-select-chev { display: inline-grid; flex: none; width: 18px; height: 18px; color: var(--ul-color-text-2); transition: rotate var(--ul-duration-base) var(--ul-ease-snappy); }
+.ul-select-trigger[data-open] .ul-select-chev { rotate: 180deg; }
+.ul-combobox .ul-select-chev { cursor: pointer; }
+.ul-select-trigger:focus-visible > .ul-btn-ring, .ul-select-trigger[data-ul-force~="focus"] > .ul-btn-ring { opacity: 1; }
+.ul-select-msg { display: flex; gap: var(--ul-space-2); margin: 0; padding: 0 var(--ul-space-1); font-size: var(--ul-text-sm); line-height: 1.45; color: var(--ul-color-text-2); }
+.ul-select-msg[data-tone="error"] { color: var(--ul-field-error-text); }
+.ul-select-msg-icon { display: inline-grid; flex: none; width: 15px; height: 15px; margin-top: 1px; }
+.ul-combobox { display: flex; flex-direction: column; min-width: 240px; }
+
+/* list */
+.ul-listbox { position: relative; display: flex; flex-direction: column; gap: 2px; min-width: 220px; max-height: var(--ul-selection-list-max-h); overflow: auto; outline: none; overscroll-behavior: contain; }
+.ul-listbox-lens { position: absolute; left: 0; top: 0; z-index: 0; pointer-events: none; opacity: 0; }
+.ul-option {
+  position: relative; z-index: 1;
+  display: flex; align-items: center; gap: var(--ul-space-3);
+  min-height: var(--ul-control-hit-min); padding: var(--ul-space-2) var(--ul-space-3);
+  border-radius: var(--ul-item-radius, var(--ul-radius-sm));
+  color: var(--ul-color-text); font-size: var(--ul-text-md); cursor: pointer; user-select: none; box-sizing: border-box;
+  transition: background-color var(--ul-check-exit) ease;
+}
+/* selected wash fades with the check: exit leads, enter after --ul-check-stagger (no transition on mount) */
+.ul-option[aria-selected="true"] { background-color: color-mix(in srgb, var(--ul-accent) 14%, transparent); transition-duration: var(--ul-check-enter); transition-delay: var(--ul-check-stagger); }
+@media (prefers-reduced-motion: reduce) { .ul-option, .ul-option[aria-selected="true"] { transition-duration: var(--ul-check-reduced); transition-delay: 0s; } }
+.ul-option[aria-disabled="true"] { opacity: var(--ul-control-disabled-opacity); cursor: not-allowed; }
+.ul-option-icon { display: inline-grid; flex: none; width: var(--ul-control-icon); height: var(--ul-control-icon); }
+.ul-option-text { display: flex; flex-direction: column; gap: 1px; flex: 1 1 auto; min-width: 0; }
+.ul-option-desc { font-size: var(--ul-text-sm); color: var(--ul-color-text-2); }
+.ul-option[aria-selected="true"] .ul-option-label { font-weight: var(--ul-weight-semibold); }
+.ul-listbox:focus-visible [data-active] { box-shadow: inset 0 0 0 var(--ul-focus-width) var(--ul-focus-color); }
+.ul-listbox-state { display: flex; align-items: center; gap: var(--ul-space-2); min-height: var(--ul-control-hit-min); padding: 0 var(--ul-space-3); color: var(--ul-color-text-2); font-size: var(--ul-text-md); }
+.ul-listbox-state > .ul-spinner { --ul-spinner-size: 16px; }
+/* native select: the same well as the ULSelect trigger (data-plain rules above), the platform list, ULIcon arrow */
+.ul-nsel-wrap { position: relative; display: flex; min-inline-size: 0; }
+.ul-nsel-control { appearance: none; -webkit-appearance: none; inline-size: 100%; min-inline-size: 0; margin: 0; padding-inline-end: calc(var(--ul-space-3) + 26px) !important; color: var(--ul-color-text); font: var(--ul-weight-regular, 400) var(--ul-text-md) / 1.2 var(--ul-font-sans); text-align: start; text-overflow: ellipsis; }
+.ul-nsel-control[data-placeholder] { color: var(--ul-color-text-2); }
+.ul-nsel-control option, .ul-nsel-control optgroup { color: initial; background: initial; }
+.ul-nsel-chev { position: absolute; inset-inline-end: var(--ul-space-3); top: 50%; translate: 0 -50%; pointer-events: none; color: var(--ul-color-text-2); }
+.ul-nsel-control:disabled + .ul-nsel-chev { opacity: var(--ul-control-disabled-opacity); }

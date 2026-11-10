@@ -1,0 +1,86 @@
+/* Forms (Task 3C): field wrapper, label, error, groups, input group. Flat paint only; the input group is ONE inset well (same tokens as .ul-well). */
+.ul-label { display: inline-flex; align-items: baseline; gap: 4px; min-width: 0; max-width: 100%; font: var(--ul-weight-medium) var(--ul-text-sm)/1.35 var(--ul-font-sans); color: var(--ul-color-text); }
+.ul-label-text { min-width: 0; overflow-wrap: anywhere; }
+.ul-label-req { color: var(--ul-field-error-text); font-weight: var(--ul-weight-semibold); }
+.ul-label-opt { color: var(--ul-color-text-2); font-weight: var(--ul-weight-regular, 400); white-space: nowrap; }
+
+.ul-ffield { min-width: 0; max-width: 100%; font-family: var(--ul-font-sans); color: var(--ul-color-text); }
+.ul-ffield-row { display: flex; flex-direction: column; gap: var(--ul-space-2); min-width: 0; }
+.ul-ffield-head { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.ul-ffield-body { display: flex; flex-direction: column; gap: var(--ul-space-2); min-width: 0; }
+.ul-ffield-body > * { min-width: 0; max-width: 100%; }
+.ul-ffield-desc { margin: 0; font-size: var(--ul-text-sm); line-height: 1.45; color: var(--ul-color-text-2); text-wrap: pretty; }
+/* horizontal: label column + control column; stacks below 480px of its own width */
+.ul-ffield[data-orientation="horizontal"] { container-type: inline-size; }
+@container (min-width: 480px) {
+  .ul-ffield[data-orientation="horizontal"] .ul-ffield-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); gap: var(--ul-space-2) var(--ul-space-5, 20px); align-items: start; }
+  .ul-ffield[data-orientation="horizontal"] .ul-ffield-head { padding-top: calc((var(--ul-field-h-compact, 44px) - 1.35em) / 2); }
+}
+.ul-ffield[data-disabled] { opacity: var(--ul-control-disabled-opacity); }
+/* native controls placed in ULField get the well look */
+.ul-ffield-body > input:not([type="checkbox"]):not([type="radio"]):not([class]), .ul-ffield-body > textarea:not([class]) {
+  box-sizing: border-box; width: 100%; min-height: var(--ul-field-h-compact, 44px); padding: 10px var(--ul-field-pad); border: 0; border-radius: var(--ul-field-radius);
+  background: var(--ul-fw); box-shadow: var(--ul-field-inset), inset 0 0 0 1px var(--ul-fr); color: var(--ul-color-text); font: inherit; font-size: var(--ul-text-md); outline: none; }
+.ul-ffield-body > input:not([class]):focus-visible, .ul-ffield-body > textarea:not([class]):focus-visible { box-shadow: var(--ul-field-inset), inset 0 0 0 1px var(--ul-fr), 0 0 0 var(--ul-focus-width) var(--ul-focus-color); }
+.ul-ffield[data-invalid] .ul-ffield-body > input:not([class]), .ul-ffield[data-invalid] .ul-ffield-body > textarea:not([class]) { box-shadow: var(--ul-field-inset), inset 0 0 0 var(--ul-focus-width) var(--ul-color-danger); }
+
+/* error: wraps by default (never overflows); truncate = one line + tooltip */
+.ul-ferr { display: flex; align-items: flex-start; gap: var(--ul-space-2); min-width: 0; max-width: 100%; margin: 0; padding: 0 var(--ul-space-1); font-size: var(--ul-text-sm); line-height: 1.45; color: var(--ul-field-error-text); }
+.ul-ferr-icon { display: inline-grid; place-items: center; flex: none; height: 1.45em; }
+.ul-ferr-text { min-width: 0; overflow-wrap: anywhere; text-wrap: pretty; }
+.ul-ferr[data-truncate] { align-items: center; }
+.ul-ferr[data-truncate] .ul-trunc { min-width: 0; flex: 1 1 auto; }
+.ul-ferr-list { margin: 0; padding: 0 0 0 1.1em; min-width: 0; overflow-wrap: anywhere; }
+
+/* group / fieldset: vertical, horizontal or N responsive columns */
+.ul-fgroup, .ul-fieldset { container-type: inline-size; min-width: 0; max-width: 100%; }
+.ul-fgroup-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--ul-space-4, 16px); min-width: 0; }
+[data-gap="sm"] > .ul-fgroup-grid { gap: var(--ul-space-2); } [data-gap="lg"] > .ul-fgroup-grid { gap: var(--ul-space-6, 24px); }
+[data-orientation="horizontal"] > .ul-fgroup-grid { display: flex; flex-wrap: wrap; align-items: flex-start; }
+[data-orientation="horizontal"] > .ul-fgroup-grid > * { flex: 1 1 200px; min-width: 0; }
+[data-cols="auto"] > .ul-fgroup-grid { grid-template-columns: repeat(auto-fill, minmax(min(100%, var(--ul-fgroup-min, 220px)), 1fr)); }
+@container (min-width: 480px) { [data-cols]:not([data-cols="1"]):not([data-cols="auto"]) > .ul-fgroup-grid { grid-template-columns: repeat(var(--ul-fgroup-cols, 2), minmax(0, 1fr)); } }
+.ul-fieldset { margin: 0; padding: 0; border: 0; display: flex; flex-direction: column; gap: var(--ul-space-3, 12px); }
+.ul-fieldset-legend { padding: 0; margin: 0 0 var(--ul-space-1); font-size: var(--ul-text-md); float: left; width: 100%; }
+.ul-fieldset-legend + * { clear: both; }
+.ul-fieldset-legend .ul-label { font-size: var(--ul-text-md); font-weight: var(--ul-weight-semibold); }
+.ul-fieldset[disabled] { opacity: var(--ul-control-disabled-opacity); }
+
+/* input group: ONE inset well; inner controls lose their own well; focus ring OUTSIDE the well */
+.ul-igroup { position: relative; display: flex; align-items: center; gap: var(--ul-space-1); box-sizing: border-box; min-width: 0; max-width: 100%;
+  min-height: var(--ul-field-h); padding: 0 var(--ul-space-1); border-radius: var(--ul-field-radius); background: var(--ul-fw);
+  box-shadow: var(--ul-field-inset), inset 0 0 0 1px var(--ul-fr); font-family: var(--ul-font-sans); color: var(--ul-color-text); cursor: text;
+  transition: box-shadow var(--ul-duration-fast) var(--ul-ease-standard), background-color var(--ul-duration-fast) var(--ul-ease-standard); }
+.ul-igroup[data-size="compact"] { min-height: var(--ul-field-h-compact); }
+.ul-igroup[data-shape="capsule"] { border-radius: var(--ul-radius-capsule); }
+.ul-igroup:hover { background: var(--ul-fwh); box-shadow: var(--ul-field-inset), inset 0 0 0 1px var(--ul-frh); }
+.ul-igroup:focus-within { background: var(--ul-fwh); box-shadow: var(--ul-field-inset), inset 0 0 0 1px var(--ul-frh), 0 0 0 var(--ul-focus-width) var(--ul-focus-color); }
+.ul-igroup[data-invalid] { box-shadow: var(--ul-field-inset), inset 0 0 0 1px var(--ul-color-danger), 0 0 0 1px var(--ul-color-danger); }
+.ul-igroup[data-invalid]:focus-within { box-shadow: var(--ul-field-inset), inset 0 0 0 1px var(--ul-color-danger), 0 0 0 var(--ul-focus-width) var(--ul-color-danger); }
+.ul-igroup[data-disabled] { opacity: var(--ul-control-disabled-opacity); pointer-events: none; }
+.ul-igroup-control { display: flex; align-items: center; flex: 1 1 auto; min-width: 0; align-self: stretch; padding-inline-start: var(--ul-space-2); }
+.ul-igroup:has(> .ul-iaddon[data-side="start"]) .ul-igroup-control { padding-inline-start: 0; }
+.ul-igroup-control > * { flex: 1 1 auto; min-width: 0; }
+.ul-igroup-input { align-self: stretch; }
+.ul-igroup-input:focus, .ul-igroup-input:focus-visible { outline: none; }
+.ul-iaddon { display: inline-flex; align-items: center; gap: 6px; flex: none; min-width: 0; max-width: 45%; padding: 0 var(--ul-space-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  font-size: var(--ul-text-sm); line-height: 1; color: var(--ul-color-text-2); user-select: none; }
+.ul-iaddon[data-kind="spinner"] { padding: 0 6px; }
+.ul-icount { font-variant-numeric: tabular-nums; font-size: var(--ul-text-xs, 12px); }
+.ul-icount[data-over] { color: var(--ul-field-error-text); }
+.ul-iactions { display: inline-flex; align-items: center; gap: 2px; flex: none; }
+/* inner UL controls: no second border, no second well, no own label / messages */
+.ul-igroup .ul-field { flex: 1 1 auto; min-width: 0; gap: 0; }
+.ul-igroup .ul-field .ul-well, .ul-igroup .ul-field:focus-within .ul-well, .ul-igroup .ul-field .ul-well:hover, .ul-igroup .ul-field[data-invalid] .ul-well { min-height: 0; padding: 0; background: none; box-shadow: none; border-radius: 0; }
+.ul-igroup .ul-field .ul-well::after { display: none; }
+.ul-igroup .ul-field .ul-field-input { padding-top: 0; }
+.ul-igroup .ul-select { flex: 1 1 auto; min-width: 0; }
+.ul-igroup .ul-select-label, .ul-igroup .ul-select-msg { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.ul-iaddon:has(.ul-select) { overflow: visible; padding: 0; max-width: none; }
+.ul-igroup .ul-select-trigger[data-plain] { box-shadow: none; display: flex; align-items: center; gap: var(--ul-space-2); width: 100%; min-height: calc(var(--ul-field-h-compact) - 4px); padding: 0 var(--ul-space-2); border: 0; border-radius: var(--ul-radius-sm); background: transparent; color: var(--ul-color-text); font: inherit; font-size: var(--ul-text-md); cursor: pointer; outline: none; }
+.ul-igroup .ul-select-trigger[data-plain]:hover { background: var(--ul-control-plain-hover); }
+.ul-igroup .ul-select-trigger[data-plain]:focus-visible { outline: none; } /* the group's outer ring is the focus indicator */
+.ul-igroup .ul-select-trigger[data-plain] .ul-select-value { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: start; }
+.ul-igroup .ul-select-trigger[data-plain] .ul-select-chev { display: inline-grid; flex: none; width: var(--ul-icon-sm, 16px); height: var(--ul-icon-sm, 16px); color: var(--ul-color-text-2); }
+@media (prefers-reduced-motion: reduce) { .ul-igroup { transition-duration: 1ms; } }
+@media (forced-colors: active) { .ul-igroup { border: 1px solid CanvasText; } .ul-igroup:focus-within { outline: 2px solid Highlight; outline-offset: 2px; } }

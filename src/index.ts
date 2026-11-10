@@ -1,0 +1,164 @@
+export { ULGlass } from './glass/ULGlass.tsx';
+export type { ULGlassProps, GlassVariant } from './glass/ULGlass.tsx';
+export { ULGlassGroup, GlassGroupContext } from './glass/ULGlassGroup.tsx';
+export type { ULGlassGroupProps } from './glass/ULGlassGroup.tsx';
+export {
+  attachGlass, detachGlass, configureGlass, supportsRefraction, generateDisplacementMap,
+  materialize, rampGlass, isMobileGlass, refreshGlass, setGlassMaterialize, setGlassGeometry, measureGlassNow, releaseGlassTier, setGlassHot, wakeGlass, getGlassMode, getGlassMaps, getGlassStats, trackPointer, untrackPointer, mapCost, isGlassScrolling, prewarmGlass,
+} from './glass/engine.ts';
+export type { MapArrow, GlassTier, GlassMode, GlassQuality, GlassPriority, GlassStats, LensMode, MapOptions, GlassOptions, GlassConfig, DisplacementMaps } from './glass/engine.ts';
+export { concentric } from './glass/radius.ts';
+export { initGlassDebug, setGlassDebug, recordScroll, debugFlags, startGlassRecorder, stopGlassRecorder } from './glass/glassDebug.ts';
+export { createSpring, springs } from './motion/spring.ts';
+export type { Spring, SpringParams, SpringName } from './motion/spring.ts';
+export { usePointerLight } from './hooks/usePointerLight.ts';
+export { useMediaQuery, useReducedMotion, useReducedTransparency } from './hooks/useReducedMotion.ts';
+export { computePlacement } from './motion/placement.ts';
+export type { Side, Align, Placement, PlacementOptions } from './motion/placement.ts';
+export { AnchoredMorph, configureMorph, getMorphTimeScale, readMorphTokens, isMorphReduced, lockPageScroll, unlockPageScroll, isPageScrollLocked } from './motion/anchoredMorph.ts';
+export type { MorphTokens, MorphParts, MorphOptions } from './motion/anchoredMorph.ts';
+export { ensureGooFilter } from './motion/goo.ts';
+export { LensBubble, readLensTokens, rubberBand } from './motion/lensBubble.ts';
+export type { LensTokens, LensOptions, LensGeometry, LensKind } from './motion/lensBubble.ts';
+export { createLensSelect } from './motion/lensSelect.ts';
+export type { LensSelect, LensSelectOptions } from './motion/lensSelect.ts';
+export { ULTabs } from './components/ULTabs/ULTabs.tsx';
+export type { ULTabsProps, TabItem } from './components/ULTabs/ULTabs.tsx';
+export { useAnchoredMorph } from './hooks/useAnchoredMorph.ts';
+export { ULAnchoredSurface } from './components/ULAnchoredSurface/ULAnchoredSurface.tsx';
+export type { ULAnchoredSurfaceProps } from './components/ULAnchoredSurface/ULAnchoredSurface.tsx';
+export { ACCENT_PRESETS, ACCENT_STRENGTHS, isAccentPreset, accentAttrs, setAccent, ULAccentScope } from './glass/accent.tsx';
+export type { Accent, AccentPreset, AccentStrength, Backdrop, ULAccentScopeProps } from './glass/accent.tsx';
+export { toRGB, contrastRatio, luminance, readContrastTokens, worstSurface, accentContrastReport, minScrim, guardAccent, toOklch, fromOklch } from './glass/contrast.ts';
+export type { ContrastRow, GlassContrastTokens, AccentGuard } from './glass/contrast.ts';
+export { ULIsland, ULIslandTool } from './components/ULIsland/ULIsland.tsx';
+export type { ULIslandProps, ULIslandToolProps, IslandState } from './components/ULIsland/ULIsland.tsx';
+export { observeSectionAccent } from './island/sectionAccent.ts';
+export type { SectionAccentOptions } from './island/sectionAccent.ts';
+export { createNavIndicator } from './components/ULIsland/navIndicator.ts';
+export type { NavIndicator, NavIndicatorOptions } from './components/ULIsland/navIndicator.ts';
+export { createAnchoredTooltip } from './components/ULTooltip/anchoredTooltip.ts';
+export type { AnchoredTooltip, AnchoredTooltipOptions } from './components/ULTooltip/anchoredTooltip.ts';
+export { HEADER_DEFAULTS, STUDIO_URL, resolveHeaderConfig } from './components/ULIsland/headerConfig.ts';
+export type { HeaderConfig, HeaderLeading, HeaderNavItem, HeaderCta, HeaderPopper } from './components/ULIsland/headerConfig.ts';
+export { ULSpinner } from './components/ULSpinner/ULSpinner.tsx';
+export type { ULSpinnerProps } from './components/ULSpinner/ULSpinner.tsx';
+export { ULButton, ULToggleButton, ULButtonGroup, ULSplitButton, ULFab } from './components/ULButton/ULButton.tsx';
+export type { ULButtonProps, ULToggleButtonProps, ULButtonGroupProps, ULSplitButtonProps, ULFabProps, SplitItem, ButtonVariant, ButtonSize, ButtonShape } from './components/ULButton/ULButton.tsx';
+export { ULTextField, ULTextArea, ULNumberField, ULOtpField, ULTagField } from './components/ULField/ULField.tsx';
+export type { FieldBaseProps, ULTextFieldProps, ULTextAreaProps, ULNumberFieldProps, ULOtpFieldProps, ULTagFieldProps } from './components/ULField/ULField.tsx';
+export { Icon as ULIcon } from './components/shared/icons.tsx';
+export { ULCheckbox, ULRadio, ULRadioGroup, ULSwitch } from './components/ULSelection/ULSelection.tsx';
+export type { ULCheckboxProps, ULRadioProps, ULRadioGroupProps, ULSwitchProps } from './components/ULSelection/ULSelection.tsx';
+export { ULSlider, ULRangeSlider } from './components/ULSlider/ULSlider.tsx';
+export type { ULSliderProps, ULRangeSliderProps } from './components/ULSlider/ULSlider.tsx';
+export { ULSegmentedControl, ULStepper } from './components/ULSegmented/ULSegmented.tsx';
+export type { ULSegmentedControlProps, SegmentOption, ULStepperProps, StepItem } from './components/ULSegmented/ULSegmented.tsx';
+export { ULSelect, ULCombobox, ULNativeSelect } from './components/ULListbox/ULListbox.tsx';
+export type { ULSelectProps, ULComboboxProps, ListOption, ULNativeSelectProps, NativeOptGroup } from './components/ULListbox/ULListbox.tsx';
+export { ULDatePicker, ULDateRangePicker, ULColorPicker, ULCalendar } from './components/ULPickers/ULPickers.tsx';
+export type { ULDatePickerProps, ULDateRangePickerProps, ULCalendarProps, DateRange, ULColorPickerProps, ULColorPreset, PickerLocale } from './components/ULPickers/ULPickers.tsx';
+export { ULCheckMark, animateCheck } from './components/shared/ULCheckMark.tsx';
+export type { ULCheckMarkProps } from './components/shared/ULCheckMark.tsx';
+export { isDev, surfaceBehind } from './components/shared/dev.ts';
+// 2c containers + overlays
+export { createVirtualAnchor, edgeRect, centerRect, pointRect } from './motion/virtualAnchor.ts';
+export type { VirtualAnchor, VirtualRect, Edge } from './motion/virtualAnchor.ts';
+export { pushOverlay, isTopOverlay, inLaterOverlay, overlayDepth, trapFocus, focusables } from './motion/overlayStack.ts';
+export { overshootEase } from './motion/anchoredMorph.ts';
+export { ULCard, ULPanel } from './components/ULContainers/ULCard.tsx';
+export type { ULCardProps, ULPanelProps } from './components/ULContainers/ULCard.tsx';
+export { ULModal, ULSheet, ULDrawer, ULPopover, ULTooltip, ULToast, ULToastProvider, useToast } from './components/ULContainers/ULOverlays.tsx';
+export type { ULModalProps, ULDrawerProps, ULPopoverProps, ULTooltipProps, ULToastProps, ULToastProviderProps, ToastOptions, ToastTone } from './components/ULContainers/ULOverlays.tsx';
+export { ULDialogProvider, ULDialogSurface, useDialog } from './components/ULContainers/ULDialog.tsx';
+export type { DialogView, DialogApi, DialogSurfaceProps } from './components/ULContainers/ULDialog.tsx';
+export { ULAccordion, ULSidebar, ULToolbar } from './components/ULContainers/ULLayout.tsx';
+export type { ULAccordionProps, AccordionItem, ULSidebarProps, SidebarItem, SidebarSection, ULToolbarProps, ToolbarItem, ToolbarGroup } from './components/ULContainers/ULLayout.tsx';
+export { ULMenu, ULMenuButton, ULContextMenu, ULCommandPalette, fuzzyScore } from './components/ULContainers/ULMenu.tsx';
+export type { MenuItem, ULMenuProps, ULContextMenuProps, CommandItem, ULCommandPaletteProps } from './components/ULContainers/ULMenu.tsx';
+// 2d data
+export { ULBadge, ULAvatar, ULAvatarGroup, ULProgress, ULSkeleton, ULEmptyState, ULBreadcrumbs, ULPagination, pageRange, ULStatTile, ULTable } from './components/ULData/ULData.tsx';
+export type { Tone, ULBadgeProps, ULAvatarProps, ULAvatarGroupProps, ULProgressProps, ULSkeletonProps, ULEmptyStateProps, Crumb, ULBreadcrumbsProps, ULPaginationProps, ULStatTileProps, TableColumn, SortState, ULTableProps, ChartSeries, ULChartProps } from './components/ULData/ULData.tsx';
+// Part 1–3: KPI, rolling numbers, live data
+export { ULRollingNumber, ULKpiCard, ULKpiDelta, ULKpiGoal, ULKpiGrid, ULSparkline, numberFormat, resolveLocale } from './components/ULData/ULKpi.tsx';
+export type { ULRollingNumberProps, ULKpiCardProps, ULKpiDeltaProps, ULKpiGoalProps, ULKpiGridProps, ULSparklineProps } from './components/ULData/ULKpi.tsx';
+export { pageSlots } from './components/ULData/ULData.tsx';
+export type { TableLiveOptions } from './components/ULData/ULData.tsx';
+export { createLiveSource, websocket, sse, polling, mock, checkLiveUrl } from './live/liveSource.ts';
+export type { LiveSource, LiveSourceOptions, LiveStatus, LiveStats, Transport, TransportContext, MockOptions, MockControls, RateLimit } from './live/liveSource.ts';
+export { createLiveStore, useLiveStore, useLiveKeys, useLiveRow, useLiveSelector, useLiveStatus } from './live/liveStore.ts';
+export type { LiveStore, LiveStoreOptions, LiveOp, LiveCommit } from './live/liveStore.ts';
+export { ULLiveStatus } from './live/ULLiveStatus.tsx';
+export type { ULLiveStatusProps } from './live/ULLiveStatus.tsx';
+export { runViewSwap, cancelSwap, newSwapAnims } from './motion/viewSwap.ts';
+export { ULContextTarget, useContextMenuTarget, resolveMenu, withContextMenu } from './components/ULContainers/contextTarget.tsx';
+export type { ContextTarget, ContextMenuSpec, ContextMenuProps, ULContextTargetProps } from './components/ULContainers/contextTarget.tsx';
+export type { ChartTargetData } from './components/ULData/ULData.tsx';
+export { keepOnTop, toTopLayer, topLayerOrder } from './motion/topLayer.ts';
+// Part 4: async actions (one core)
+export { ULActionButton, setActionTimeScale, getActionTimeScale, useAsyncAction, useCoalescedAction, useActionTooltip, actionText, announce, ACTION_CANCEL, SwapText } from './components/actions/core.tsx';
+export type { CoalesceMode, CoalescedStatus, CoalescedOptions, CoalescedAction, ULActionButtonProps, ActionStatus, AsyncActionOptions, AsyncAction, ActionSlots, ActionLocale } from './components/actions/core.tsx';
+export { ULTypeToConfirm } from './components/actions/actions.tsx';
+export { ULCopyButton, copyText, ULPublishButton, ULSaveButton, ULSaveStatus, useUnsavedChangesGuard, ULSubmitButton, ULConfirmAction, ULDownloadButton, ULExportButton, ULRefreshButton, ULToggleIconButton, ULShareButton, ULUndoToast } from './components/actions/actions.tsx';
+export type { ULCopyButtonProps, ULPublishButtonProps, ULSaveButtonProps, ULSaveStatusProps, SaveState, ULSubmitButtonProps, ULConfirmActionProps, ULDownloadButtonProps, ExportResult, ULRefreshButtonProps, ULToggleIconButtonProps, ULShareButtonProps, ULUndoToastProps } from './components/actions/actions.tsx';
+// Part 5: dashboard building blocks
+export { ULBulkActionBar, ULColumnsMenu, columnsMenuItems, applyColumns, useColumnsState, defaultColumnsState, ULFilterBar, filtersToQuery, filtersFromQuery, applyFilters, OPS as FILTER_OPS, ULTimeAgo, ULTimestamp, useSharedNow, relTime, timeAgoStats, ULCellStatus, ULCellProgress, ULCellPerson, ULCellNumber, ULCellTime, ULCellSparkline, ULCellTags, ULCellId, ULCellActions, ULCellBool, ULCellLink, ULTimeRange, ULRefreshControl, resolveRange, ULCopyField, ULStatusDot, ULStatusPill, ULBanner, ULBannerQueue, ULUsageMeter, ULErrorState, ULDescriptionList, ULKeyValue, ULTruncatedText, blockText } from './components/dashboard/blocks.tsx';
+export type { BulkAction, ULBulkActionBarProps, ColumnsState, ULColumnsMenuProps, FilterField, Filter, FilterOp, FilterType, SavedView, ULFilterBarProps, ULTimeAgoProps, RangePreset, TimeRangeValue, ULTimeRangeProps, ULRefreshControlProps, ULCopyFieldProps, OpStatus, BannerTone, BannerItem, ULBannerProps, ULUsageMeterProps, ULErrorStateProps, KeyValueItem } from './components/dashboard/blocks.tsx';
+// Part 11: dashboard blocks 2
+/** @internal test hooks (columns drag maths + counters) */
+export { reorderKeys, dragSlot, columnsDragStats } from './components/dashboard/columnsDrag.ts';
+export { ULInlineEdit, ULNotificationCenter, ULActivityFeed, ULCodeBlock, ULJsonViewer, tokenizeLine, block2Text } from './components/dashboard/blocks2.tsx';
+export type { ULInlineEditProps, NotificationItem, ULNotificationCenterProps, ActivityEvent, ULActivityFeedProps, CodeSample, ULCodeBlockProps, ULJsonViewerProps } from './components/dashboard/blocks2.tsx';
+export { useLiveQueue, useThrottledAnnounce } from './live/liveQueue.ts';
+export type { LiveQueue } from './live/liveQueue.ts';
+// Task 3A: charts (shared core)
+export { ULCartesianChart, ULLineChart, ULAreaChart, ULBarChart, ULComboChart, ULChart } from './charts/ULCartesianChart.tsx';
+export type { ULCartesianChartProps, ChartSeriesDef, ChartReference, ChartThreshold, ChartAxisConfig, ChartPointTarget, ChartTone, ULChartLegacyProps } from './charts/ULCartesianChart.tsx';
+export { ULDonutChart, ULPieChart, ULSparkChart } from './charts/ULDonutChart.tsx';
+export type { ULDonutChartProps, ULSparkChartProps } from './charts/ULDonutChart.tsx';
+export { ChartFrame, ChartLegend, ChartDataTable, ChartSkeleton, SeriesKey, chartText, useChartTween, useHoverLayer, useWidth as useChartWidth, tableToCsv, SERIES_DASH, usePatternPolicy } from './charts/core.tsx';
+export type { ChartState, ChartTable, HoverApi, HoverPoint, LegendItem, PatternMode, PatternPolicy } from './charts/core.tsx';
+// Task 3B: advanced charts
+export { ULRadialChart, ULGaugeChart } from './charts/ULRadialChart.tsx';
+export type { ULRadialChartProps, ULGaugeChartProps, GaugeThreshold } from './charts/ULRadialChart.tsx';
+export { ULRadarChart } from './charts/ULRadarChart.tsx';
+export type { ULRadarChartProps } from './charts/ULRadarChart.tsx';
+export { ULScatterChart, shapePath, SCATTER_SHAPES } from './charts/ULScatterChart.tsx';
+export type { ULScatterChartProps, ScatterShape } from './charts/ULScatterChart.tsx';
+export { buildQuadtree, nearestBrute } from './charts/quadtree.ts';
+export type { QuadTree } from './charts/quadtree.ts';
+export { ULHeatmapChart, ULCalendarHeatmap } from './charts/ULHeatmapChart.tsx';
+export type { ULHeatmapChartProps, ULCalendarHeatmapProps } from './charts/ULHeatmapChart.tsx';
+export { ULFunnelChart, ULHistogramChart, ULTreemapChart, squarify, binValues, quantile } from './charts/ULFunnelChart.tsx';
+export type { ULFunnelChartProps, ULHistogramChartProps, ULTreemapChartProps, TreeNode } from './charts/ULFunnelChart.tsx';
+export { ULStreamChart, createChartStream, zoomAt, panBy, clampView, sliceFor, rangeValue } from './charts/timeseries.tsx';
+export type { ChartStream, ChartStreamOptions, ChartStreamSnapshot, ULStreamChartProps } from './charts/timeseries.tsx';
+export { lttb, canvasThreshold } from './charts/decimate.ts';
+export { useMarkNav, advText, useBrush, ChartAxes, colorScale, ColorLegend, useCellIndicator } from './charts/nav.tsx';
+export type { ChartBaseProps, MarkNavOptions } from './charts/nav.tsx';
+export { scaleLinear, scaleLog, scaleBand, scalePoint, scaleTime, niceDomain, linearTicks, makeNumberFormat, makeTimeFormat, linePath, areaPath, arcPath } from './charts/scales.ts';
+// Task 3C: forms, feedback + structure
+export { ULField, ULLabel, ULFieldError, ULFieldGroup, ULFieldSet, ULInputGroup, ULInputGroupInput, ULInputGroupButton, formText } from './components/ULForms/forms.tsx';
+export type { ULFieldProps, ULLabelProps, ULFieldErrorProps, ULFieldGroupProps, ULFieldSetProps, ULInputGroupProps, FieldControlProps } from './components/ULForms/forms.tsx';
+export { FieldCtx, InputGroupCtx, useFieldCtx, useInputGroupCtx, fieldAria } from './components/ULForms/fieldContext.ts';
+export { ULKbd, formatKeys, detectPlatform, ULSeparator, ULAlert, ULAlertDialog, useAlertDialog, ULConfirmPopover, ULToggleGroup, ULItem, ULItemGroup, ULCollapsible, ULScrollArea, scrollThumb } from './components/ULStructure/structure.tsx';
+export type { ULKbdProps, ULSeparatorProps, ULAlertProps, AlertTone, ULAlertDialogProps, ULConfirmPopoverProps, ToggleItem, ULToggleGroupProps, ULItemProps, ULCollapsibleProps, ULScrollAreaProps } from './components/ULStructure/structure.tsx';
+// Task 3D: shadcn batch 2
+export { ULHoverCard } from './components/ULBatch2/hovercard.tsx';
+export type { ULHoverCardProps } from './components/ULBatch2/hovercard.tsx';
+export { ULMenubar } from './components/ULBatch2/menubar.tsx';
+export type { ULMenubarProps, MenubarMenu } from './components/ULBatch2/menubar.tsx';
+export { ULNavigationMenu } from './components/ULBatch2/navmenu.tsx';
+export type { ULNavigationMenuProps, NavMenuItem, NavLink } from './components/ULBatch2/navmenu.tsx';
+export { ULAspectRatio } from './components/ULBatch2/layout.tsx';
+export type { ULAspectRatioProps } from './components/ULBatch2/layout.tsx';
+export { ULResizablePanelGroup, ULResizablePanel, ULResizableHandle } from './components/ULBatch2/resizable.tsx';
+export type { ULResizablePanelGroupProps, ULResizablePanelProps, ULResizableHandleProps, ResizableApi } from './components/ULBatch2/resizable.tsx';
+export { ULCarousel } from './components/ULBatch2/carousel.tsx';
+export type { ULCarouselProps } from './components/ULBatch2/carousel.tsx';
+export { ULHeading, ULText, ULCode, ULBlockquote, ULList, ULLink, ULProse } from './components/ULBatch2/typography.tsx';
+export type { ULHeadingProps, ULTextProps, ULBlockquoteProps, ULListProps, ULLinkProps, TypeSize } from './components/ULBatch2/typography.tsx';
+
+export { ULProvider, useMaterial, resolveMaterial, mergeMaterialScope, MATERIAL_DEFAULTS, MATERIAL_CATEGORIES } from './glass/material.tsx';
+export type { Material, MaterialCategory, MaterialConfig, ULProviderProps } from './glass/material.tsx';
+export { isFlatMaterial } from './glass/engine.ts';

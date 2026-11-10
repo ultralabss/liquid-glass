@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<title>probe cells</title>
+<link rel="stylesheet" href="../tokens/tokens.css">
+<script src="../dist/ul-glass.min.js"></script>
+<script src="./demos-kbd.js"></script>
+<style>html,body{margin:0;background:#0b0d12;color:#f3f6fb;font-family:system-ui,sans-serif}a{color:#8fb8ff}a:hover{color:#eef2f8}</style>
+</helmet>
+<div data-ul-theme="app" data-ul-accent="violet" data-ul-backdrop="dark" style="padding:24px;display:flex;flex-direction:column;gap:16px;max-width:1100px;box-sizing:border-box">
+  <h1 style="margin:0;font-size:20px;font-weight:600">Cells probe</h1>
+  <p style="margin:0;font-size:13px;color:#c3cbd8">ULTable with every cell renderer. ?rows=6 (default) · ?density=compact|cozy|comfortable · ?bench=200 (mount time of N rows) · ?probe (hit-area probe of every control in the table) · ?cards=hitarea</p>
+  <div id="cells-host"></div>
+  <pre style="margin:0;white-space:pre-wrap;font:12px/1.5 ui-monospace,monospace;color:#cfe3ff">{{ out }}</pre>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { out: 'loading…' };
+  componentDidMount() { const go = () => this.run(); if (window.UL) setTimeout(go, 0); else window.addEventListener('ul:ready', go, { once: true }); }
+  rows(n) {
+    const ST = [['Active', 'success'], ['Trial', 'accent'], ['Overdue', 'danger'], ['Paused', 'neutral']];
+    return Array.from({ length: n }, (_, i) => ({ id: 'acc_' + (100000 + i * 37).toString(36) + 'x9f2c1a7e', name: ['Jana Nováková', 'Peter Horváth', 'Lukas Weber', 'Eva Kováčová'][i % 4], email: 'user' + i + '@example.test', status: ST[i % 4][0], tone: ST[i % 4][1], mrr: 1200 + i * 37, tags: ['eu', 'kyc', 'pro', 'beta'].slice(0, 1 + (i % 4)), on: i % 2 === 0, at: Date.now() - i * 3.6e6, url: 'https://example.test/a/' + i }));
+  }
+  columns() {
+    const UL = window.UL, h = React.createElement;
+    const only = new URLSearchParams(location.search).get('cols');
+    return [
+      { key: 'id', header: 'Account', width: 180, pin: new URLSearchParams(location.search).has('pin') ? 'left' : undefined, render: (r) => h(UL.ULCellId, { value: r.id }) },
+      { key: 'name', header: 'Owner', width: 200, render: (r) => h(UL.ULCellPerson, { name: r.name, subtitle: r.email }) },
+      { key: 'status', header: 'Status', render: (r) => h(UL.ULCellStatus, { value: r.status, tone: r.tone }) },
+      { key: 'mrr', header: 'MRR', align: 'end', render: (r) => h(UL.ULCellCurrency || UL.ULCellNumber || 'span', UL.ULCellCurrency ? { value: r.mrr, currency: 'EUR' } : { value: r.mrr }) },
+      { key: 'tags', header: 'Tags', render: (r) => h(UL.ULCellTags, { tags: r.tags, max: 2 }) },
+      { key: 'on', header: 'KYC', render: (r) => h(UL.ULCellBool, { value: r.on }) },
+      { key: 'at', header: 'Updated', render: (r) => h(UL.ULTimeAgo, { value: r.at }) },
+      { key: 'url', header: 'Link', render: (r) => h(UL.ULCellLink, { href: r.url }, 'Open') },
+    ].filter((c) => !only || only.split(',').includes(c.key));
+  }
+  mount(n, density) {
+    const host = document.getElementById('cells-host'); if (this.root) this.root.unmount();
+    this.root = window.ReactDOM.createRoot(host);
+    // synchronous measure (render + commit + effects + layout): the preview's rAF is throttled, so frame-based timing is meaningless here
+    const el = React.createElement(window.UL.ULTable, { label: 'Accounts', columns: this.columns(), rows: this.rows(n), rowKey: (r) => r.id, selectable: true, density, maxHeight: 520, rowMenu: () => [{ id: 'open', label: 'Open' }] });
+    const t0 = performance.now();
+    if (window.ReactDOM.flushSync) window.ReactDOM.flushSync(() => this.root.render(el)); else this.root.render(el);
+    void host.offsetHeight; const t1 = performance.now();
+    return new Promise((res) => setTimeout(() => { void host.offsetHeight; res({ commit: t1 - t0, settled: performance.now() - t0 }); }, 0));
+  }
+  probe() {
+    const host = document.getElementById('cells-host'), out = [], q = (e) => { if (!e) return '–'; const r = e.getBoundingClientRect(); return Math.round(r.top) + '–' + Math.round(r.bottom); };
+    const cs = (e, ...k) => { const s = getComputedStyle(e); return k.map((x) => x + ':' + s[x]).join(' '); };
+    const sel = new URLSearchParams(location.search).get('sel') || '.ul-cell-id button, .ul-row-act, .ul-row-check, .ul-cell-more, .ul-th-sort';
+    for (const b of host.querySelectorAll(sel)) {
+      const sc0 = b.closest('.ul-table-scroll'); if (sc0) { const pr = sc0.getBoundingClientRect(), r0 = b.getBoundingClientRect(); sc0.scrollTop += (r0.top + r0.height / 2) - (pr.top + pr.height / 2); sc0.scrollLeft += (r0.left + r0.width / 2) - (pr.left + pr.width / 2); }
+      const r = b.getBoundingClientRect(), cx = r.left + r.width / 2, bad = [];
+      for (const [dy, nm] of [[-(Math.max(0, (44 - r.height) / 2) - 1), 'top'], [r.height + Math.max(0, (44 - r.height) / 2) - 1, 'bottom']]) {
+        const y = r.top + dy, f = document.elementFromPoint(cx, y);
+        if (!(f && (f === b || b.contains(f)))) bad.push(nm + ' (' + Math.round(dy) + 'px) → ' + (f ? f.tagName.toLowerCase() + '.' + String(f.className).split(' ')[0] : 'none'));
+      }
+      if (!bad.length) continue;
+      const td = b.closest('td,th'), tr = b.closest('tr'), sc = b.closest('.ul-table-scroll'), hl = b.querySelector(':scope > .ul-hit-layer');
+      out.push(`${String(b.className).split(' ')[0]} ${Math.round(r.width)}×${Math.round(r.height)} · ${bad.join(' · ')}\n   button ${q(b)} · layer ${hl ? q(hl) : (getComputedStyle(b, '::after').content !== 'none' ? '::after' : 'none')} · td ${q(td)} · tr ${q(tr)} · scroll ${q(sc)}\n   td ${cs(td, 'overflow', 'contain', 'pointerEvents', 'position', 'verticalAlign')} · tr ${cs(tr, 'position', 'zIndex')} · scroll ${cs(sc, 'overflow', 'contain')}`);
+    }
+    return out;
+  }
+  async run() {
+    const p = new URLSearchParams(location.search), density = p.get('density') || 'cozy';
+    if (p.get('bench')) {
+      const n = +p.get('bench'), lines = [];
+      for (let i = 0; i < 3; i++) { const ms = await this.mount(n, density); lines.push(`mount ${n} rows (${p.get('cols') || 'all columns'}): commit + layout ${Math.round(ms.commit)} ms · + passive effects ${Math.round(ms.settled)} ms`); this.root.unmount(); this.root = null; await new Promise((r) => setTimeout(r, 300)); }
+      // after mount: long tasks for 3 s (ResizeObserver callbacks, tooltips, glass) + cost of one scroll + elementFromPoint step
+      await this.mount(n, density);
+      const longs = []; let po = null; try { po = new PerformanceObserver((l) => l.getEntries().forEach((e) => longs.push(Math.round(e.duration)))); po.observe({ entryTypes: ['longtask'] }); } catch (e) { /* unsupported */ }
+      const roCalls = { n: 0 }; const RO = window.ResizeObserver;
+      await new Promise((r) => setTimeout(r, 3000)); po && po.disconnect();
+      const sc = document.querySelector('#cells-host .ul-table-scroll'), steps = [];
+      for (let i = 0; i < 10 && sc; i++) { const t = performance.now(); sc.scrollTop += 48; const b = sc.querySelector('.ul-cell-id button'); const r = b.getBoundingClientRect(); document.elementFromPoint(r.left + 4, r.top + 4); steps.push(performance.now() - t); }
+      lines.push(`after mount (3 s): long tasks ${longs.length ? longs.join(', ') + ' ms' : 'none reported'} · scroll + hit-test step: median ${Math.round(steps.sort((a, b) => a - b)[5] || 0)} ms`);
+      lines.push(`per-row resources: ${document.querySelectorAll('#cells-host .ul-glass').length} glass elements · ${document.querySelectorAll('#cells-host [data-ul-tip]').length} tooltip hosts · ${document.querySelectorAll('#cells-host .ul-cell-id-t').length} truncation observers`);
+      const ro = window.__ulCellStats ? JSON.stringify(window.__ulCellStats) : '';
+      window.__bench = lines; this.setState({ out: lines.join('\n') + (ro ? '\n' + ro : '') }); return;
+    }
+    if (p.has('ctx')) {
+      await this.mount(6, density); await new Promise((r) => setTimeout(r, 900));
+      const out = [], tr = document.querySelector('#cells-host tbody tr'), td = tr.querySelector('td[data-col]');
+      for (const delay of [0, 0, 300]) {
+        const r = tr.getBoundingClientRect(), px = r.left + 120, py = r.top + 12;
+        td.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: px, clientY: py, button: 2 }));
+        const snap = (lbl) => { const m = [...document.querySelectorAll('.ul-context-menu')].find((n) => n.style.visibility !== 'hidden' && n.getClientRects().length); const va = document.querySelector('[data-ul-virtual-anchor]'); const b = m && m.getBoundingClientRect(), vb = va && va.getBoundingClientRect(); return `${lbl}: menu ${b ? Math.round(b.left - px) + ',' + Math.round(b.top - py) + ' ' + Math.round(b.width) + '×' + Math.round(b.height) : '–'} · anchor ${vb ? Math.round(vb.left - px) + ',' + Math.round(vb.top - py) : '–'} · row now ${Math.round(tr.getBoundingClientRect().left - r.left)}`; };
+        out.push(snap('sync')); for (let k = 0; k < 80 && document.querySelector('[data-ul-morphing]'); k++) await new Promise((r) => setTimeout(r, 50)); await new Promise((r) => setTimeout(r, 200)); out.push(snap('settled (no data-ul-morphing)'));
+        document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })); await new Promise((r) => setTimeout(r, 900 + delay));
+      }
+      this.setState({ out: out.join('\n') }); return;
+    }
+    if (p.has('accent')) {
+      // accent prop on overlays reaches the surface glass: menu + modal in two accents
+      const host = document.getElementById('cells-host'), h = React.createElement, UL = window.UL;
+      const Demo = () => { const r1 = React.useRef(null), r2 = React.useRef(null); const [o, so] = React.useState(false);
+        React.useEffect(() => { setTimeout(() => so(true), 200); }, []);
+        return h('div', { style: { display: 'flex', gap: '24px', minHeight: '360px' } },
+          h('button', { ref: r1, type: 'button', style: { height: '44px' } }, 'rose menu'), h('button', { ref: r2, type: 'button', style: { height: '44px', marginLeft: '260px' } }, 'ice menu'),
+          h(UL.ULMenu, { open: o, onOpenChange: () => {}, anchorRef: r1, accent: 'rose', label: 'Rose', items: [{ id: 'a', label: 'Rename' }, { id: 'b', label: 'Duplicate' }] }),
+          h(UL.ULMenu, { open: o, onOpenChange: () => {}, anchorRef: r2, accent: 'ice', label: 'Ice', items: [{ id: 'a', label: 'Rename' }, { id: 'b', label: 'Duplicate' }] }));
+      };
+      this.root = window.ReactDOM.createRoot(host); this.root.render(h(Demo));
+      await new Promise((r) => setTimeout(r, 1500));
+      const surf = [...document.querySelectorAll('.ul-menu-surface')].map((n) => { const g = n.closest('[data-ul-accent]') || n; return (n.getAttribute('aria-label') || '') + ' → data-ul-accent=' + g.getAttribute('data-ul-accent') + ' · --ul-accent=' + getComputedStyle(n).getPropertyValue('--ul-accent').trim(); });
+      this.setState({ out: surf.join('\n') || 'no menu surface' }); return;
+    }
+    if (p.has('glassattrs')) {
+      // ULGlass forwards element attrs (type, href) and consumes pressScale (no DOM attribute); a glass button inside a form must not submit
+      const host = document.getElementById('cells-host'), h = React.createElement, UL = window.UL; let submits = 0;
+      this.root = window.ReactDOM.createRoot(host);
+      this.root.render(h('div', { style: { display: 'flex', gap: '24px', alignItems: 'flex-start' } },
+        h('form', { onSubmit: (e) => { e.preventDefault(); submits++; } }, h(UL.ULDatePicker, { label: 'Date' })),
+        h(UL.ULCheckbox, { label: 'Check' }), h(UL.ULGlass, { as: 'a', href: '#x', tier: 'sm', pressable: true, interactive: true, radius: '50%', className: 'probe-a', style: { width: '44px', height: '44px', display: 'grid', placeItems: 'center' }, 'aria-label': 'link' }, '↩')));
+      await new Promise((r) => setTimeout(r, 900));
+      const trig = host.querySelector('.ul-select-trigger'), box = host.querySelector('.ul-check-box'), a = host.querySelector('a.probe-a');
+      trig && trig.click(); await new Promise((r) => setTimeout(r, 400)); document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+      const leak = [...host.querySelectorAll('[pressscale]')].length;
+      this.setState({ out: `picker trigger type="${trig && trig.getAttribute('type')}" · form submits after click ${submits} · glass link href="${a && a.getAttribute('href')}" · elements with a pressscale DOM attribute ${leak} · checkbox box pressscale attr ${box && box.hasAttribute('pressscale')}` }); return;
+    }
+    if (p.has('calendar')) {
+      // ULCalendar header: native month / year selects (44px tall since pre-freeze fixes)
+      const host = document.getElementById('cells-host'); host.style.maxWidth = '360px';
+      this.root = window.ReactDOM.createRoot(host);
+      this.root.render(React.createElement(window.UL.ULCalendar, { label: 'Pick a date', defaultValue: new Date(2026, 10, 9), defaultMonth: new Date(2026, 10, 1) }));
+      await new Promise((r) => setTimeout(r, 600));
+      const sels = [...host.querySelectorAll('.ul-calendar-sel')].map((s) => Math.round(s.getBoundingClientRect().width) + '×' + Math.round(s.getBoundingClientRect().height));
+      this.setState({ out: 'month / year selects: ' + sels.join(' · ') }); return;
+    }
+    if (p.has('frame')) {
+      // first-frame cost: long tasks (style + layout + paint; JS is measured separately) from mount until 4 s later
+      const longs = []; try { new PerformanceObserver((l) => l.getEntries().forEach((e) => longs.push(Math.round(e.duration)))).observe({ entryTypes: ['longtask'] }); } catch (e) { /* unsupported */ }
+      // JS profile by source: rAF callbacks, ResizeObserver callbacks, timers (time + count, keyed by the first app stack frame)
+      const prof = {}; const key = () => { const s = (new Error().stack || '').split('\n').slice(3, 6).map((l) => (l.match(/at (\S+)/) || [])[1] || '').filter(Boolean).join('<'); return s.slice(0, 80); };
+      const wrap = (kind, fn) => { const k = kind + ' ' + key(); return function () { const t = performance.now(); try { return fn.apply(this, arguments); } finally { const e = prof[k] || (prof[k] = { n: 0, ms: 0 }); e.n++; e.ms += performance.now() - t; } }; };
+      const rAF = window.requestAnimationFrame, RO = window.ResizeObserver, sT = window.setTimeout;
+      window.requestAnimationFrame = (f) => rAF.call(window, wrap('raf', f));
+      window.ResizeObserver = class extends RO { constructor(cb) { super(wrap('ro', cb)); } };
+      const ms = await this.mount(+(p.get('rows') || 6), density); await new Promise((r) => sT(r, 4000));
+      window.requestAnimationFrame = rAF; window.ResizeObserver = RO;
+      const top = Object.entries(prof).sort((a, b) => b[1].ms - a[1].ms).slice(0, 8).map(([k, v]) => `${k}: ${v.n}× ${Math.round(v.ms)} ms`).join('\n');
+      window.__prof = top;
+      const out = `rows ${p.get('rows') || 6} · glass ${p.get('glass') || 'full'} · JS commit ${Math.round(ms.commit)} ms · long tasks ${longs.join(', ') || 'none'} ms (sum ${longs.reduce((a, b) => a + b, 0)}) · nodes ${document.querySelectorAll('#cells-host *').length}\n${top}`;
+      if (p.has('hide')) document.getElementById('cells-host').style.display = 'none';
+      window.__frame = out; this.setState({ out }); return;
+    }
+    await this.mount(+(p.get('rows') || 6), density); await new Promise((r) => setTimeout(r, 900));
+    if (p.has('probe')) { const o = this.probe(); window.__probe = o; this.setState({ out: o.length ? o.join('\n') : 'all table controls resolve to themselves at the top and bottom of their 44px box' }); return; }
+    if (p.get('cards') === 'hitarea') { for (let i = 0; i < 50 && !(window.ULDemos && window.ULDemos.hitAreaTest); i++) await new Promise((r) => setTimeout(r, 100)); this.setState({ out: 'use probe-charts ?cards=hitarea for the full card' }); return; }
+    this.setState({ out: 'mounted ' + (p.get('rows') || 6) + ' rows (' + density + ')' });
+  }
+  renderVals() { return { out: this.state.out }; }
+}
+</script>
+</body>
+</html>

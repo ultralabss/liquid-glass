@@ -1,0 +1,6 @@
+/* ULCheckMark: fixed slot (labels never shift); enter / exit are WAAPI on the svg + path, rest state is plain CSS. */
+.ul-check { display: inline-grid; place-items: center; flex: none; width: 16px; height: 16px; color: var(--ul-color-text); pointer-events: none; }
+.ul-check > svg { width: 100%; height: 100%; overflow: visible; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; opacity: 0; transform-origin: 50% 55%; }
+.ul-check > svg > path { stroke-dasharray: 1; stroke-dashoffset: 1; }
+.ul-check[data-on] > svg { opacity: 1; }
+.ul-check[data-on] > svg > path { stroke-dashoffset: 0; }

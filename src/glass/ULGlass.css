@@ -1,0 +1,279 @@
+/* ULGlass material. Layer model (a–f) and accent system are documented in DESIGN.md. Tokens only. */
+
+/* ---------- Accent ---------- */
+/* Registered so hue and strength changes interpolate. Set via data-ul-accent (preset) or inline --ul-accent (custom). */
+@property --ul-accent {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: #8fb8ff;
+}
+/* Accent strength k: subtle (ambient) .22 · tinted (default for accented glass) .64 · vivid (hero) 1 */
+@property --ul-accent-k {
+  syntax: "<number>";
+  inherits: true;
+  initial-value: 0.22;
+}
+:root { --ul-accent-k: var(--ul-accent-strength-subtle); }
+/* Lite tier amount 0..1 (set inline by the engine, crossfades with the lens). Not inherited, so nested glass never picks it up. */
+@property --ul-lite {
+  syntax: "<number>";
+  inherits: false;
+  initial-value: 0;
+}
+[data-ul-accent="ice"] { --ul-accent: var(--ul-accent-ice); }
+[data-ul-accent="violet"] { --ul-accent: var(--ul-accent-violet); }
+[data-ul-accent="emerald"] { --ul-accent: var(--ul-accent-emerald); }
+[data-ul-accent="amber"] { --ul-accent: var(--ul-accent-amber); }
+[data-ul-accent="rose"] { --ul-accent: var(--ul-accent-rose); }
+/* Accented glass defaults to "tinted"; an ancestor's (or own) data-ul-accent-strength wins via --ul-accent-level. */
+[data-ul-accent] { --ul-accent-k: var(--ul-accent-level, var(--ul-accent-strength)); }
+[data-ul-accent-strength="subtle"] { --ul-accent-level: var(--ul-accent-strength-subtle); --ul-accent-k: var(--ul-accent-level); }
+[data-ul-accent-strength="tinted"] { --ul-accent-level: var(--ul-accent-strength-tinted); --ul-accent-k: var(--ul-accent-level); }
+[data-ul-accent-strength="vivid"] { --ul-accent-level: var(--ul-accent-strength-vivid); --ul-accent-k: var(--ul-accent-level); }
+[data-ul-accent-strength="custom"] { --ul-accent-k: var(--ul-accent-level); }
+/* Only the element that sets accent/strength transitions; descendants inherit the animated value. */
+[data-ul-accent], [data-ul-accent-strength] {
+  transition: --ul-accent var(--ul-accent-duration) var(--ul-ease-standard), --ul-accent-k var(--ul-accent-duration) var(--ul-ease-standard);
+}
+
+/* Contrast guard: declare what sits behind the glass. */
+[data-ul-backdrop="dark"] { --ul-bd-mid: 0; --ul-bd-light: 0; }
+[data-ul-backdrop="mid"] { --ul-bd-mid: 1; --ul-bd-light: 0; }
+[data-ul-backdrop="light"] { --ul-bd-mid: 0; --ul-bd-light: 1; }
+
+.ul-glass {
+  --ul-glass-blur: var(--ul-glass-md-blur);
+  --ul-glass-refraction: var(--ul-glass-md-refraction);
+  --ul-glass-bezel: var(--ul-glass-md-bezel);
+  --ul-glass-aberration: var(--ul-glass-md-aberration);
+  --ul-glass-tint: var(--ul-glass-md-tint);
+  --ul-glass-shadow: var(--ul-glass-md-shadow);
+  --ul-glass-radius: var(--ul-glass-md-radius);
+  --ul-glass-padding: 0px;
+
+  /* x: 0 at subtle, 1 at vivid. Every accent effect is lerp(subtle, vivid, x). */
+  --ul-ax: clamp(0, (var(--ul-accent-k) - var(--ul-accent-strength-subtle)) / (1 - var(--ul-accent-strength-subtle)), 1);
+  --ul-ax-t: calc((var(--ul-accent-strength-tinted) - var(--ul-accent-strength-subtle)) / (1 - var(--ul-accent-strength-subtle)));
+  --ul-a-tint: calc(var(--ul-accent-tint-subtle) + var(--ul-ax) * (var(--ul-accent-tint-vivid) - var(--ul-accent-tint-subtle)));
+  --ul-a-shade: calc(var(--ul-accent-shade-subtle) + var(--ul-ax) * (var(--ul-accent-shade-vivid) - var(--ul-accent-shade-subtle)));
+  --ul-a-body: calc(var(--ul-accent-body-subtle) + var(--ul-ax) * (var(--ul-accent-body-vivid) - var(--ul-accent-body-subtle)));
+  --ul-a-wash: calc(var(--ul-accent-wash-subtle) + var(--ul-ax) * (var(--ul-accent-wash-vivid) - var(--ul-accent-wash-subtle)));
+  --ul-a-rim: calc(var(--ul-accent-rim-subtle) + var(--ul-ax) * (var(--ul-accent-rim-vivid) - var(--ul-accent-rim-subtle)));
+  --ul-a-glow: calc(var(--ul-accent-glow-subtle) + var(--ul-ax) * (var(--ul-accent-glow-vivid) - var(--ul-accent-glow-subtle)));
+  --ul-a-light: calc(var(--ul-accent-light-subtle) + var(--ul-ax) * (var(--ul-accent-light-vivid) - var(--ul-accent-light-subtle)));
+  --ul-a-sat: calc(var(--ul-accent-saturate-subtle) + var(--ul-ax) * (var(--ul-accent-saturate-vivid) - var(--ul-accent-saturate-subtle)));
+  /* lite tier (no SVG backdrop colorize): the body carries the hue the colorize would add (backdrop strength × --ul-perf-lite-colorize). --ul-lite 0..1 crossfades with the lens. */
+  --ul-a-bd: calc(var(--ul-accent-backdrop-subtle) + var(--ul-ax) * (var(--ul-accent-backdrop-vivid) - var(--ul-accent-backdrop-subtle)));
+  --ul-a-body-x: calc(var(--ul-a-body) + var(--ul-lite, 0) * var(--ul-perf-lite-tint));
+  /* bottom layer, transparent unless lite: the raw accent over the desaturated backdrop stands in for the SVG colorize */
+  --ul-lite-wash: color-mix(in srgb, var(--ul-accent) calc(var(--ul-lite, 0) * var(--ul-a-bd) * var(--ul-perf-lite-colorize) * 100%), transparent);
+
+  /* body: accent lifted toward white at subtle, pure and shaded (saturated mid-tone) at vivid */
+  --ul-glass-tint-color: color-mix(in oklab, color-mix(in oklab, var(--ul-accent) var(--ul-a-tint), var(--ul-color-white)), #000 var(--ul-a-shade));
+  --ul-glass-rim-color: color-mix(in oklab, var(--ul-accent) var(--ul-a-rim), var(--ul-color-white));
+  --ul-glass-light-color: color-mix(in oklab, var(--ul-accent) var(--ul-a-light), var(--ul-color-white));
+  --ul-glass-deep: color-mix(in oklab, var(--ul-accent) var(--ul-accent-deep), #000);
+
+  /* contrast scrim per backdrop class, piecewise subtle → tinted → vivid */
+  --ul-sp: clamp(0, var(--ul-ax) / var(--ul-ax-t), 1);
+  --ul-sq: clamp(0, (var(--ul-ax) - var(--ul-ax-t)) / (1 - var(--ul-ax-t)), 1);
+  --ul-sc-d: calc(var(--ul-scrim-dark-subtle) + var(--ul-sp) * (var(--ul-scrim-dark-tinted) - var(--ul-scrim-dark-subtle)) + var(--ul-sq) * (var(--ul-scrim-dark-vivid) - var(--ul-scrim-dark-tinted)));
+  --ul-sc-m: calc(var(--ul-scrim-mid-subtle) + var(--ul-sp) * (var(--ul-scrim-mid-tinted) - var(--ul-scrim-mid-subtle)) + var(--ul-sq) * (var(--ul-scrim-mid-vivid) - var(--ul-scrim-mid-tinted)));
+  --ul-sc-l: calc(var(--ul-scrim-light-subtle) + var(--ul-sp) * (var(--ul-scrim-light-tinted) - var(--ul-scrim-light-subtle)) + var(--ul-sq) * (var(--ul-scrim-light-vivid) - var(--ul-scrim-light-tinted)));
+  --ul-glass-scrim: calc(var(--ul-sc-d) + var(--ul-bd-mid, 0) * (var(--ul-sc-m) - var(--ul-sc-d)) + var(--ul-bd-light, 0) * (var(--ul-sc-l) - var(--ul-sc-d)));
+  /* deep ACCENT backing (never neutral gray), above the body so it governs text contrast */
+  --ul-glass-backing: color-mix(in srgb, var(--ul-glass-deep) calc(var(--ul-glass-scrim) * 100%), transparent);
+
+  position: relative;
+  isolation: isolate;
+  box-sizing: border-box;
+  padding: var(--ul-glass-padding);
+  border-radius: var(--ul-glass-radius);
+  color: var(--ul-color-text);
+  /* c) wash (soft, from below) › backing › colored body */
+  background:
+    radial-gradient(120% 90% at 50% 115%, color-mix(in srgb, var(--ul-accent) calc(var(--ul-a-wash) * 100%), transparent), transparent 70%),
+    linear-gradient(var(--ul-glass-backing), var(--ul-glass-backing)),
+    linear-gradient(180deg,
+      color-mix(in srgb, var(--ul-glass-tint-color) calc((var(--ul-glass-tint) * 1.5 + var(--ul-a-body-x)) * 100%), transparent) 0%,
+      color-mix(in srgb, var(--ul-glass-tint-color) calc((var(--ul-glass-tint) + var(--ul-a-body-x)) * 100%), transparent) 42%,
+      color-mix(in srgb, var(--ul-glass-tint-color) calc((var(--ul-glass-tint) * .8 + var(--ul-a-body-x)) * 100%), transparent) 100%),
+    linear-gradient(var(--ul-lite-wash), var(--ul-lite-wash));
+  /* b) refraction FIRST (url() set by the engine in Chromium only; it also colorizes the refracted backdrop), then a) light blur, saturation boosted with strength */
+  -webkit-backdrop-filter: blur(var(--ul-glass-blur)) saturate(calc(var(--ul-glass-saturate) * (1 + var(--ul-a-sat)))) brightness(var(--ul-glass-brightness));
+  backdrop-filter: var(--ul-glass-filter,) blur(var(--ul-glass-blur)) saturate(calc(var(--ul-glass-saturate) * (1 + var(--ul-a-sat)))) brightness(var(--ul-glass-brightness));
+  /* d) thin NEUTRAL highlight + inner rim shadows, e) tinted outer shadow + accent glow */
+  box-shadow:
+    inset 0 1px 0 0 rgb(var(--ul-color-white-rgb) / .2),
+    inset 0 -1px 1px 0 rgb(var(--ul-color-white-rgb) / .05),
+    inset 0 0 20px 0 color-mix(in srgb, var(--ul-glass-rim-color) 5%, transparent),
+    /* lite fake lensing (0 unless lite): brighter rim hairline, edge darkening where the lens would bend, lit top bevel, shaded bottom bevel */
+    inset 0 0 0 1px rgb(var(--ul-color-white-rgb) / calc(var(--ul-lite, 0) * var(--ul-perf-lite-rim))),
+    inset 0 0 var(--ul-perf-lite-edge) 0 rgb(0 0 0 / calc(var(--ul-lite, 0) * .12)),
+    inset 0 var(--ul-perf-lite-edge) var(--ul-perf-lite-edge) calc(var(--ul-perf-lite-edge) * -1) rgb(var(--ul-color-white-rgb) / calc(var(--ul-lite, 0) * .24)),
+    inset 0 calc(var(--ul-perf-lite-edge) * -1) calc(var(--ul-perf-lite-edge) * 1.4) calc(var(--ul-perf-lite-edge) * -1) rgb(0 0 0 / calc(var(--ul-lite, 0) * .26)),
+    /* chroma fringe on the bezel only (full tier): warm toward the lit corner, cool toward the shaded one. Plain paint, never a filter channel. */
+    inset var(--ul-glass-fringe-w, 1.5px) var(--ul-glass-fringe-w, 1.5px) calc(var(--ul-glass-fringe-w, 1.5px) * 1.4) calc(var(--ul-glass-fringe-w, 1.5px) * -.6) rgb(255 84 120 / var(--ul-glass-fringe-a, 0)),
+    inset calc(var(--ul-glass-fringe-w, 1.5px) * -1) calc(var(--ul-glass-fringe-w, 1.5px) * -1) calc(var(--ul-glass-fringe-w, 1.5px) * 1.4) calc(var(--ul-glass-fringe-w, 1.5px) * -.6) rgb(72 170 255 / var(--ul-glass-fringe-a, 0)),
+    var(--ul-glass-shadow),
+    0 10px calc(36px + var(--ul-ax) * 24px) -10px color-mix(in srgb, var(--ul-accent) calc(var(--ul-a-glow) * 100%), transparent);
+}
+
+.ul-glass[data-tier="sm"] { --ul-glass-blur: var(--ul-glass-sm-blur); --ul-glass-refraction: var(--ul-glass-sm-refraction); --ul-glass-bezel: var(--ul-glass-sm-bezel); --ul-glass-aberration: var(--ul-glass-sm-aberration); --ul-glass-tint: var(--ul-glass-sm-tint); --ul-glass-shadow: var(--ul-glass-sm-shadow); --ul-glass-radius: var(--ul-glass-sm-radius); }
+.ul-glass[data-tier="lg"] { --ul-glass-blur: var(--ul-glass-lg-blur); --ul-glass-refraction: var(--ul-glass-lg-refraction); --ul-glass-bezel: var(--ul-glass-lg-bezel); --ul-glass-aberration: var(--ul-glass-lg-aberration); --ul-glass-tint: var(--ul-glass-lg-tint); --ul-glass-shadow: var(--ul-glass-lg-shadow); --ul-glass-radius: var(--ul-glass-lg-radius); }
+.ul-glass[data-tier="xl"] { --ul-glass-blur: var(--ul-glass-xl-blur); --ul-glass-refraction: var(--ul-glass-xl-refraction); --ul-glass-bezel: var(--ul-glass-xl-bezel); --ul-glass-aberration: var(--ul-glass-xl-aberration); --ul-glass-tint: var(--ul-glass-xl-tint); --ul-glass-shadow: var(--ul-glass-xl-shadow); --ul-glass-radius: var(--ul-glass-xl-radius); }
+
+/* d) specular rim: 1px ring. The bright top-left stays neutral white (reads as glass); the rest carries the accent. */
+.ul-glass::before {
+  content: "";
+  opacity: var(--ul-rim, 1);
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  border-radius: inherit;
+  padding: 1px;
+  pointer-events: none;
+  background: linear-gradient(var(--ul-rim-angle, 135deg),
+    rgb(var(--ul-color-white-rgb) / .7) 0%,
+    color-mix(in srgb, var(--ul-glass-rim-color) calc(14% + var(--ul-ax) * 16%), transparent) 24%,
+    transparent 48%,
+    color-mix(in srgb, var(--ul-glass-rim-color) calc(10% + var(--ul-ax) * 20%), transparent) 76%,
+    color-mix(in srgb, var(--ul-glass-rim-color) calc(46% + var(--ul-ax) * 24%), transparent) 100%);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+}
+
+/* f) pointer light (accent-tinted) + press flare (z-index -1 paints above the body, below content) */
+.ul-glass::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  pointer-events: none;
+  background:
+    radial-gradient(var(--ul-glass-flare-size) circle at var(--fx, 50%) var(--fy, 50%),
+      rgb(var(--ul-color-white-rgb) / calc(var(--ul-glass-flare-intensity) * var(--ul-flare, 0))), transparent 70%),
+    radial-gradient(var(--ul-glass-light-size) circle at var(--mx, 50%) var(--my, -30%),
+      color-mix(in srgb, var(--ul-glass-light-color) calc(var(--ul-glass-light-intensity) * var(--ul-light, 0) * 100%), transparent), transparent 70%);
+}
+
+/* Chrome variant: cold silver sheen over the colored body; the cold tone follows the accent */
+.ul-glass[data-variant="chrome"] {
+  background:
+    linear-gradient(112deg, transparent 28%, color-mix(in srgb, var(--ul-accent) calc(10% + var(--ul-ax) * 10%), transparent) 48%, transparent 64%),
+    linear-gradient(var(--ul-glass-backing), var(--ul-glass-backing)),
+    linear-gradient(180deg,
+      rgb(var(--ul-color-silver-hi-rgb) / calc(var(--ul-glass-tint) * 1.6)) 0%,
+      color-mix(in srgb, var(--ul-glass-tint-color) calc((var(--ul-glass-tint) * .8 + var(--ul-a-body-x)) * 100%), transparent) 46%,
+      rgb(var(--ul-color-steel-2-rgb) / calc(var(--ul-glass-tint) * 1.2)) 100%),
+    linear-gradient(var(--ul-lite-wash), var(--ul-lite-wash));
+}
+.ul-glass[data-variant="chrome"]::before {
+  background: linear-gradient(var(--ul-rim-angle, 135deg),
+    rgb(var(--ul-color-silver-hi-rgb) / .9) 0%,
+    color-mix(in srgb, var(--ul-glass-rim-color) 28%, transparent) 26%,
+    transparent 50%,
+    color-mix(in srgb, var(--ul-glass-rim-color) 20%, transparent) 74%,
+    rgb(var(--ul-color-silver-rgb) / .62) 100%);
+}
+
+/* Glass inside glass: flattened to tint + rim, never samples the backdrop. The parent already carries scrim + body.
+   The CSS-only rule covers the moment before the engine marks it flat. */
+.ul-glass .ul-glass { -webkit-backdrop-filter: none; backdrop-filter: none; }
+.ul-glass[data-ul-mode="flat"]:not([data-ul-top]) {
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  background: color-mix(in srgb, var(--ul-glass-tint-color) calc((var(--ul-tint-flat) + var(--ul-a-body) * .4) * 100%), transparent);
+  box-shadow: inset 0 1px 0 0 rgb(var(--ul-color-white-rgb) / .12), inset 0 0 0 .5px color-mix(in srgb, var(--ul-glass-rim-color) 20%, transparent);
+}
+
+/* Lite tier: no SVG colorize, so colorize the backdrop with CSS filters by the same strength; a light accent wash helps
+   (the engine appends the same term to the lens while a lite ↔ full crossfade runs). */
+.ul-glass[data-ul-mode="lite"] { --ul-glass-filter: var(--ul-lite-filter); }
+/* Fringe strength follows the tier's aberration token; scaled by the lens amount (q), off in lite / flat / fallback and in the legacy 3-pass debug mode */
+.ul-glass[data-ul-mode="refract"] { --ul-glass-fringe-a: calc(var(--ul-glass-aberration, 2) * var(--ul-glass-fringe, .05) * (1 - var(--ul-lite, 0))); }
+[data-ul-three-pass] .ul-glass { --ul-glass-fringe-a: 0; }
+/* glass debug switches (glassDebug.ts, ?glassdebug) */
+[data-ul-gd~="nofringe"] .ul-glass { --ul-glass-fringe-a: 0 !important; }
+[data-ul-gd~="contain"] .ul-glass { will-change: backdrop-filter; contain: paint; }
+[data-ul-gd~="noisolate"] .ul-glass { isolation: auto; will-change: auto; contain: none; }
+[data-ul-gd~="notrans"] .ul-glass, [data-ul-gd~="notrans"] .ul-glass::before, [data-ul-gd~="notrans"] .ul-glass::after, [data-ul-gd~="notrans"] [data-ul-accent], [data-ul-gd~="notrans"] [data-ul-accent-strength] { transition: none !important; }
+[data-ul-gd~="nocv"] * { content-visibility: visible !important; animation-timeline: auto !important; }
+.ul-glass {
+  /* CSS colorize: gray → sepia → rotate to the accent hue (--ul-lite-hue, set by the engine) → re-saturate, by the colorize strength */
+  /* --ul-lite-ready: set by the engine together with --ul-lite-hue. Until then the colorize stays off, so a surface entering the
+     viewport never shows sepia at hue 0 (the olive / green flash) for a frame before its accent hue is known. */
+  --ul-lite-x: calc(var(--ul-lite, 0) * var(--ul-a-bd) * var(--ul-perf-lite-desaturate) * var(--ul-lite-ready, 0));
+  --ul-lite-c: min(1, var(--ul-lite-x) * 2); /* hue fully replaced (hue-rotate can't be partial); strength lives in saturate */
+  --ul-lite-filter: grayscale(var(--ul-lite-c)) sepia(var(--ul-lite-c)) hue-rotate(calc(var(--ul-lite-hue, 0deg) * var(--ul-lite-x) / max(var(--ul-lite-x), .001))) saturate(calc(1 + var(--ul-lite-x) * 2.2));
+}
+
+/* Quality "flat" on a top-level surface (explicit, or off-screen): no backdrop-filter at all; keeps backing, body (+ lite hue), rim and inner shadows. */
+.ul-glass[data-ul-mode="flat"][data-ul-top] { -webkit-backdrop-filter: none; backdrop-filter: none; }
+
+/* No refraction (Safari, Firefox, WebKit): the backdrop can't be colorized, so the body carries more of the hue */
+.ul-glass[data-ul-mode="fallback"] {
+  --ul-glass-tint: calc(var(--ul-tint-regular) + .02);
+  --ul-a-body: calc(var(--ul-accent-body-subtle) + var(--ul-ax) * (var(--ul-accent-body-vivid) + var(--ul-accent-fallback-body) - var(--ul-accent-body-subtle)));
+}
+/* Mobile blur-only (iOS / WebKit, and large surfaces on Android under the mobile policy): no lens to show depth,
+   so the material fakes it: more frost, a brighter top rim, an accent hairline and a soft inner bevel. Never a flat gray plate. */
+.ul-glass[data-ul-mode="fallback"][data-ul-mobile] {
+  --ul-glass-tint: calc(var(--ul-tint-regular) + .02 + var(--ul-mobile-fallback-tint));
+  --ul-glass-blur: calc(var(--ul-glass-sm-blur) + 14px);
+  box-shadow:
+    inset 0 1px 0 0 rgb(var(--ul-color-white-rgb) / var(--ul-mobile-fallback-rim)),
+    inset 0 0 0 1px color-mix(in srgb, var(--ul-glass-rim-color) 16%, transparent),
+    inset 0 12px 20px -14px rgb(var(--ul-color-white-rgb) / .12),
+    inset 0 -12px 20px -14px rgb(0 0 0 / .45),
+    var(--ul-glass-shadow),
+    0 10px calc(36px + var(--ul-ax) * 24px) -10px color-mix(in srgb, var(--ul-accent) calc(var(--ul-a-glow) * 100%), transparent);
+}
+
+/* Showcase-only: the stage-B look (subtle accent, neutral graphite backing) for before/after comparison */
+[data-ul-accent-legacy] .ul-glass {
+  --ul-ax: 0;
+  --ul-glass-backing: rgb(var(--ul-color-graphite-rgb) / var(--ul-glass-scrim));
+}
+
+/* Debug: paint the displacement map */
+.ul-glass[data-ul-debug] {
+  background: var(--ul-glass-debug-map) center / 100% 100% no-repeat;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+/* Reduced transparency: solid surfaces (deep accent keeps the identity) */
+@media (prefers-reduced-transparency: reduce) {
+  .ul-glass { -webkit-backdrop-filter: none; backdrop-filter: none; background: color-mix(in oklab, var(--ul-glass-deep) calc(var(--ul-ax) * 60%), var(--ul-color-surface-solid)); }
+}
+/* same, forced (tests / user setting): <html data-ul-transparency="reduce">, or ?transparency=reduce via initGlassDebug */
+:root[data-ul-transparency="reduce"] .ul-glass { -webkit-backdrop-filter: none; backdrop-filter: none; background: color-mix(in oklab, var(--ul-glass-deep) calc(var(--ul-ax) * 60%), var(--ul-color-surface-solid)); }
+[data-ul-reduce-transparency="true"] .ul-glass {
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  background: color-mix(in oklab, var(--ul-glass-deep) calc(var(--ul-ax) * 60%), var(--ul-color-surface-solid));
+}
+/* material="flat" (ULProvider / material prop / data-ul-material; data-ul-flat = engine-resolved nearest attribute):
+   opaque body colour (--ul-glass-tint-color) weighted by --ul-ax under the glass contrast backing, so accented controls
+   (primary, destructive) keep their accent fill. At subtle (ax 0) = --ul-color-surface-solid, same as the fallback. */
+.ul-glass[data-ul-material="flat"], .ul-glass[data-ul-flat] {
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  background:
+    linear-gradient(color-mix(in srgb, var(--ul-glass-deep) calc(var(--ul-glass-scrim) * var(--ul-ax) * 100%), transparent), color-mix(in srgb, var(--ul-glass-deep) calc(var(--ul-glass-scrim) * var(--ul-ax) * 100%), transparent)),
+    linear-gradient(color-mix(in oklab, var(--ul-glass-tint-color) calc(var(--ul-ax) * 100%), var(--ul-color-surface-solid)), color-mix(in oklab, var(--ul-glass-tint-color) calc(var(--ul-ax) * 100%), var(--ul-color-surface-solid)));
+}
+
+/* flat: no gloss rim, no pointer light / flare (geometry, padding and timing unchanged) */
+.ul-glass:is([data-ul-material="flat"], [data-ul-flat])::before, .ul-glass:is([data-ul-material="flat"], [data-ul-flat])::after { opacity: 0; }
+
+.ul-glass[data-pressable] { cursor: pointer; touch-action: manipulation; }
+
+/* Reveal on hover: rows/items that become glass cards only on hover, focus or when current (menus, lists) */
+.ul-glass[data-ul-reveal="hover"] { transition: background-color var(--ul-duration-fast) var(--ul-ease-standard), box-shadow var(--ul-duration-fast) var(--ul-ease-standard); }
+.ul-glass[data-ul-reveal="hover"]::before { transition: opacity var(--ul-duration-fast) var(--ul-ease-standard); }
+.ul-glass[data-ul-reveal="hover"]:not(:hover):not(:focus-visible):not([data-active]):not([aria-current]) { background: transparent; box-shadow: none; }
+.ul-glass[data-ul-reveal="hover"]:not(:hover):not(:focus-visible):not([data-active]):not([aria-current])::before { opacity: 0; }

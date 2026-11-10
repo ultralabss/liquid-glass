@@ -1,0 +1,7 @@
+.ul-glass-group {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--ul-glass-group-spacing, var(--ul-space-3));
+}
+.ul-glass-group[data-direction="column"] { flex-direction: column; align-items: stretch; }

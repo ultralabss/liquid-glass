@@ -1,0 +1,67 @@
+.ul-glass.ul-anchored {
+  position: fixed;
+  z-index: calc(var(--ul-z-overlay) + var(--ul-depth, 0) * 4);
+  margin: 0;
+  /* overlays carry text over arbitrary content: deep-accent backing at least --ul-pop-scrim */
+  --ul-glass-backing: color-mix(in srgb, var(--ul-glass-deep) calc(max(var(--ul-pop-scrim), var(--ul-glass-scrim)) * 100%), transparent);
+  /* Concentric item radius: popper radius − popper padding, floor --ul-menu-item-radius-min, capped at a pill (44 / 2).
+     Resolved here (on the surface) and inherited by rows and the shared hover lens, so both always match. */
+  --ul-item-radius: clamp(var(--ul-menu-item-radius-min), calc(var(--ul-glass-radius) - var(--ul-glass-padding)), var(--ul-menu-item-radius-max));
+}
+/* Top layer (anchorVisibility "covered" and anything opened above it): reset the UA popover box, keep our geometry. */
+.ul-glass.ul-anchored[popover] { inset: auto; margin: 0; border: 0; overflow: visible; max-width: none; max-height: none; }
+.ul-scrim[popover], .ul-morph-goo[popover] { inset: 0; margin: 0; padding: 0; border: 0; width: auto; height: auto; max-width: none; max-height: none; overflow: visible; color: inherit; }
+.ul-morph-goo[popover] { background: transparent; }
+/* no popover API: same order by z-index (above any page chrome) */
+[data-ul-top-layer]:not([popover]) { z-index: 2147483000 !important; }
+/* Covered (modal) surfaces: opaque base from frame 0 (before refraction is ready), so the trigger never shows through.
+   Once refraction is decoded the engine crossfades --ul-lite 1 → 0 (--ul-perf-crossfade); the backing rides the same
+   value down to --ul-modal-glass-backing. Blur-only / lite surfaces keep --ul-lite 1 and therefore the covered backing. */
+.ul-glass.ul-anchored[data-ul-covered-anchor] {
+  --ul-modal-backing-now: calc(var(--ul-modal-glass-backing) + (var(--ul-modal-covered-backing) - var(--ul-modal-glass-backing)) * var(--ul-lite, 1));
+  --ul-glass-backing: color-mix(in srgb, var(--ul-glass-deep) calc(max(var(--ul-modal-backing-now), var(--ul-pop-scrim), var(--ul-glass-scrim)) * 100%), transparent);
+}
+.ul-morph-stage {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.ul-morph-content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ul-space-1);
+  min-width: 0;
+}
+/* Gooey neck helper: plain shapes, never glass, never an ancestor of glass. Below the surface; clipped with the same anchor hole as the surface. */
+.ul-morph-goo {
+  position: fixed;
+  inset: 0;
+  z-index: calc(var(--ul-z-overlay) + var(--ul-depth, 0) * 4 - 1);
+  pointer-events: none;
+  opacity: 0;
+}
+/* Soft scrim (modal, drawer, palette): plain graphite, never glass; opacity is written by the morph timeline. */
+.ul-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: calc(var(--ul-z-overlay) + var(--ul-depth, 0) * 4 - 2);
+  background: var(--ul-scrim-color);
+  -webkit-tap-highlight-color: transparent;
+}
+/* A modal covered by a stacked modal steps back (container state, not an enter / exit). */
+.ul-glass.ul-anchored[data-ul-covered] { scale: var(--ul-modal-stack-scale); transition: scale 320ms var(--ul-ease-smooth); }
+.ul-glass.ul-anchored:not([data-ul-covered]) { transition: scale 320ms var(--ul-ease-smooth); }
+@media (prefers-reduced-motion: reduce) { .ul-glass.ul-anchored { transition: none; } }
+
+.ul-morph-goo > span {
+  position: absolute;
+  left: 0;
+  top: 0;
+  background: rgb(var(--ul-color-silver-hi-rgb));
+}
+
+/* Debug: outlines + z-order colors (set data-ul-morph-debug on <html>) */
+[data-ul-morph-debug] .ul-anchored { outline: 1px dashed var(--ul-color-ice); outline-offset: 2px; }
+[data-ul-morph-debug] [data-ul-morph-occluder] { outline: 2px solid var(--ul-color-warning); outline-offset: 3px; }
+[data-ul-morph-debug] .ul-morph-goo > span { background: var(--ul-color-danger); }

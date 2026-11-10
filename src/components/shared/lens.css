@@ -1,0 +1,46 @@
+/* Lens bubble (src/motion/lensBubble.ts) + flat resting thumbs. Shared by ULSwitch, ULSlider, ULSegmentedControl, ULTabs. Tokens only.
+   The bubble lives in [data-ul-lens-layer] at the document root: size, position (translate3d), radius, opacity and --ul-lens-k
+   are written per frame by LensBubble. lens = the only glass of the control. */
+.ul-thumb-knob {
+  position: absolute; inset: 0; border-radius: inherit;
+  background: rgb(var(--ul-color-white-rgb));
+  box-shadow: 0 1px 2px rgb(var(--ul-color-shadow-rgb) / .3), 0 3px 8px -2px rgb(var(--ul-color-shadow-rgb) / .38), inset 0 0 0 .5px rgb(var(--ul-color-shadow-rgb) / .12);
+  pointer-events: none;
+}
+.ul-lens-wrap {
+  --k: var(--ul-lens-k, 0);
+  position: absolute; left: 0; top: 0;
+  display: none;
+  box-sizing: border-box;
+  overflow: visible;
+  pointer-events: none;
+  opacity: 0;
+  will-change: transform, width, height;
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--ul-accent) 40%, rgb(var(--ul-color-white-rgb) / .5)),
+    0 0 calc(18px * var(--k)) calc(1px * var(--k)) color-mix(in srgb, var(--ul-accent) 38%, transparent),
+    0 calc(2px + 8px * var(--k)) calc(6px + 18px * var(--k)) rgb(var(--ul-color-shadow-rgb) / calc(.2 + .24 * var(--k)));
+}
+.ul-lens-wrap > .ul-lens { position: absolute; inset: 0; display: block; --ul-glass-bezel: 14px; --ul-glass-aberration: 2.5; }
+/* specular highlight + inner rim (content of the lens, never glass) */
+.ul-lens-spec {
+  position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+  background: radial-gradient(120% 90% at 30% 10%, rgb(var(--ul-color-white-rgb) / .5) 0, rgb(var(--ul-color-white-rgb) / 0) 38%),
+              radial-gradient(90% 70% at 70% 100%, rgb(var(--ul-color-white-rgb) / .16) 0, rgb(var(--ul-color-white-rgb) / 0) 50%);
+  box-shadow: inset 0 1px 0 rgb(var(--ul-color-white-rgb) / .55), inset 0 -1px 2px rgb(var(--ul-color-shadow-rgb) / .22);
+}
+/* lite / blur-only / over glass: same motion, bevel + magnified-looking inner highlight, never a flat plate */
+.ul-lens-wrap[data-fallback] { background: color-mix(in srgb, var(--ul-accent) 12%, rgb(var(--ul-color-white-rgb) / .12)); }
+.ul-lens-wrap[data-fallback] .ul-lens-spec {
+  background: radial-gradient(120% 90% at 30% 8%, rgb(var(--ul-color-white-rgb) / .62) 0, rgb(var(--ul-color-white-rgb) / 0) 40%),
+              radial-gradient(70% 60% at 50% 56%, rgb(var(--ul-color-white-rgb) / .14) 0, rgb(var(--ul-color-white-rgb) / 0) 70%),
+              radial-gradient(90% 70% at 70% 100%, rgb(var(--ul-color-white-rgb) / .24) 0, rgb(var(--ul-color-white-rgb) / 0) 46%);
+  box-shadow: inset 0 2px 2px rgb(var(--ul-color-white-rgb) / .55), inset 0 -3px 6px rgb(var(--ul-color-shadow-rgb) / .3), inset 0 0 0 1px rgb(var(--ul-color-white-rgb) / .3);
+}
+/* persistent indicator (tabs, segmented): the SAME node rests as a flat capsule inside the list, above the labels */
+.ul-lens-wrap[data-host] { display: block; z-index: 2; opacity: 1; will-change: auto; }
+.ul-lens-wrap[data-rest] {
+  background: rgb(var(--ul-color-white-rgb) / .14);
+  box-shadow: inset 0 0 0 1px rgb(var(--ul-color-white-rgb) / .22), 0 1px 3px rgb(var(--ul-color-shadow-rgb) / .35);
+}
+.ul-lens-wrap[data-rest] .ul-lens-spec { opacity: .35; }

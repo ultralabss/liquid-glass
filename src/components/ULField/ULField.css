@@ -1,0 +1,223 @@
+/* Fields: inset well (not glass), floating label, messages. Tokens only. */
+/* accent-tinted well + rim, resolved on the field container so the LOCAL accent applies (root tokens resolve --ul-accent at :root) */
+.ul-field, .ul-ffield, .ul-igroup, .ul-select, .ul-combobox, .ul-picker {
+  --ul-fw: color-mix(in oklab, var(--ul-field-well), var(--ul-accent) var(--ul-field-accent-mix));
+  --ul-fwh: color-mix(in oklab, var(--ul-field-well-hover), var(--ul-accent) var(--ul-field-accent-mix-hover));
+  --ul-fr: color-mix(in oklab, var(--ul-field-rim), var(--ul-accent) var(--ul-field-rim-accent-mix));
+  --ul-frh: color-mix(in oklab, var(--ul-field-rim-hover), var(--ul-accent) var(--ul-field-rim-accent-mix-hover));
+}
+.ul-field {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ul-space-2);
+  min-width: 0;
+  font-family: var(--ul-font-sans);
+  color: var(--ul-color-text);
+}
+.ul-field > .ul-field-label { font-size: var(--ul-text-sm); font-weight: var(--ul-weight-medium); color: var(--ul-color-text-2); }
+.ul-field-req { color: var(--ul-color-text-2); }
+
+.ul-well {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  align-items: center;
+  gap: var(--ul-space-1);
+  box-sizing: border-box;
+  min-height: var(--ul-field-h);
+  padding: 0 var(--ul-space-1) 0 var(--ul-field-pad);
+  border-radius: var(--ul-field-radius);
+  background: var(--ul-fw);
+  box-shadow: var(--ul-field-inset), inset 0 0 0 1px var(--ul-fr);
+  transition: box-shadow var(--ul-duration-fast) var(--ul-ease-standard), background-color var(--ul-duration-fast) var(--ul-ease-standard);
+}
+/* pointer light only (engine sets --mx/--my/--ul-light); no movement */
+.ul-well::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  pointer-events: none;
+  background: radial-gradient(var(--ul-glass-light-size) circle at var(--mx, 50%) var(--my, -30%), rgb(var(--ul-color-white-rgb) / calc(var(--ul-field-light) * var(--ul-light, 0))), transparent 70%);
+}
+.ul-field[data-size="compact"] .ul-well { min-height: var(--ul-field-h-compact); }
+.ul-field[data-shape="capsule"] .ul-well { border-radius: var(--ul-radius-capsule); padding-left: var(--ul-space-3); }
+.ul-well:hover, .ul-field[data-ul-force~="hover"] .ul-well { background: var(--ul-fwh); box-shadow: var(--ul-field-inset), inset 0 0 0 1px var(--ul-frh); }
+.ul-field:focus-within .ul-well, .ul-field[data-ul-force~="focus"] .ul-well {
+  background: var(--ul-fwh);
+  box-shadow: var(--ul-field-inset), inset 0 0 0 var(--ul-focus-width) var(--ul-focus-color), 0 0 0 4px color-mix(in srgb, var(--ul-focus-color) 22%, transparent);
+}
+.ul-field[data-invalid] .ul-well { box-shadow: var(--ul-field-inset), inset 0 0 0 var(--ul-focus-width) var(--ul-color-danger); }
+.ul-field[data-invalid]:focus-within .ul-well { box-shadow: var(--ul-field-inset), inset 0 0 0 var(--ul-focus-width) var(--ul-color-danger), 0 0 0 4px color-mix(in srgb, var(--ul-color-danger) 22%, transparent); }
+.ul-field[data-disabled] { opacity: var(--ul-control-disabled-opacity); }
+.ul-field[data-disabled] .ul-well { pointer-events: none; }
+
+.ul-field-icon { position: relative; display: inline-grid; place-items: center; flex: none; width: var(--ul-control-icon); height: var(--ul-control-icon); color: var(--ul-color-text-2); }
+.ul-field-icon + .ul-field-control { margin-left: var(--ul-space-2); }
+.ul-field-control { position: relative; flex: 1 1 auto; min-width: 0; align-self: stretch; display: flex; flex-direction: column; justify-content: center; }
+
+.ul-field-input {
+  appearance: none;
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--ul-color-text);
+  font: inherit;
+  font-size: var(--ul-text-md);
+  line-height: 1.4;
+  caret-color: var(--ul-focus-color);
+}
+.ul-field-input::placeholder { color: var(--ul-color-text-3); opacity: 1; }
+.ul-field-input::-webkit-search-cancel-button, .ul-field-input::-webkit-search-decoration { -webkit-appearance: none; }
+.ul-field-input:disabled { cursor: not-allowed; }
+
+/* floating label: sits in the well like a placeholder, floats up on focus / when filled */
+.ul-field[data-floating] .ul-field-label {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transform: translateY(-50%);
+  transform-origin: left top;
+  font-size: var(--ul-text-md);
+  color: var(--ul-color-text-2);
+  pointer-events: none;
+  transition: top var(--ul-duration-fast) var(--ul-ease-standard), transform var(--ul-duration-fast) var(--ul-ease-standard), color var(--ul-duration-fast) var(--ul-ease-standard);
+}
+.ul-field[data-floating] .ul-field-input { padding-top: calc(var(--ul-field-label-shift) * 2); }
+.ul-field[data-floating]:focus-within .ul-field-label,
+.ul-field[data-floating][data-filled] .ul-field-label,
+.ul-field[data-floating][data-ul-force~="focus"] .ul-field-label { top: var(--ul-field-label-shift); transform: scale(var(--ul-field-label-scale)); }
+.ul-field[data-floating]:focus-within .ul-field-label { color: var(--ul-color-text); }
+.ul-field[data-floating]:not(:focus-within) .ul-field-input::placeholder { color: transparent; }
+.ul-field[data-floating][data-size="compact"] .ul-field-label { font-size: var(--ul-text-sm); }
+
+/* multiline (textarea, tags) */
+.ul-well[data-multiline] { align-items: flex-start; padding-top: calc(var(--ul-field-label-shift) * 2.6); padding-bottom: var(--ul-space-3); }
+.ul-well[data-multiline] .ul-field-control { justify-content: flex-start; }
+.ul-well[data-multiline] .ul-field-input { padding-top: 0; }
+.ul-field[data-floating] .ul-well[data-multiline] .ul-field-label { top: calc(-1 * var(--ul-field-label-shift)); transform: none; }
+.ul-field[data-floating]:not([data-filled]):not(:focus-within):not([data-ul-force~="focus"]) .ul-well[data-multiline] .ul-field-label { top: 0; }
+.ul-field[data-floating]:focus-within .ul-well[data-multiline] .ul-field-label,
+.ul-field[data-floating][data-filled] .ul-well[data-multiline] .ul-field-label,
+.ul-field[data-floating][data-ul-force~="focus"] .ul-well[data-multiline] .ul-field-label { top: calc(-1.8 * var(--ul-field-label-shift)); transform: scale(var(--ul-field-label-scale)); }
+.ul-field-textarea { resize: none; display: block; padding-right: var(--ul-space-3); }
+
+/* search: capsule, optionally collapsed until focused / filled */
+.ul-field[data-expand] { width: var(--ul-field-search-w); max-width: 100%; transition: width var(--ul-duration-base) var(--ul-ease-standard); }
+.ul-field[data-expand]:focus-within, .ul-field[data-expand][data-filled], .ul-field[data-expand][data-ul-force~="focus"] { width: 100%; }
+
+/* buttons inside a well: plain, 44px hit area */
+.ul-well-btn {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  box-sizing: border-box;
+  width: var(--ul-control-hit-min);
+  height: var(--ul-control-hit-min);
+  padding: calc((var(--ul-control-hit-min) - var(--ul-control-icon)) / 2);
+  border: 0;
+  border-radius: var(--ul-radius-sm);
+  background: transparent;
+  color: var(--ul-color-text-2);
+  cursor: pointer;
+  outline: none;
+  transition: background-color var(--ul-duration-fast) var(--ul-ease-standard), color var(--ul-duration-fast) var(--ul-ease-standard);
+}
+.ul-field[data-shape="capsule"] .ul-well-btn { border-radius: var(--ul-radius-capsule); }
+.ul-well-btn:hover:not(:disabled) { background: var(--ul-control-plain-hover); color: var(--ul-color-text); }
+.ul-well-btn:active:not(:disabled) { background: var(--ul-control-plain-active); }
+.ul-well-btn:focus-visible { outline: var(--ul-focus-width) solid var(--ul-focus-color); outline-offset: -2px; color: var(--ul-color-text); }
+.ul-well-btn:disabled { opacity: var(--ul-control-disabled-opacity); cursor: not-allowed; }
+.ul-well-btn[aria-pressed="true"] { color: var(--ul-color-text); }
+.ul-stepper { display: inline-flex; flex: none; }
+.ul-field-number { font-variant-numeric: tabular-nums; }
+
+/* messages */
+.ul-field-msg { display: flex; align-items: flex-start; gap: var(--ul-space-2); margin: 0; padding: 0 var(--ul-space-1); font-size: var(--ul-text-sm); line-height: 1.45; color: var(--ul-color-text-2); }
+/* error text sits outside the well (on a panel or page): lighter danger so it passes 4.5:1 on the worst glass backing */
+.ul-field-msg[data-tone="error"] { color: var(--ul-field-error-text); }
+/* Field directly on a busy backdrop (no glass / solid panel): helper and error text get a small backing so they keep >= 4.5:1. */
+.ul-field[data-ul-bare] .ul-field-msg { align-self: flex-start; padding: var(--ul-field-msg-backing-pad); border-radius: var(--ul-radius-xs); background: var(--ul-field-msg-backing); }
+.ul-field-msg-icon { display: inline-grid; flex: none; width: 15px; height: 15px; margin-top: 1px; }
+
+/* OTP */
+/* sizes to its container: cells shrink from --ul-field-otp-w to 75 % of it, the gap from space-2 to space-1 (% gap = of the row);
+   at the normal form width nothing changes (48px cells, 8px gap). Height stays --ul-field-h. */
+.ul-otp-row { display: flex; align-items: center; gap: clamp(var(--ul-space-1), 2.5%, var(--ul-space-2)); min-width: 0; max-width: 100%; }
+.ul-otp-box {
+  box-sizing: border-box;
+  flex: 0 1 var(--ul-field-otp-w);
+  width: var(--ul-field-otp-w);
+  min-width: calc(var(--ul-field-otp-w) * .75);
+  min-height: var(--ul-field-h);
+  padding: 0;
+  border: 0;
+  outline: 0;
+  color: var(--ul-color-text);
+  font: inherit;
+  font-family: var(--ul-font-mono);
+  font-size: var(--ul-text-xl);
+  font-weight: var(--ul-weight-semibold);
+  text-align: center;
+  caret-color: var(--ul-focus-color);
+}
+.ul-otp-box:focus, .ul-otp[data-ul-force~="focus"] .ul-otp-box:first-child {
+  background: var(--ul-fwh);
+  box-shadow: var(--ul-field-inset), inset 0 0 0 var(--ul-focus-width) var(--ul-focus-color), 0 0 0 4px color-mix(in srgb, var(--ul-focus-color) 22%, transparent);
+}
+.ul-otp[data-invalid] .ul-otp-box { box-shadow: var(--ul-field-inset), inset 0 0 0 var(--ul-focus-width) var(--ul-color-danger); }
+/* only the focused box shows the focus ring (the shared .ul-field:focus-within rule would light all of them) */
+.ul-otp:focus-within .ul-otp-box:not(:focus) { background: var(--ul-fw); box-shadow: var(--ul-field-inset), inset 0 0 0 1px var(--ul-fr); }
+.ul-otp[data-invalid]:focus-within .ul-otp-box:not(:focus) { box-shadow: var(--ul-field-inset), inset 0 0 0 var(--ul-focus-width) var(--ul-color-danger); }
+.ul-otp[data-ul-force~="focus"]:not(:focus-within) .ul-otp-box:not(:first-child) { background: var(--ul-fw); box-shadow: var(--ul-field-inset), inset 0 0 0 1px var(--ul-fr); }
+.ul-otp[data-disabled] { opacity: var(--ul-control-disabled-opacity); }
+
+/* tags */
+.ul-tags { display: flex; flex-wrap: wrap; align-items: center; gap: var(--ul-space-1) var(--ul-space-2); min-height: calc(var(--ul-field-chip-h) + 4px); }
+.ul-tags-list { display: contents; list-style: none; margin: 0; padding: 0; }
+.ul-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  height: var(--ul-field-chip-h);
+  padding: 0 2px 0 var(--ul-space-3);
+  border-radius: var(--ul-radius-capsule);
+  background: var(--ul-field-chip-bg);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ul-accent) 40%, transparent), inset 0 1px 0 rgb(var(--ul-color-white-rgb) / .1);
+  color: var(--ul-color-text);
+  font-size: var(--ul-text-sm);
+  font-weight: var(--ul-weight-medium);
+}
+.ul-chip-x {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  padding: 5px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--ul-color-text-2);
+  cursor: pointer;
+  outline: none;
+}
+.ul-chip-x:hover { background: var(--ul-control-plain-hover); color: var(--ul-color-text); }
+.ul-chip-x:focus-visible { outline: var(--ul-focus-width) solid var(--ul-focus-color); outline-offset: 0; color: var(--ul-color-text); }
+.ul-tags-input { flex: 1 1 80px; width: auto; min-height: var(--ul-field-chip-h); }
+
+/* material="flat" (default for inputs): the well keeps its look, no pointer light. Nearest attribute wins. */
+[data-ul-material="flat"] .ul-well::after { opacity: 0; }
+[data-ul-material="flat"] [data-ul-material="glass"] .ul-well::after { opacity: 1; }

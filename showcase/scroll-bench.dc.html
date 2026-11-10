@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<title>UltraLabs Glass · Scroll behavior bench</title>
+<link rel="stylesheet" href="../tokens/tokens.css">
+<script src="./perf-hud.js"></script>
+<script src="../dist/ul-glass.js"></script>
+<style>html,body{margin:0;background:#0b0d12;color:#f3f6fb}body{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text",system-ui,sans-serif}a{color:#8fb8ff}a:hover{color:#c4d8ff}</style>
+</helmet>
+<div data-ul-theme="app" data-ul-accent="violet" data-ul-backdrop="dark" style="display:flex;flex-direction:column;gap:24px;padding:40px;min-height:2400px;background:var(--ul-color-graphite)">
+  <header style="display:flex;flex-direction:column;gap:8px;max-width:900px">
+    <span style="font-family:var(--ul-font-mono);font-size:13px;letter-spacing:.08em;color:var(--ul-color-text-2)">SCROLL BEHAVIOR BENCH · AnchoredMorph scrollBehavior + onAnchorHidden</span>
+    <h1 style="margin:0;font-size:32px;font-weight:700">Overlays while the page scrolls</h1>
+    <p style="margin:0;font-size:15px;line-height:1.6;color:var(--ul-color-text-2);text-wrap:pretty">Open an overlay, then scroll the page or the inner box. Defaults: menu = lock, popover = follow, tooltip = follow + hide, anchored toast = fixed. The select is the real ULSelect (lock). Automated checks: <a href="./motion-test.dc.html">motion-test</a> → Overlay scroll behavior.</p>
+  </header>
+  <section style="display:flex;flex-direction:column;gap:10px;padding:20px;border-radius:20px;background:rgb(255 255 255 / .04);box-shadow:0 0 0 1px rgb(255 255 255 / .1)">
+    <span style="font-family:var(--ul-font-mono);font-size:12px;letter-spacing:.06em;color:var(--ul-color-text-2)">2c · real components · modal / stacked / sheet / drawers / menu / submenu / context menu / palette = lock · popover = follow · toasts = fixed (stack right edge + scroll-lock gap)</span>
+    <x-import component-from-global-scope="ULDemos.MotionFixtures" from="./demos-2c.js" hint-size="100%,90px"></x-import>
+  </section>
+  <section style="display:flex;flex-direction:column;gap:10px;padding:20px;border-radius:20px;background:rgb(255 255 255 / .04);box-shadow:0 0 0 1px rgb(255 255 255 / .1)">
+    <span style="font-family:var(--ul-font-mono);font-size:12px;letter-spacing:.06em;color:var(--ul-color-text-2)">2e · date range picker (lock; bottom sheet below 640px) · colour picker with custom expand (lock) · radio menu (lock)</span>
+    <x-import component-from-global-scope="ULDemos.PickerFixtures" from="./demos-2e.js" hint-size="100%,90px"></x-import>
+  </section>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:20px;align-items:start">
+    <div style="display:flex;flex-direction:column;gap:16px;padding:20px;border-radius:20px;background:rgb(255 255 255 / .04);box-shadow:0 0 0 1px rgb(255 255 255 / .1)">
+      <x-import component-from-global-scope="UL.ULSelect" dc-props="{{ select }}" hint-size="100%,72px"></x-import>
+      <x-import component-from-global-scope="UL.ULTextField" label="Name" hint-size="100%,56px"></x-import>
+      <sc-for list="{{ rows }}" as="r" hint-placeholder-count="3">
+        <div style="display:flex;flex-wrap:wrap;align-items:center;gap:8px">
+          <button type="button" data-bench="{{ r.id }}" onClick="{{ r.toggle }}" style="min-height:40px;padding:0 16px;border-radius:999px;border:1px solid rgb(255 255 255 / .35);background:rgb(255 255 255 / .1);color:#fff;font:600 14px/1 inherit;cursor:pointer">{{ r.label }}</button>
+          <select aria-label="{{ r.sbLabel }}" value="{{ r.sb }}" onChange="{{ r.setSb }}" style="min-height:36px;border-radius:10px;background:#12151c;color:#fff;border:1px solid rgb(255 255 255 / .2)"><option value="lock">lock</option><option value="follow">follow</option><option value="fixed">fixed</option><option value="close">close</option></select>
+          <select aria-label="{{ r.hidLabel }}" value="{{ r.hid }}" onChange="{{ r.setHid }}" style="min-height:36px;border-radius:10px;background:#12151c;color:#fff;border:1px solid rgb(255 255 255 / .2)"><option value="keep">keep</option><option value="hide">hide</option><option value="close">close</option></select>
+        </div>
+      </sc-for>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <span style="font-family:var(--ul-font-mono);font-size:12px;color:var(--ul-color-text-2)">nested scroll container</span>
+      <div style="height:260px;overflow:auto;border-radius:16px;box-shadow:inset 0 0 0 1px rgb(255 255 255 / .14);padding:16px">
+        <div style="height:900px;padding-top:120px">
+          <button type="button" data-bench="nested" onClick="{{ nested.toggle }}" style="min-height:40px;padding:0 16px;border-radius:999px;border:1px solid rgb(255 255 255 / .35);background:rgb(255 255 255 / .1);color:#fff;font:600 14px/1 inherit;cursor:pointer">Popover in a scroll box</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+const KINDS = [
+  { id: 'popover', label: 'Popover', sb: 'follow', hid: 'keep' },
+  { id: 'tooltip', label: 'Tooltip', sb: 'follow', hid: 'hide' },
+  { id: 'toast', label: 'Anchored toast', sb: 'fixed', hid: 'keep' },
+];
+class Component extends DCLogic {
+  state = { cfg: Object.fromEntries(KINDS.map((k) => [k.id, { sb: k.sb, hid: k.hid }])), nested: { sb: 'follow', hid: 'keep' } };
+  open = {};
+  componentWillUnmount() { Object.values(this.open).forEach((o) => { o.m.destroy(); o.s.remove(); }); }
+  async toggle(id, label, cfg) {
+    const UL = window.UL; if (!UL) return;
+    const cur = this.open[id];
+    if (cur) { delete this.open[id]; await cur.m.exit(); cur.m.destroy(); cur.s.remove(); return; }
+    const anchor = document.querySelector(`[data-bench="${id}"]`);
+    const s = document.createElement('div');
+    s.style.cssText = 'position:fixed;left:0;top:0;width:220px;padding:14px 16px;border-radius:16px;background:#1b2030;color:#fff;font:14px/1.4 system-ui;box-shadow:0 0 0 1px #fff3,0 16px 40px -12px #000c;z-index:1001;visibility:hidden';
+    s.textContent = `${label} · ${cfg.sb} · anchor hidden: ${cfg.hid}`;
+    document.body.appendChild(s);
+    const m = new UL.AnchoredMorph({ anchor, surface: s }, { side: 'bottom', align: 'start', scrollBehavior: cfg.sb, onAnchorHidden: cfg.hid, onRequestClose: () => this.toggle(id) });
+    this.open[id] = { m, s };
+    await m.enter();
+  }
+  renderVals() {
+    const s = this.state;
+    const set = (id, key) => (e) => this.setState((x) => ({ cfg: { ...x.cfg, [id]: { ...x.cfg[id], [key]: e.target.value } } }));
+    return {
+      select: { label: 'Country (menu: lock)', defaultValue: 'sk', options: [['sk', 'Slovakia'], ['cz', 'Czechia'], ['de', 'Germany'], ['at', 'Austria'], ['pl', 'Poland'], ['hu', 'Hungary'], ['si', 'Slovenia'], ['hr', 'Croatia']].map(([value, label]) => ({ value, label })) },
+      rows: KINDS.map((k) => ({ id: k.id, label: k.label, sb: s.cfg[k.id].sb, hid: s.cfg[k.id].hid, sbLabel: k.label + ' scroll behavior', hidLabel: k.label + ' when the anchor is hidden', setSb: set(k.id, 'sb'), setHid: set(k.id, 'hid'), toggle: () => this.toggle(k.id, k.label, s.cfg[k.id]) })),
+      nested: { toggle: () => this.toggle('nested', 'Nested popover', s.nested) },
+    };
+  }
+}
+</script>
+</body>
+</html>

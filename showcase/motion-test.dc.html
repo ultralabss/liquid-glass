@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<title>UltraLabs Glass · Anchored motion test</title>
+<link rel="stylesheet" href="../tokens/tokens.css">
+<script src="./load-meter.js"></script>
+<script src="./perf-hud.js"></script>
+<script src="../dist/ul-glass.min.js"></script>
+<script src="./motion-harness.js"></script>
+<script src="./scroll-harness.js"></script>
+<script src="./glass-scroll-harness.js"></script>
+<script src="./demos-2g.js"></script>
+<script src="./demos-2h.js"></script>
+<script src="./demos-2j.js"></script>
+<script src="./demos-2k.js"></script>
+<script src="./demos-2m.js"></script>
+<script src="./demos-2n.js"></script>
+<script src="./demos-2o.js"></script>
+<script src="./demos-3b.js"></script>
+<script src="./demos-3d.js"></script>
+<script src="./ul-contrast.js"></script>
+<script src="./demos-3e.js"></script>
+<script src="./demos-3f.js"></script>
+<script src="./demos-3g.js"></script>
+<script src="./demos-3h.js"></script>
+<script src="./demos-3i.js"></script>
+<script src="./demos-kbd.js"></script>
+<script src="./demos-material.js"></script>
+<style>html,body{margin:0;background:#0b0d12;color:#f3f6fb}body{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text",system-ui,sans-serif;-webkit-font-smoothing:antialiased}a{color:#8fb8ff}a:hover{color:#c4d8ff}</style>
+<script>if(/[?&]from=focused\b/.test(location.search))addEventListener('DOMContentLoaded',function(){var a=document.createElement('a');var q=new URLSearchParams(location.search);['norun','card','from','only','modes'].forEach(function(k){q.delete(k)});a.href='./focused-runs.dc.html'+(q.toString()?'?'+q:'')+location.hash;a.textContent='\u2190 Focused runs';a.style.cssText='position:fixed;top:12px;right:12px;z-index:2147483000;display:inline-flex;align-items:center;min-height:44px;padding:0 16px;border-radius:999px;background:#1a1f2b;color:#eef2f8;font:600 14px/1 system-ui,sans-serif;text-decoration:none;box-shadow:0 0 0 1px rgb(255 255 255 / .3)';document.body.appendChild(a)});</script>
+</helmet>
+<div data-ul-theme="app" data-ul-accent="violet" data-ul-backdrop="dark" style="position:relative;box-sizing:border-box;min-height:100vh;padding:40px;display:flex;flex-direction:column;gap:28px;background:var(--ul-color-graphite)">
+  <header style="display:flex;flex-direction:column;gap:10px;max-width:980px">
+    <span style="font-family:var(--ul-font-mono);font-size:13px;letter-spacing:.08em;color:var(--ul-color-text-2)">MOTION TEST · loads dist/ul-glass.min.js + motion-harness.js · samples every rAF frame</span>
+    <h1 style="margin:0;font-size:34px;font-weight:700;letter-spacing:-.01em">Anchored morph: automated enter / exit test</h1>
+    <p style="margin:0;font-size:15px;line-height:1.6;color:var(--ul-color-text-2);text-wrap:pretty">Each overlay is opened and closed programmatically. The harness listens for the <code>ul:morph</code> events every AnchoredMorph dispatches, samples the surface rect, the anchor hit-test and the stage opacity on every animation frame, and checks the result against the motion spec. Runs: clean enter, clean exit, reduced motion, and an interruption (close at 40 %, reopen at 60 %). The header overlays (megamenu, language popper, studio tooltip) run the same harness in <a href="../../landing/chrome/motion-test.dc.html">landing/chrome/motion-test</a>.</p>
+  </header>
+
+  <div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px">
+    <button type="button" onClick="{{ runAll }}" style="min-height:40px;padding:0 18px;border-radius:999px;border:1px solid rgb(255 255 255 / .5);background:rgb(255 255 255 / .14);color:#fff;font:600 14px/1 inherit;cursor:pointer">Run all</button>
+    <sc-for list="{{ speedOpts }}" as="o" hint-placeholder-count="2">
+      <button type="button" onClick="{{ o.go }}" aria-pressed="{{ o.on }}" style="{{ o.s }}">{{ o.t }}</button>
+    </sc-for>
+    <button type="button" onClick="{{ repeat5 }}" style="min-height:40px;padding:0 18px;border-radius:999px;border:1px solid rgb(255 255 255 / .3);background:transparent;color:#fff;font:600 14px/1 inherit;cursor:pointer">Repeat ×5</button>
+    <span style="font-family:var(--ul-font-mono);font-size:13px;color:var(--ul-color-text)">{{ summary }}</span>
+    <span data-load-meter="" style="font-family:var(--ul-font-mono);font-size:12px;color:var(--ul-color-text-2)">{{ loadText }}</span>
+  </div>
+  <p role="note" style="margin:0;max-width:980px;padding:10px 14px;border-radius:12px;background:#3a2a06;color:#ffe2a6;font-size:14px;line-height:1.5">Final verdict only from a live run in a foreground tab on a real machine (120 Hz if possible). A virtual-clock re-measure never turns a live FAIL into a PASS: it shows as WARN and is counted separately. Each card starts from a reset state (overlays closed, morphs ended, scroll unlocked, focus cleared); while the suite runs the perf HUD is off and the governor budget is unlimited.</p>
+
+  <p role="status" style="{{ tabBannerS }}">{{ tabBanner }}</p>
+  <p style="margin:0;font-size:14px;color:var(--ul-color-text-2)">Lens and thumb cards (slider follow, timings, switch logic, tabs / segmented one-indicator) run on their own page: <a href="./lens-tests.dc.html">lens-tests</a>. Toast viewport + radius at three sizes: <a href="./viewport-tests.dc.html">viewport-tests</a>.</p>
+
+  <sc-if value="{{ fxOff }}" hint-placeholder-val="{{ true }}">
+    <div ref="{{ fxSentinel }}" data-fixtures-placeholder="" style="display:flex;align-items:center;gap:12px;min-height:120px;padding:20px;border-radius:22px;box-sizing:border-box;background:#12151c;box-shadow:0 0 0 1px rgb(255 255 255 / .1)">
+      <span style="font-size:14px;color:var(--ul-color-text-2)">{{ fxText }}</span>
+      <button type="button" onClick="{{ mountFx }}" style="min-height:40px;padding:0 18px;border-radius:999px;border:1px solid rgb(255 255 255 / .35);background:transparent;color:#fff;font:500 14px/1 inherit;cursor:pointer">Mount fixtures</button>
+    </div>
+  </sc-if>
+  <sc-if value="{{ fxOn }}" hint-placeholder-val="{{ false }}">
+  <section style="position:relative;display:flex;flex-direction:column;gap:12px;padding:20px;border-radius:22px;min-height:520px;background:radial-gradient(circle at 80% 20%, #8b5cf6 0, transparent 34%), radial-gradient(circle at 20% 90%, #22d3ee88 0, transparent 30%), linear-gradient(135deg, #12304d, #2a1240)">
+    <span style="font-family:var(--ul-font-mono);font-size:12px;letter-spacing:.06em;color:var(--ul-color-text);text-shadow:0 1px 2px rgb(0 0 0 / .8)">fixtures · overlays open downward into this space</span>
+    <div style="display:flex;flex-wrap:wrap;align-items:flex-start;gap:20px">
+      <div data-case="select" style="width:240px"><x-import component-from-global-scope="UL.ULSelect" dc-props="{{ fx.select }}" hint-size="240px,72px"></x-import></div>
+      <div data-case="combobox" style="width:240px"><x-import component-from-global-scope="UL.ULCombobox" dc-props="{{ fx.combo }}" hint-size="240px,72px"></x-import></div>
+      <div data-case="date" style="width:240px"><x-import component-from-global-scope="UL.ULDatePicker" dc-props="{{ fx.date }}" hint-size="240px,72px"></x-import></div>
+      <div data-case="color" style="width:240px"><x-import component-from-global-scope="UL.ULColorPicker" dc-props="{{ fx.color }}" hint-size="240px,72px"></x-import></div>
+      <div data-case="split" style="display:flex;flex-direction:column;gap:8px;padding-top:26px"><x-import component-from-global-scope="UL.ULSplitButton" items="{{ fx.split }}" hint-size="160px,44px">Save</x-import></div>
+      <div data-case="tooltip" ref="{{ tipBox }}" style="position:relative;display:flex;padding-top:26px">
+        <button type="button" data-ul-tip="Copy link" aria-label="Copy" style="min-width:44px;min-height:44px;padding:0 16px;border-radius:999px;border:1px solid rgb(255 255 255 / .35);background:rgb(255 255 255 / .12);color:#fff;font:600 14px/1 inherit;cursor:pointer">Copy</button>
+      </div>
+      <div data-case="island" style="padding-top:26px"><x-import component-from-global-scope="UL.ULIsland" dc-props="{{ fx.island }}" hint-size="200px,48px"></x-import></div>
+    </div>
+  </section>
+
+  <section style="position:relative;display:flex;flex-direction:column;gap:12px;padding:20px;border-radius:22px;background:radial-gradient(circle at 70% 30%, #22d3ee55 0, transparent 34%), radial-gradient(circle at 10% 80%, #8b5cf688 0, transparent 30%), linear-gradient(135deg, #1b2440, #2a1240)">
+    <span style="font-family:var(--ul-font-mono);font-size:12px;letter-spacing:.06em;color:var(--ul-color-text);text-shadow:0 1px 2px rgb(0 0 0 / .8)">2c fixtures · modal, stacked modal, sheet, drawers, popover, toasts, menu, submenu, context menu, command palette</span>
+    <x-import component-from-global-scope="ULDemos.MotionFixtures" from="./demos-2c.js" hint-size="100%,90px"></x-import>
+  </section>
+
+  <section style="position:relative;display:flex;flex-direction:column;gap:12px;padding:20px;border-radius:22px;background:radial-gradient(circle at 15% 30%, #f59e0b55 0, transparent 30%), radial-gradient(circle at 85% 70%, #22d3ee55 0, transparent 34%), linear-gradient(135deg, #1c2a4a, #3a1240)">
+    <span style="font-family:var(--ul-font-mono);font-size:12px;letter-spacing:.06em;color:var(--ul-color-text);text-shadow:0 1px 2px rgb(0 0 0 / .8)">2e fixtures · date range picker, colour picker (custom expand), radio menu (check handover), tabs (blur-only)</span>
+    <x-import component-from-global-scope="ULDemos.PickerFixtures" from="./demos-2e.js" hint-size="100%,90px"></x-import>
+    <span style="font-family:var(--ul-font-mono);font-size:12px;letter-spacing:.06em;color:var(--ul-color-text);text-shadow:0 1px 2px rgb(0 0 0 / .8)">2f fixture · 200-row table with row actions (inner scroll)</span>
+    <x-import component-from-global-scope="ULDemos.TableFixture" from="./demos-2f.js" hint-size="520px,360px"></x-import>
+  </section>
+  </sc-if>
+
+  <section style="display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,440px),1fr));gap:16px">
+    <sc-for list="{{ tcards }}" as="r" hint-placeholder-count="12">
+      <article id="{{ r.id }}" style="display:flex;flex-direction:column;gap:12px;padding:16px 18px;border-radius:18px;background:#12151c;box-shadow:0 0 0 1px rgb(255 255 255 / .1)">
+        <div style="display:flex;align-items:center;gap:10px">
+          <strong style="font-size:16px">{{ r.name }}</strong>
+          <span style="{{ r.badgeS }}">{{ r.badge }}</span>
+          <span style="flex:1"></span>
+          <button type="button" onClick="{{ r.run }}" style="min-height:32px;padding:0 12px;border-radius:999px;border:1px solid rgb(255 255 255 / .25);background:transparent;color:#fff;font:500 13px/1 inherit;cursor:pointer">Run</button>
+        </div>
+        <sc-if value="{{ r.hasChart }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;align-items:center;gap:12px">
+            <svg width="240" height="70" viewBox="-2 -3 244 76" data-ul-illustration="harness result chart (motion curves), not a component icon" aria-hidden="true" style="flex:none;background:#0b0d12;border-radius:8px">
+              <sc-for list="{{ r.lines }}" as="l"><path d="{{ l.d }}" fill="none" stroke="{{ l.c }}" stroke-width="1.6"></path></sc-for>
+            </svg>
+            <div style="display:flex;flex-direction:column;gap:4px;font-family:var(--ul-font-mono);font-size:12px;color:#b9c2d0">
+              <sc-for list="{{ r.legend }}" as="g"><span><span style="{{ g.s }}">━</span> {{ g.t }}</span></sc-for>
+              <span>{{ r.driver }}</span>
+            </div>
+          </div>
+        </sc-if>
+        <div style="display:grid;grid-template-columns:18px minmax(200px,1fr) minmax(0,auto);gap:4px 10px;font-size:13px;line-height:1.4">
+          <sc-for list="{{ r.checks }}" as="c" hint-placeholder-count="8">
+            <span style="{{ c.markS }}">{{ c.mark }}</span>
+            <span style="color:#dfe5ee">{{ c.label }}</span>
+            <span style="font-family:var(--ul-font-mono);font-size:12px;color:#b9c2d0;text-align:right;max-width:300px;overflow-wrap:anywhere">{{ c.value }}</span>
+          </sc-for>
+        </div>
+        <sc-if value="{{ r.hasNote }}" hint-placeholder-val="{{ false }}"><pre style="margin:0;white-space:pre-wrap;font-size:11px;color:#ff9db5">{{ r.note }}</pre></sc-if>
+      </article>
+    </sc-for>
+  </section>
+
+  <section style="display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,440px),1fr));gap:16px">
+    <sc-for list="{{ cards }}" as="r" hint-placeholder-count="7">
+      <article id="{{ r.id }}" style="display:flex;flex-direction:column;gap:12px;padding:16px 18px;border-radius:18px;background:#12151c;box-shadow:0 0 0 1px rgb(255 255 255 / .1)">
+        <div style="display:flex;align-items:center;gap:10px">
+          <strong style="font-size:16px">{{ r.name }}</strong>
+          <span style="{{ r.badgeS }}">{{ r.badge }}</span>
+          <span style="flex:1"></span>
+          <button type="button" onClick="{{ r.run }}" style="min-height:32px;padding:0 12px;border-radius:999px;border:1px solid rgb(255 255 255 / .25);background:transparent;color:#fff;font:500 13px/1 inherit;cursor:pointer">Run</button>
+        </div>
+        <p style="margin:0;font-size:13px;line-height:1.5;color:#b9c2d0;text-wrap:pretty">{{ r.cause }}</p>
+        <sc-if value="{{ r.hasChart }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;align-items:center;gap:12px">
+            <svg width="240" height="70" viewBox="-2 -3 244 76" data-ul-illustration="harness result chart (motion curves), not a component icon" aria-hidden="true" style="flex:none;background:#0b0d12;border-radius:8px">
+              <path d="{{ r.p.fw }}" fill="none" stroke="#8fb8ff" stroke-opacity=".35" stroke-dasharray="3 3"></path>
+              <path d="{{ r.p.fh }}" fill="none" stroke="#3dff8b" stroke-opacity=".35" stroke-dasharray="3 3"></path>
+              <path d="{{ r.p.split }}" fill="none" stroke="#ffffff" stroke-opacity=".15"></path>
+              <path d="{{ r.p.w }}" fill="none" stroke="#8fb8ff" stroke-width="1.6"></path>
+              <path d="{{ r.p.h }}" fill="none" stroke="#3dff8b" stroke-width="1.6"></path>
+            </svg>
+            <div style="display:flex;flex-direction:column;gap:4px;font-family:var(--ul-font-mono);font-size:12px;color:#b9c2d0">
+              <span><span style="color:#8fb8ff">━</span> width · <span style="color:#3dff8b">━</span> height</span>
+              <span>enter │ exit, dashed = final</span>
+              <span>{{ r.geo }}</span>
+              <span>{{ r.driver }}</span>
+            </div>
+          </div>
+        </sc-if>
+        <div style="display:grid;grid-template-columns:18px minmax(200px,1fr) minmax(0,auto);gap:4px 10px;font-size:13px;line-height:1.4">
+          <sc-for list="{{ r.checks }}" as="c" hint-placeholder-count="13">
+            <span style="{{ c.markS }}">{{ c.mark }}</span>
+            <span style="color:#dfe5ee">{{ c.label }}</span>
+            <span style="font-family:var(--ul-font-mono);font-size:12px;color:#b9c2d0;text-align:right;max-width:300px;overflow-wrap:anywhere">{{ c.value }}</span>
+          </sc-for>
+        </div>
+        <sc-if value="{{ r.hasNote }}" hint-placeholder-val="{{ false }}"><pre style="margin:0;white-space:pre-wrap;font-size:11px;color:#ff9db5">{{ r.note }}</pre></sc-if>
+      </article>
+    </sc-for>
+  </section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+const PORTAL_CAUSE = 'Before: (c). It already went through ULAnchoredSurface (getAnimations() = 1 running, geometry animating), but raise() lifted every stacking-context ancestor of the trigger (page root z-index:1 → overlay + 2) above the portalled surface, so the whole morph played behind the page and the list appeared at the end. Fixed by the even-odd anchor hole.';
+const CASES = [
+  { id: 'select', name: 'ULSelect', cause: PORTAL_CAUSE, kind: 'btn', sel: '.ul-select-trigger' },
+  { id: 'combobox', name: 'ULCombobox', cause: PORTAL_CAUSE, kind: 'combo' },
+  { id: 'date', name: 'ULDatePicker', cause: PORTAL_CAUSE, kind: 'btn', sel: '[aria-haspopup="dialog"]' },
+  { id: 'color', name: 'ULColorPicker', cause: PORTAL_CAUSE, kind: 'btn', sel: '[aria-haspopup="dialog"]' },
+  { id: 'split', name: 'ULSplitButton menu', cause: PORTAL_CAUSE, kind: 'btn', sel: '[aria-haspopup="menu"]' },
+  { id: 'tooltip', name: 'createAnchoredTooltip', cause: 'Before: worked (manual placement, not portalled, nothing raised). Now uses the same hole instead of z-index.', kind: 'tip' },
+  { id: 'island', name: 'ULIsland notification', cause: 'Before: (c), same as the selection overlays: portalled ULAnchoredSurface hidden behind raised ancestors. The pill is the occluder ([data-ul-morph-occluder]).', kind: 'island' },
+];
+// 2c overlays (fixtures in demos-2c.js, driven through window.__mt2c)
+const M2 = () => window.__mt2c;
+const q2 = (k, sel = 'button') => document.querySelector(`[data-case="${k}"] ${sel}`);
+const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+const key = (el, k) => el && el.dispatchEvent(new KeyboardEvent('keydown', { key: k, bubbles: true, cancelable: true }));
+const subItem = () => [...document.querySelectorAll('.ul-menu-surface [data-menu-item]')].find((n) => n.dataset.text === 'Share');
+const subOpen = () => { const it = subItem(); if (it) { it.focus(); key(it, 'ArrowRight'); } };
+const subClose = () => { const s = [...document.querySelectorAll('.ul-menu-surface')]; const last = s[s.length - 1]; const it = last && last.querySelector('[data-menu-item]'); if (it && s.length > 1) key(it, 'ArrowLeft'); };
+const ctxOpen = () => { const t = document.querySelector('[data-case="ctx"]'); if (!t) return; const b = t.getBoundingClientRect(); t.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: b.left + 60, clientY: b.top + 30, button: 2 })); };
+const esc = () => key(document.activeElement || document.body, 'Escape');
+const CASES2 = [
+  ['modal', 'ULModal (from trigger)'], ['sheet', 'ULSheet (bottom)'], ['dr', 'ULDrawer right (edge)'], ['dl', 'ULDrawer left (edge)'],
+  ['pop', 'ULPopover (arrow)'], ['toast', 'ULToast (anchored, fixed)'], ['stacktoast', 'ULToastStack (origin)'], ['menu', 'ULMenu'], ['submenu', 'ULMenu nested submenu'], ['ctx', 'ULContextMenu (pointer point)'], ['cmd', 'ULCommandPalette (from search)'],
+].map(([id, name]) => ({ id, name, kind: 'm2', cause: '2c: new overlay on ULAnchoredSurface (anchored morph, clip-path hole, shared scroll behavior, overlay stack).' }));
+const M2CASE = {
+  stack2: { setup: async () => { M2().set('stack1', true); await wait(700); }, teardown: async () => { M2().set('stack2', false); await wait(400); M2().set('stack1', false); await wait(500); } },
+  stacktoast: { anchor: () => q2('stackorigin'), open: () => M2().toast(true), close: () => M2().toast(false) },
+  submenu: { setup: async () => { M2().set('menu', true); await wait(700); }, anchor: () => q2('menu'), open: subOpen, close: subClose, teardown: async () => { M2().set('menu', false); await wait(500); } },
+  ctx: { anchor: () => document.querySelector('[data-case="ctx"]'), open: ctxOpen, close: esc },
+  cmd: { open: () => M2().set('cmd', true), close: () => M2().set('cmd', false) },
+};
+const TCASES = [
+  // lens / thumb cards (switch, slider, range, tabs, segmented, timings) live on lens-tests.dc.html (own page, same isolation)
+  { id: 'drange', name: 'ULDateRangePicker: morph, selection flow, band, swap, restart, Esc, keyboard, locale', el: 'scroll', fn: 'rangeTest' },
+  { id: 'cpx', name: 'ULColorPicker: custom expand / collapse, Esc order, contrast guard', el: 'scroll', fn: 'colorTest' },
+  { id: 'check', name: 'ULCheckMark: enter / exit handover, no label movement', el: 'scroll', fn: 'checkTest' },
+  { id: 'radius', name: 'Item radius concentric with the popper; lens = item', el: 'scroll', fn: 'radiusTest' },
+  { id: 'arrow', name: 'Glass arrow: outline map gate, cost, cache', el: 'scroll', fn: 'arrowTest' },
+  { id: 'kbd', name: 'Keyboard-only walkthrough (2c overlays + pickers)', el: 'scroll', fn: 'keyboardTest' },
+  { id: 'leftover', name: 'Leftover surfaces: 30 cycles per overlay + row actions (200 rows)', el: 'scroll', fn: 'leftoverTest' },
+  { id: 'submenu', name: 'Nested menus: beside the parent, 2px gap, 3 levels, flip, hover bridge', el: 'scroll', fn: 'submenuTest' },
+  { id: 'covered', name: 'Modal overlays cover their trigger (top layer, cold / warm / interrupt)', el: 'scroll', fn: 'coveredTest' },
+  { id: 'scrollinv', name: 'Scroll freeze: glass state frame-invariant while scrolling (1 / 3 / 20px)', el: 'scroll', fn: 'scrollInvariance' },
+  { id: 'roll', name: 'Rolling number: one glyph per cell, one line (4 locales, EUR, compact, %, negative)', el: 'scroll', fn: 'rollTest' },
+  { id: 'ctxmenu', name: 'Context menu: pointer, flip, row vs selection, keys, long-press, native, pinned row, shared rowMenu, focus, 30 cycles', el: 'scroll', fn: 'ctxMenuTest' },
+  { id: 'ptrglass', name: 'Glass stability with a pointer: cursor path + wheel with the cursor parked over glass', el: 'scroll', fn: 'pointerGlassTest' },
+  { id: 'nested3', name: 'Nested menus, 3 levels: hover into level 3 keeps all open (+600 ms), close order on leave, Esc = deepest only', el: 'scroll', fn: 'nestedMenuTest' },
+  { id: 'drill375', name: 'Nested menu drill-in at 375px: one surface, back row, ← / Esc up one level', el: 'scroll', fn: 'drillTest' },
+  { id: 'toastmodal', name: 'Toast above modal (focus, clicks, scrim, re-promotion) + modal backing ease', el: 'scroll', fn: 'toastModalTest' },
+  { id: 'kpistates', name: 'KPI states (loading, empty, error, stale, live) and variants', el: 'scroll', fn: 'kpiStatesTest' },
+  { id: 'livesrc', name: 'Live source: backoff + jitter, heartbeat, dedupe / reorder, schema, size, rate limit, buffer cap, URL rules', el: 'scroll', fn: 'liveSourceTest' },
+  { id: 'livetable', name: 'Live table: ops, hold while hovered, pill, focus / selection / scroll kept, pause, announcements', el: 'scroll', fn: 'liveTableTest' },
+  { id: 'dataglass', name: 'Data glass levels (basic vs rich) + data text contrast ≥ 4.5:1', el: 'scroll', fn: 'dataGlassTest' },
+  { id: 'actmachine', name: 'Action state machine: transitions, min loading, double click, interruption, controlled, unmount', el: 'scroll', fn: 'actionMachineTest' },
+  { id: 'actswap', name: 'Action icon + label swap: overlap, one glyph row, width morph, reserve keeps neighbours', el: 'scroll', fn: 'actionSwapTest' },
+  { id: 'actcopy', name: 'Copy: clipboard, fallback, failure, tooltip timing + restart, sensitive, EN / SK / DE / CS', el: 'scroll', fn: 'copyTest' },
+  { id: 'actsave', name: 'Save: dirty, saving, error + retry, saved, shortcut, unsaved guard', el: 'scroll', fn: 'saveTest' },
+  { id: 'actconfirm', name: 'Confirm: inline countdown + revert, hold + cancel, type to confirm', el: 'scroll', fn: 'confirmTest' },
+  { id: 'togglespam', name: 'Coalesced toggle: spam, even clicks, in-flight follow-up, rollback, max wait, pagehide / unmount flush, key repeat', el: 'scroll', fn: 'toggleSpamTest' },
+  { id: 'holdfill', name: 'Hold fill: whole button every frame, left origin, linear in time, release, once, contrast 0–100 %', el: 'scroll', fn: 'holdFillTest' },
+  { id: 'ripple', name: 'Success ripple: centre, symmetric, full peak, clipped, no shift, clean, restart, contrast, reduced', el: 'scroll', fn: 'rippleTest' },
+  { id: 'blocks', name: 'Dashboard blocks: bulk bar morph + selection pin, copy field mask, banner queue, shared time-ago timer, filter URL round trip', el: 'scroll', fn: 'blocksTest' },
+  { id: 'filterbar', name: 'Filter bar: chip remove animation, edit popover, apply, rolling result count', el: 'scroll', fn: 'filterBarTest' },
+  { id: 'inlineedit', name: 'Inline edit: same box, focus in / out, Enter save (spinner → check), optimistic rollback, Esc cancel', el: 'scroll', fn: 'inlineEditTest' },
+  { id: 'notif', name: 'Notification centre: bell ring rate limit, rolling count, popover morph, queue pill under the pointer, context menu, mark all read', el: 'scroll', fn: 'notifTest' },
+  { id: 'feed', name: 'Activity feed: soft insert, queue while interacting, filter chips, details', el: 'scroll', fn: 'feedTest' },
+  { id: 'layoutoverflow', name: 'Layout guard: no descendant outside its popper / drawer / dialog / panel (list, hover, live insert, error, empty, expanded)', el: 'scroll', fn: 'layoutOverflowTest' },
+  { id: 'iconsize', name: 'Layout guard: every component svg has an explicit size ≤ 2× font size, ≤ 48px (unless data-ul-illustration)', el: 'scroll', fn: 'iconSizeTest' },
+  { id: 'ctrltext', name: 'Layout guard: chip / pill / badge / button / select text is one line and vertically centred (±1px)', el: 'scroll', fn: 'controlTextTest' },
+  { id: 'hitarea', name: 'Layout guard: 44px hit areas (elementFromPoint in the 44px box, row items vertical only), no hit layer over a neighbour, lens geometry unchanged', el: 'scroll', fn: 'hitAreaTest' },
+  { id: 'coveredanchor', name: 'Notification centre covers the bell in every frame (cold, warm, interrupted), close button, focus back to the bell', el: 'scroll', fn: 'coveredAnchorTest' },
+  { id: 'codejson', name: 'Code block tabs / tokens / wrap · JSON viewer lazy tree, keyboard, search', el: 'scroll', fn: 'codeJsonTest' },
+  { id: 'charttable', name: 'Charts: "View as table" equals the data for every type (line, area, bar, horizontal, combo, donut, pie, legacy)', el: 'scroll', fn: 'chartTableTest' },
+  { id: 'chartlegend', name: 'Charts: legend toggle changes the visible series and rescales the axis; last series stays', el: 'scroll', fn: 'chartLegendTest' },
+  { id: 'chartctx', name: 'Charts: contextMenu target payload for a data point, a series chip and the plot background', el: 'scroll', fn: 'chartCtxTest' },
+  { id: 'chartkeys', name: 'Charts: keyboard order, series walk, polite live text, Enter / click pin, Esc unpin', el: 'scroll', fn: 'chartKeysTest' },
+  { id: 'chartreduced', name: 'Charts: reduced motion = no draw-in, no morph, short opacity fade', el: 'scroll', fn: 'chartReducedTest' },
+  { id: 'chartmorph', name: 'Charts: identical data starts nothing; a change starts one morph; a second change restarts without a jump', el: 'scroll', fn: 'chartMorphTest' },
+  { id: 'chartsizes', name: 'Charts: 10 / 100 / 1000 points render without overflow', el: 'scroll', fn: 'chartSizesTest' },
+  { id: 'charttip', name: 'Charts (frame): tooltip follows the pointer in the same frame, ≤ 1 positioner write per move', el: 'scroll', fn: 'chartTipTest' },
+  { id: 'chartdraw', name: 'Charts (frame): draw-in progress monotonic per frame', el: 'scroll', fn: 'chartDrawTest' },
+  { id: 'chartperf', name: 'Charts (frame): 4 charts + 200-row table ≈ 120 fps', el: 'scroll', fn: 'chartPerfTest' },
+  { id: 'fieldaria', name: "Forms 3C: field aria wiring + error announced without moving focus", el: 'scroll', fn: 'f3c_fieldaria' },
+  { id: 'inputgroup', name: "Forms 3C: input group one well, outer focus ring, clear, counter, plain inner controls", el: 'scroll', fn: 'f3c_inputgroup' },
+  { id: 'alerts', name: "Feedback 3C: alert roles by severity, dismiss, no glass", el: 'scroll', fn: 'f3c_alerts' },
+  { id: 'alertdialog', name: "Feedback 3C: alert dialog initial focus, Esc, scrim, return focus, type-to-confirm, covered trigger", el: 'scroll', fn: 'f3c_alertdialog' },
+  { id: 'togglegroup', name: "Feedback 3C: toggle group roving + aria, shared indicator only", el: 'scroll', fn: 'f3c_togglegroup' },
+  { id: 'separator', name: "Feedback 3C: separator semantics", el: 'scroll', fn: 'f3c_separator' },
+  { id: 'kbd', name: "Feedback 3C: kbd platform text", el: 'scroll', fn: 'f3c_kbd' },
+  { id: 'item', name: "Feedback 3C: item selection + contextMenu target + truncation", el: 'scroll', fn: 'f3c_item' },
+  { id: 'collapsible', name: "Feedback 3C: collapsible aria + measured heights (never auto)", el: 'scroll', fn: 'f3c_collapsible' },
+  { id: 'scrollarea', name: "Feedback 3C: scroll area native scroll, thumb maths, keyboard, no wheel hijack, cleanup", el: 'scroll', fn: 'f3c_scrollarea' },
+  { id: 'f3dhovercard', name: "3D: hover card intent delays (timers), bridge, Esc, focus return, one per group", el: 'scroll', fn: 'f3d_hovercard' },
+  { id: 'f3dmenubar', name: "3D: menubar roving, switch on hover / arrows while open, submenu 2px, Esc", el: 'scroll', fn: 'f3d_menubar' },
+  { id: 'f3dnavmenu', name: "3D: navigation menu keys, aria-current, one panel surface, sheet below 640px", el: 'scroll', fn: 'f3d_navmenu' },
+  { id: 'f3dnativeselect', name: "3D: native select + ULSelect native mode", el: 'scroll', fn: 'f3d_nativeselect' },
+  { id: 'f3dcalendar', name: "3D: calendar modes, disabled skip, locale, keyboard, band per row", el: 'scroll', fn: 'f3d_calendar' },
+  { id: 'f3daspect', name: "3D: aspect ratio computed ratio, object-fit, skeleton", el: 'scroll', fn: 'f3d_aspect' },
+  { id: 'f3dresizable', name: "3D: resizable keys, aria values, clamp, collapse, reset, storage, no per-move renders", el: 'scroll', fn: 'f3d_resizable' },
+  { id: 'f3dcarousel', name: "3D: carousel snap index, keys, shared indicator only, autoplay off, pause, aria", el: 'scroll', fn: 'f3d_carousel' },
+  { id: 'f3dtypography', name: "3D: heading level vs size, link rel / target, no overflow", el: 'scroll', fn: 'f3d_typography' },
+  { id: 'f3dcontrast3d', name: "3D: contrast of every new colour pair (shared tool)", el: 'scroll', fn: 'f3d_contrast3d' },
+  { id: 'collheight', name: "Feedback 3C (frame): collapsible height steps per frame", el: 'scroll', fn: 'f3c_collheight' },
+  { id: 'tglide', name: "Feedback 3C (frame): toggle group lens glide", el: 'scroll', fn: 'f3c_tglide' },
+  { id: 'advtable', name: "Charts 3B: \"View as table\" equals the data (radial, gauge, radar, scatter, heatmap, calendar, funnel, histogram, treemap)", el: 'scroll', fn: 'advTableTest' },
+  { id: 'advctx', name: "Charts 3B: contextMenu payload per type (point, band, cell, step, bar, segment, series chip)", el: 'scroll', fn: 'advCtxTest' },
+  { id: 'advkeys', name: "Charts 3B: keyboard per type (grid rows, weeks, radar series, treemap drill) + polite live text", el: 'scroll', fn: 'advKeysTest' },
+  { id: 'quadtree', name: "Charts 3B: quadtree nearest point and rect query = brute force", el: 'scroll', fn: 'quadtreeTest' },
+  { id: 'lttb', name: "Charts 3B: LTTB length, ends, extremes kept, cost", el: 'scroll', fn: 'lttbTest' },
+  { id: 'canvas', name: "Charts 3B: canvas renderer switches at --ul-chart-canvas-at with identical tooltip", el: 'scroll', fn: 'canvasTest' },
+  { id: 'scattercanvas', name: "Charts: scatter canvas renderer = SVG (tooltip, keys, brush, ctx), 10k / 50k no overflow", el: 'scroll', fn: 'scatterCanvasTest' },
+  { id: 'colsdrag', name: "ULColumnsMenu drag reorder: order maths, no per-move renders, FLIP, Esc restore, touch on handle only, keys, announce", el: 'scroll', fn: 'colsDragTest' },
+  { id: 'material', name: "Material glass | flat: category defaults, provider / instance / nearest scope, data-ul-material, flat = no backdrop-filter, outside the budget, input popover stays glass", el: 'scroll', fn: 'materialTest' },
+  { id: 'otplayout', name: "OTP layout: group fits its container at 375 / 480 / 720px, no cell overlap, cells ≥ 44px tall", el: 'scroll', fn: 'otpLayoutTest' },
+  { id: 'kbdaudit', name: "Keyboard-only walkthrough: Tab / Shift+Tab, arrows, Home / End, Enter / Space, Esc, focus return, traps, ContextMenu / Shift+F10 (run singly)", el: 'scroll', fn: 'kbdAuditTest' },
+  { id: 'a11ystatic', name: "Static a11y sweep: names, labels, roles, ids, 44px hit areas, tabindex", el: 'scroll', fn: 'a11yStaticTest' },
+  { id: 'fallback', name: "Fallback contrast (run with ?glass=lite|flat and &transparency=reduce)", el: 'scroll', fn: 'fallbackAuditTest' },
+  { id: 'zoom', name: "Charts 3B: zoom maths, onRangeChange payload, Esc cancels a brush, keys, double-click, wheel rule", el: 'scroll', fn: 'zoomTest' },
+  { id: 'linked', name: "Charts 3B: linked demo — brush filters table and KPI, row hover → chart point", el: 'scroll', fn: 'linkedTest' },
+  { id: 'stream', name: "Charts 3B: streaming batch per frame, hold / pause queue, window, order, stale", el: 'scroll', fn: 'streamTest' },
+  { id: 'advreduced', name: "Charts 3B: reduced motion = opacity fade only (every new type)", el: 'scroll', fn: 'advReducedTest' },
+  { id: 'advtip', name: "Charts 3B (frame): scatter tooltip follows the pointer in the same event", el: 'scroll', fn: 'advTipTest' },
+  { id: 'zoomsmooth', name: "Charts 3B (frame): zoom / pan frame time", el: 'scroll', fn: 'zoomSmoothTest' },
+  { id: 'streamperf', name: "Charts 3B (frame): 4 streaming charts at 20 pts/s + 200-row table ≈ 120 fps", el: 'scroll', fn: 'streamPerfTest' },
+  { id: 'actmisc', name: 'Export progress, refresh countdown + hidden pause, toggle rollback, undo pause, reduced motion', el: 'scroll', fn: 'actionMiscTest' },
+  { id: 'blur', name: 'Blur-only: tabs, sidebar, toasts, pickers', el: 'scroll', fn: 'blurOnlyTest' },
+  { id: 'scroll', name: 'Overlay scroll behavior', el: 'scroll' },
+  { id: 'scroll2c', name: '2c overlays: scroll lock / follow / fixed, push + Esc', el: 'scroll' },
+  { id: 'dialog', name: 'Dialog: same-surface push / pop', el: 'scroll' },
+  { id: 'toasts', name: 'Toast stack: inside the visual viewport', el: 'scroll' },
+  { id: 'sidebar', name: 'Sidebar: rigid indicator while collapsing, never clipped', el: 'scroll' },
+];
+window.__swLog = window.__swLog || [];
+class Component extends DCLogic {
+  state = { fx: false, ready: !!(window.UL && window.ULMotionTest), results: {}, tresults: {}, rates: {}, running: '', slow: false, isl: 'compact', step: '', hidden: typeof document !== 'undefined' && document.visibilityState === 'hidden' };
+  tipBox = React.createRef();
+  fxSentinel = React.createRef();
+  /** Fixtures (selection overlays, 2c / 2e / 2f demos) mount only when a card that needs them runs, on Run all, or when scrolled into view. Chart cards bring their own fixture. */
+  ensureFixtures = async () => {
+    if (!this.state.fx) { this.setState({ fx: true }); window.__loadMeter && window.__loadMeter.mark('fixturesRequested'); }
+    for (let i = 0; i < 300 && !(document.querySelector('[data-case="select"] .ul-select-trigger') && this.tipBox.current && window.__mt2c); i++) await new Promise((r) => setTimeout(r, 100));
+    if (!this.tip && this.tipBox.current) { const box = this.tipBox.current; this.tip = window.UL.createAnchoredTooltip({ container: box, layer: box, delay: 0 }); window.__loadMeter && window.__loadMeter.mark('fixtures'); this.forceUpdate(); }
+  };
+  mountFx = () => { this.ensureFixtures(); };
+  componentDidMount() {
+    window.__loadMeter && window.__loadMeter.mark('page');
+    this._lm = setInterval(() => { this.forceUpdate(); if (performance.now() > 60000) clearInterval(this._lm); }, 2000);
+    this.onVis = () => this.setState({ hidden: document.visibilityState === 'hidden' }); document.addEventListener('visibilitychange', this.onVis);
+    const go = () => { if (!(window.UL && window.ULMotionTest)) return; this.setState({ ready: true }); this.boot(); };
+    if (window.UL && window.ULMotionTest) go();
+    else { window.addEventListener('ul:ready', go); window.addEventListener('ul:motion-test-ready', go); this.unb = () => { window.removeEventListener('ul:ready', go); window.removeEventListener('ul:motion-test-ready', go); }; }
+  }
+  componentWillUnmount() { clearInterval(this._lm); this.io && this.io.disconnect(); document.removeEventListener('visibilitychange', this.onVis); this.unb && this.unb(); this.tip && this.tip.destroy(); }
+  boot() {
+    if (this.booted) return; this.booted = true;
+    window.__mtRepeat = this.repeat5; window.__mtRunAll = this.runAll;
+    window.__loadMeter && window.__loadMeter.mark('ready');
+    const el = this.fxSentinel.current;
+    if (el && 'IntersectionObserver' in window) { this.io = new IntersectionObserver(([e]) => { if (e.isIntersecting && this._userScrolled) { this.io.disconnect(); this.ensureFixtures(); } }, { rootMargin: '100px 0px' }); this.io.observe(el); addEventListener('scroll', () => { this._userScrolled = true; }, { once: true, passive: true }); }
+    const card = (location.search.match(/[?&]card=([\w-]+)/) || [])[1];
+    // a single requested card never starts the suite (with or without ?norun)
+    if (card) { this.setState({ paused: true }); setTimeout(() => { window.__mtCard = TCASES.some((x) => x.id === card) ? this.runThumb(card) : this.runOne(card); }, 300); }
+    else if (!/[?&]norun\b/.test(location.search)) setTimeout(() => this.runAll(), 900);
+    else this.setState({ paused: true });
+  }
+  harnessCase(c) {
+    const q = (sel) => document.querySelector(`[data-case="${c.id}"] ${sel}`);
+    if (c.kind === 'm2') { const x = M2CASE[c.id] || {}; return { ...c, anchor: x.anchor || (() => q2(c.id)), open: x.open || (() => M2().set(c.id, true)), close: x.close || (() => M2().set(c.id, false)) }; }
+    if (c.kind === 'btn') return { ...c, anchor: () => q(c.sel), open: () => { const t = q(c.sel); if (t && t.getAttribute('aria-expanded') !== 'true') t.click(); }, close: () => { const t = q(c.sel); if (t && t.getAttribute('aria-expanded') === 'true') t.click(); } };
+    if (c.kind === 'combo') {
+      const tog = (want) => { const inp = q('[role="combobox"]'), ch = q('.ul-select-chev'); if (inp && ch && (inp.getAttribute('aria-expanded') === 'true') !== want) ch.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, cancelable: true })); };
+      return { ...c, anchor: () => q('.ul-combobox'), open: () => tog(true), close: () => tog(false) };
+    }
+    if (c.kind === 'tip') return { ...c, anchor: () => q('[data-ul-tip]'), open: () => q('[data-ul-tip]').dispatchEvent(new PointerEvent('pointerover', { bubbles: true })), close: () => this.tipBox.current.dispatchEvent(new PointerEvent('pointerleave')) };
+    return { ...c, anchor: () => q('.ul-island-pill'), open: () => this.setState({ isl: 'notification' }), close: () => this.setState({ isl: 'compact' }) };
+  }
+  tEl(c) {
+    const box = document.querySelector(`[data-tcase="${c.el}"]`);
+    if (!box) return null;
+    return c.el === 'switch' ? box.querySelector('.ul-switch') : c.el === 'tabs' ? box.querySelector('.ul-tabs-list') : c.el === 'seg' ? box.querySelector('.ul-seg') : box.querySelector('.ul-slider');
+  }
+  async runThumb(id) {
+    const c = TCASES.find((x) => x.id === id); if (!c || !window.ULDemos) return;
+    for (let i = 0; i < 100 && c.fn && !window.ULDemos[c.fn]; i++) await new Promise((r) => setTimeout(r, 100));
+    if (!/^chart/.test(id)) await this.ensureFixtures();
+    const el = c.el === 'scroll' ? document.body : this.tEl(c); if (!el) return;
+    const b = el.getBoundingClientRect(); if (b.top < 80 || b.bottom > innerHeight - 40) window.scrollBy(0, b.top - innerHeight * 0.4);
+    this.setState({ running: id });
+    const leaks = await this.resetState();
+    if (c.el !== 'scroll') { const el2 = this.tEl(c); const b2 = el2 && el2.getBoundingClientRect(); if (b2 && (b2.top < 80 || b2.bottom > innerHeight - 40)) { window.scrollBy(0, b2.top - innerHeight * 0.4); await new Promise((res) => requestAnimationFrame(() => requestAnimationFrame(res))); } }
+    const t0 = performance.now();
+    let r = c.fn ? await window.ULDemos[c.fn]() : id === 'sidebar' ? await window.ULDemos.sidebarTest() : id === 'toasts' ? await window.ULDemos.toastTest() : id === 'dialog' ? await window.ULDemos.dialogTest() : id === 'scroll2c' ? await window.ULDemos.scroll2c() : id === 'scroll' ? await window.ULScrollTest.run({ menuTrigger: () => document.querySelector('[data-case="select"] .ul-select-trigger') }) : await window.ULThumbTest.run(id, el, id === 'timing' ? document.querySelector('[data-tcase="slider"] .ul-slider') : window.__swLog);
+    r = window.ULMotionTest.focusGate(r, t0);
+    if (r && leaks.length) r.checks.unshift({ key: 'leak', label: 'clean start (state left by the previous card)', pass: null, value: leaks.join(' · ') });
+    this.setState((s) => ({ tresults: { ...s.tresults, [id]: r }, running: '' }));
+    return r;
+  }
+  async runOne(id) {
+    const c = CASES.concat(CASES2).find((x) => x.id === id); if (!c || !window.ULMotionTest) return;
+    this._t0 = performance.now();
+    await this.ensureFixtures();
+    this.setState({ running: id });
+    const leaks = await this.resetState();
+    const x = M2CASE[c.id] || {};
+    if (x.setup) await x.setup();
+    const r = await window.ULMotionTest.runCase(this.harnessCase(c), (cid, step) => this.setState({ step }));
+    if (x.teardown) await x.teardown();
+    window.ULMotionTest.focusGate(r, this._t0 || 0);
+    if (leaks.length) { r.checks.unshift({ key: 'leak', label: 'clean start (state left by the previous card)', pass: null, value: leaks.join(' · ') }); }
+    this.setState((s) => ({ results: { ...s.results, [id]: r }, running: '', step: '' }));
+    return r;
+  }
+  /** Isolation: close every overlay, wait for morphs, release pointer state, restore morph config. Returns leaks found. */
+  async resetState() {
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms)), frames = () => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+    const leaks = [];
+    const vis = () => [...document.querySelectorAll('.ul-anchored')].filter((n) => n.style.visibility !== 'hidden' && n.getClientRects().length);
+    if (vis().length) leaks.push(vis().length + ' overlay(s) still open');
+    if (document.documentElement.hasAttribute('data-ul-scroll-locked')) leaks.push('page scroll still locked');
+    if (document.querySelector('[data-ul-morphing]')) leaks.push('a morph / tier freeze still running');
+    if (window.__mt2c) { ['modal', 'stack1', 'stack2', 'sheet', 'dr', 'dl', 'pop', 'toast', 'menu', 'cmd', 'alert'].forEach((k) => window.__mt2c.set(k, false)); window.__mt2c.toast(false); }
+    if (window.__mt2e) window.__mt2e.set('menu', false);
+    for (let i = 0; i < 4 && vis().length; i++) { (document.activeElement || document.body).dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })); await wait(160); }
+    if (this.state.isl !== 'compact') this.setState({ isl: 'compact' });
+    for (let i = 0; i < 60 && (document.querySelector('[data-ul-morphing]') || vis().length); i++) await wait(50);
+    if (document.documentElement.hasAttribute('data-ul-scroll-locked')) leaks.push('lock NOT released after closing everything');
+    if (document.activeElement && document.activeElement !== document.body) document.activeElement.blur();
+    window.__swLog = [];
+    window.UL.configureMorph({ timeScale: this.state.slow ? 4 : 1, reducedMotion: 'auto' });
+    await frames();
+    return leaks;
+  }
+  /** Deterministic setting while the suite runs: HUD off, governor budget unlimited (no demotion / tier crossfades mid-test). */
+  deterministic(on) {
+    const UL = window.UL, P = window.__ulPerf;
+    if (on) { this._hud = P && P.on; if (P) P.on = false; UL.configureGlass({ budget: Infinity }); }
+    else { if (P && this._hud) P.on = true; UL.configureGlass({ budget: 'auto' }); }
+  }
+  ids() { return CASES.concat(CASES2).map((c) => ['o', c.id]).concat(TCASES.map((c) => ['t', c.id])); }
+  repeat5 = async (only) => {
+    if (this._busy) return; this._busy = true; this.deterministic(true);
+    const rates = {};
+    window.__mtRepeat = this.repeat5;
+    try {
+      for (const [k, id] of this.ids().filter(([, i]) => !Array.isArray(only) || only.includes(i))) {
+        const runs = [];
+        for (let i = 0; i < 5; i++) { const r = k === 'o' ? await this.runOne(id) : await this.runThumb(id); runs.push(r ? r.status + (r.status !== 'pass' && r.checks ? ':' + r.checks.filter((c) => c.pass === false || c.focus).map((c) => c.key).join(',') : '') : 'error'); this.setState({ step: `${id} ${i + 1}/5` }); }
+        rates[id] = { pass: runs.filter((s) => s === 'pass').length, warn: runs.filter((s) => s.startsWith('warn')).length, focus: runs.filter((s) => s.startsWith('focus')).length, runs };
+        this.setState((s) => ({ rates: { ...s.rates, [id]: rates[id] } }));
+      }
+    } finally { this.deterministic(false); this._busy = false; }
+    window.__ulRepeat = rates;
+    console.info('[motion-test repeat ×5]\n' + Object.entries(rates).map(([id, r]) => `${id.padEnd(14)} ${r.pass}/5 pass ${r.warn ? r.warn + ' warn ' : ''}${r.pass > 0 && r.pass < 5 ? 'FLAKY' : r.pass === 0 ? 'FAIL' : ''}`).join('\n'));
+  };
+  runAll = async () => {
+    if (this._busy) return; this._busy = true;
+    const y = window.scrollY;
+    this.deterministic(true);
+    await this.ensureFixtures();
+    try { for (const c of CASES.concat(CASES2)) await this.runOne(c.id); for (const c of TCASES) await this.runThumb(c.id); } finally { this.deterministic(false); this._busy = false; }
+    window.scrollTo(0, y);
+    const all = CASES.concat(CASES2).map((c) => this.state.results[c.id]).filter(Boolean);
+    window.__ulThumbResults = TCASES.map((c) => this.state.tresults[c.id]).filter(Boolean);
+    window.__ulMotionResults = all;
+    console.info('[motion-test]\n' + window.ULMotionTest.text(all));
+  };
+  componentDidUpdate() { const v = !!this.state.slow; if (this._slow !== v && window.UL) { this._slow = v; window.UL.configureMorph({ timeScale: v ? 4 : 1 }); } }
+  renderVals() {
+    const s = this.state, h = React.createElement, MT = window.ULMotionTest;
+    const pill = (on) => ({ minHeight: '32px', padding: '0 12px', borderRadius: '999px', border: '1px solid ' + (on ? 'rgb(255 255 255 / .55)' : 'rgb(255 255 255 / .16)'), background: on ? 'rgb(255 255 255 / .16)' : 'transparent', color: '#fff', font: '500 13px/1 inherit', cursor: 'pointer' });
+    const done = CASES.concat(CASES2).map((c) => s.results[c.id]).concat(TCASES.map((c) => s.tresults[c.id])).filter(Boolean);
+    const pass = done.filter((r) => r.status === 'pass').length;
+    const badge = (r, id) => {
+      if (s.running === id) return ['running · ' + s.step, '#ffd23f'];
+      if (!r) return ['not run', '#8a93a3'];
+      if (r.status === 'n/a') return [r.preview ? 'NEEDS HEALTHY PREVIEW · virtual PASS' : 'N/A · throttled', '#8a93a3'];
+      if (r.status === 'focus') return ['NEEDS FOCUS', '#7cc4ff'];
+      const rt = s.rates && s.rates[id], rs = rt ? ` · ×5 ${rt.pass}/5${rt.pass > 0 && rt.pass < 5 ? ' FLAKY' : ''}` : '';
+      if (rt && rt.pass > 0 && rt.pass < 5) return ['FLAKY' + rs, '#ffb020'];
+      return r.status === 'pass' ? ['PASS' + rs, '#3dff8b'] : r.status === 'warn' ? ['WARN · live FAIL / virtual PASS' + rs, '#ffb020'] : r.status === 'error' ? ['ERROR' + rs, '#ff5a8a'] : ['FAIL' + rs, '#ff5a8a'];
+    };
+    const focusIds = CASES.concat(CASES2, TCASES).filter((c) => { const r = (s.results || {})[c.id] || (s.tresults || {})[c.id]; return r && r.status === 'focus'; });
+    const nWarn = done.filter((r) => r.status === 'warn').length, nFail = done.filter((r) => r.status === 'fail' || r.status === 'error').length;
+    s.flaky = Object.entries(s.rates || {}).filter(([, r]) => r.pass > 0 && r.pass < 5).map(([id]) => id);
+    return {
+      speedOpts: [['×1', false], ['×0.25 slow motion', true]].map(([t, v]) => ({ t, on: String(s.slow === v), s: pill(s.slow === v), go: () => this.setState({ slow: v }) })),
+      summary: s.running ? `running ${s.running} · ${s.step}` : done.length ? `mode: live (document timeline) · LIVE: ${pass} pass · ${nFail} fail · VIRTUAL-only: ${nWarn} warn (live FAIL / virtual PASS) · NEEDS FOCUS: ${focusIds.length} · of ${done.length}${s.flaky.length ? ' · FLAKY: ' + s.flaky.join(', ') : ''}` : (s.ready ? (s.paused ? 'auto-run off (?norun / ?card) · press Run all' : 'starting…') : 'loading… library (dist/ul-glass.min.js) + harness'),
+      tabBanner: s.hidden ? 'This tab is in the background: results from this run are not valid (rAF throttled). Bring it to the foreground and run again.' : focusIds.length ? `NEEDS FOCUS: ${focusIds.map((c) => c.name.split(':')[0]).join(', ')}. The page had no keyboard focus during these runs; run the suite in a focused foreground tab (click into the page first).` : 'Foreground tab: live results valid.',
+      tabBannerS: { margin: 0, maxWidth: '980px', padding: '8px 14px', borderRadius: '12px', background: s.hidden ? '#5a0f24' : focusIds.length ? '#0f2a4a' : '#0f3a26', color: s.hidden ? '#ffc2d1' : focusIds.length ? '#cfe6ff' : '#bff5d6', fontSize: '14px', lineHeight: 1.5 },
+      repeat5: this.repeat5,
+      loadText: window.__loadMeter ? 'load: ' + window.__loadMeter.text() : '',
+      fx: {
+        select: { label: 'Country', defaultValue: 'sk', options: [['sk', 'Slovakia'], ['cz', 'Czechia'], ['de', 'Germany'], ['at', 'Austria'], ['pl', 'Poland'], ['hu', 'Hungary']].map(([value, label]) => ({ value, label })) },
+        combo: { label: 'City', options: ['Bratislava', 'Brno', 'Berlin', 'Budapest', 'Košice', 'Prague', 'Vienna'].map((c) => ({ value: c.toLowerCase(), label: c })) },
+        date: { label: 'Start date', locale: 'en', defaultValue: new Date(2026, 10, 18) },
+        color: { label: 'Accent', defaultValue: 'violet' },
+        split: [{ label: 'Save as draft' }, { label: 'Save and close' }, { label: 'Discard changes', destructive: true }],
+        sw: { label: 'Wi-Fi', onCheckedChange: (v) => { (window.__swLog = window.__swLog || []).push(v); } },
+        tabs: { 'aria-label': 'Sections', defaultValue: 'a', items: [{ value: 'a', label: 'Overview' }, { value: 'b', label: 'Activity' }, { value: 'c', label: 'Settings' }, { value: 'd', label: 'Billing' }] },
+        seg: { 'aria-label': 'Range', defaultValue: 'd', options: [{ value: 'd', label: 'Day' }, { value: 'w', label: 'Week' }, { value: 'm', label: 'Month' }, { value: 'y', label: 'Year' }] },
+        slider: { label: 'Volume', defaultValue: 4, min: 0, max: 100, format: (v) => v + ' %' },
+        range: { label: 'Price', defaultValue: [20, 60], min: 0, max: 100, thumbLabels: ['Minimum price', 'Maximum price'], format: (v) => '€' + v },
+        island: { state: s.isl, label: 'Status', compact: h('span', { style: { padding: '0 18px', fontSize: '14px', fontWeight: 600 } }, 'Project'), notification: h('span', { style: { fontSize: '14px' } }, 'Changes saved') },
+      },
+      tipBox: this.tipBox, fxSentinel: this.fxSentinel, fxOn: s.fx, fxOff: !s.fx, mountFx: this.mountFx,
+      fxText: 'Fixtures are not mounted yet (they mount when a card that needs them runs, on Run all, or when you scroll here). Chart cards use their own fixture.',
+      tcards: TCASES.map((c) => {
+        const r = s.tresults[c.id], [b, col] = badge(r, c.id);
+        const TT = window.ULThumbTest, lines = r && r.curves && r.curves.length && TT ? TT.paths(r.curves) : [];
+        return {
+          id: c.id, name: c.name, badge: b,
+          badgeS: { fontFamily: 'var(--ul-font-mono)', fontSize: '12px', fontWeight: 700, color: '#000', background: col, borderRadius: '6px', padding: '2px 8px' },
+          run: () => { if (!this._busy) this.runThumb(c.id); }, hasChart: lines.length > 0,
+          lines: lines.map((d, i) => ({ d, c: (r.legend[i] || [])[0] || '#fff' })),
+          legend: (r && r.legend ? r.legend : []).map(([cc, t]) => ({ t, s: { color: cc } })),
+          driver: r && r.driver ? r.driver : '',
+          checks: (r ? r.checks : []).map((k) => ({ mark: k.pass === true ? '✓' : k.pass === false ? '✗' : '–', markS: { fontWeight: 700, color: k.pass === true ? '#3dff8b' : k.pass === false ? '#ff5a8a' : '#8a93a3' }, label: k.label, value: k.value })),
+          hasNote: !!(r && r.note), note: r ? r.note : '',
+        };
+      }),
+      runAll: this.runAll,
+      cards: CASES.concat(CASES2).map((c) => {
+        const r = s.results[c.id], [b, col] = badge(r, c.id);
+        const p = r && r.chart && MT ? MT.chartPaths(r.chart, 240, 70) : null;
+        return {
+          id: c.id, name: c.name, cause: c.cause, badge: b,
+          badgeS: { fontFamily: 'var(--ul-font-mono)', fontSize: '12px', fontWeight: 700, color: '#000', background: col, borderRadius: '6px', padding: '2px 8px' },
+          run: () => { if (!this._busy) this.runOne(c.id); },
+          hasChart: !!p, p: p || {},
+          geo: r && r.chart ? `anchor ${Math.round(r.chart.A.w)}×${Math.round(r.chart.A.h)} → ${Math.round(r.chart.F.w)}×${Math.round(r.chart.F.h)} · ${r.side}` : '',
+          checks: (r ? r.checks : []).map((k) => ({ mark: k.pass === true ? '✓' : k.pass === false ? '✗' : '–', markS: { fontWeight: 700, color: k.pass === true ? '#3dff8b' : k.pass === false ? '#ff5a8a' : '#8a93a3' }, label: k.label, value: k.value })),
+          hasNote: !!(r && r.note), note: r ? r.note : '', driver: r && r.driver ? r.driver : '',
+        };
+      }),
+    };
+  }
+}
+</script>
+</body>
+</html>

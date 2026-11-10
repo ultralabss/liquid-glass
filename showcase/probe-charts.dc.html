@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<title>probe charts</title>
+<link rel="stylesheet" href="../tokens/tokens.css">
+<script src="../dist/ul-glass.min.js"></script>
+<script src="./demo-lazy.js"></script>
+<script src="./ul-contrast.js"></script>
+<script src="./chart-contrast.js"></script>
+<script src="./demos-2o.js"></script>
+<script src="./demos-3b.js"></script>
+<script src="./demos-3d.js"></script>
+<script src="./demos-kbd.js"></script>
+<style>html,body{margin:0;background:#0b0d12;color:#f3f6fb;font-family:system-ui,sans-serif}a{color:#8fb8ff}a:hover{color:#eef2f8}</style>
+</helmet>
+<div data-ul-theme="app" data-ul-accent="violet" data-ul-backdrop="dark" style="padding:24px;display:flex;flex-direction:column;gap:16px;max-width:1320px;box-sizing:border-box;background:radial-gradient(circle at 80% 0%, #3b2a6b 0, transparent 45%), radial-gradient(circle at 0% 60%, #12304d 0, transparent 40%), #0b0d12;min-height:100vh">
+  <h1 style="margin:0;font-size:20px;font-weight:600">Charts probe</h1>
+  <p style="margin:0;font-size:13px;color:var(--ul-color-text-2)">Modes: ?adv (3B advanced types, &only=radial,gauge…) · ?n=10|100|1000 · ?guard (layout guards at 1280×800, 924×540, 375×667 in iframes, one at a time) · ?guardframe (single size, used by ?guard)</p>
+  <sc-if value="{{ guardOut }}" hint-placeholder-val="{{ false }}"><pre style="margin:0;white-space:pre-wrap;font:12px/1.5 ui-monospace,monospace;color:#cfe3ff">{{ guardText }}</pre></sc-if>
+  <sc-if value="{{ adv }}" hint-placeholder-val="{{ false }}"><x-import component-from-global-scope="ULDemos.ChartsAdv" from="./demos-3c.js" only="{{ only }}" hint-size="100%,1600px"></x-import></sc-if>
+  <sc-if value="{{ demos }}" hint-placeholder-val="{{ false }}"><x-import component-from-global-scope="ULDemos.Charts" from="./demos-3a.js" initial-size="{{ size }}" hint-size="100%,2400px"></x-import></sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { ready: !!window.UL, guardText: '' };
+  componentDidMount() {
+    const go = () => { this.setState({ ready: true }); this.mode(); };
+    if (window.UL) setTimeout(go, 0); else window.addEventListener('ul:ready', go, { once: true });
+  }
+  async mode() {
+    const q = new URLSearchParams(location.search);
+    const waitFor = async (k) => { for (let i = 0; i < 100 && !(window.ULDemos && window.ULDemos[k]); i++) await new Promise((r) => setTimeout(r, 100)); };
+    if (q.has('guardframe')) {
+      await waitFor('chartGuardAll'); await waitFor('__scanControls');
+      const r = await window.ULDemos.chartGuardAll();
+      window.__guard = r; parent !== window && parent.postMessage({ chartGuard: r }, '*');
+      this.setState({ guardText: r.size + ' ' + r.status.toUpperCase() + '\n' + r.checks.map((c) => (c.pass === false ? 'FAIL ' : c.pass ? 'pass ' : '  –  ') + c.label + ' · ' + c.value).join('\n') });
+    }
+    if (q.has('contrast') || q.has('actions')) {
+      // shared tool (ul-contrast.js): waits for stylesheets, fonts and resolved tokens itself; unresolved colours throw
+      await waitFor('chartContrastReport');
+      const fmt = (name, r) => `${name}: ${r.checked} rows · ${r.fails} fail\n` + Object.entries(r.worst).map(([k, w]) => `${w.pass ? 'pass ' : 'FAIL '}${k}: ${w.v} · ${w.combo}`).join('\n') + (r.fails ? '\n\nfirst fails:\n' + r.firstFails.map((f) => `${f.cat} ${f.v} · ${f.combo}`).join('\n') : '');
+      try {
+        const st = window.ULContrast.selfTest(); let txt = `tool self-test ${st.pass ? 'PASS' : 'FAIL'}\n`;
+        if (q.has('contrast')) { const r = await window.ULDemos.chartContrastReport(); window.__contrast = r; txt += '\n' + fmt('charts', r); }
+        if (q.has('actions')) { const r = await window.ULDemos.actionContrastReport(); window.__actionContrast = r; txt += '\n\n' + fmt('actions', r); }
+        this.setState({ guardText: txt });
+      } catch (e) { window.__contrastError = String(e && e.message || e); this.setState({ guardText: 'CONTRAST TOOL ERROR\n' + window.__contrastError }); }
+    }
+    if (q.get('cards')) {
+      const MAP = { charttable: 'chartTableTest', chartlegend: 'chartLegendTest', chartctx: 'chartCtxTest', chartkeys: 'chartKeysTest', chartreduced: 'chartReducedTest', chartmorph: 'chartMorphTest', chartsizes: 'chartSizesTest', charttip: 'chartTipTest', chartdraw: 'chartDrawTest', chartperf: 'chartPerfTest', advtable: 'advTableTest', advctx: 'advCtxTest', advkeys: 'advKeysTest', quadtree: 'quadtreeTest', lttb: 'lttbTest', canvas: 'canvasTest', scattercanvas: 'scatterCanvasTest', colsdrag: 'colsDragTest', kbdaudit: 'kbdAuditTest', fallback: 'fallbackAuditTest', a11ystatic: 'a11yStaticTest', hitarea: 'hitAreaTest', zoom: 'zoomTest', linked: 'linkedTest', stream: 'streamTest', advreduced: 'advReducedTest', advtip: 'advTipTest', zoomsmooth: 'zoomSmoothTest', streamperf: 'streamPerfTest' };
+      const ids = q.get('cards') === 'all' ? Object.keys(MAP) : q.get('cards').split(',');
+      await waitFor('chartPerfTest'); await waitFor('streamTest'); await waitFor('__layoutOverflow');
+      const out = []; window.__cards = out;
+      for (const id of ids) {
+        let r; try { r = await window.ULDemos[MAP[id]](); } catch (e) { r = { status: 'error', checks: [{ key: 'error', label: String(e && e.message || e), pass: false, value: '' }], driver: '' }; }
+        out.push({ id, r });
+        this.setState({ guardText: out.map(({ id, r }) => `${id} ${String(r.status).toUpperCase()} · mode: ${r.driver}\n` + r.checks.map((c) => (c.pass === false ? '  FAIL ' : c.pass ? '  pass ' : '   –   ') + c.label + ' · ' + c.value).join('\n')).join('\n\n') });
+      }
+    }
+    if (q.has('guard')) {
+      const out = [];
+      for (const [w, hh] of [[1280, 800], [924, 540], [375, 667]]) {
+        const fr = document.createElement('iframe'); const k = Math.min(1, (innerWidth - 20) / w, (innerHeight - 20) / hh);
+        fr.style.cssText = `position:fixed;left:10px;top:10px;width:${w}px;height:${hh}px;border:0;z-index:2000;transform:scale(${k});transform-origin:0 0;background:#0b0d12`;
+        fr.src = location.pathname + '?guardframe';
+        const r = await new Promise((res) => { const on = (e) => { if (e.source === fr.contentWindow && e.data && e.data.chartGuard) { removeEventListener('message', on); res(e.data.chartGuard); } }; addEventListener('message', on); document.body.appendChild(fr); setTimeout(() => res({ size: w + '×' + hh, status: 'timeout', checks: [] }), 120000); });
+        fr.remove(); out.push(r);
+        this.setState({ guardText: out.map((r) => r.size + ' ' + r.status.toUpperCase() + '\n' + r.checks.map((c) => (c.pass === false ? '  FAIL ' : c.pass ? '  pass ' : '   –   ') + c.label + ' · ' + c.value).join('\n')).join('\n\n') });
+      }
+      window.__guardAll = out;
+    }
+  }
+  renderVals() {
+    const q = new URLSearchParams(location.search);
+    const n = +(q.get('n') || 10);
+    const testMode = q.has('guard') || q.has('guardframe') || q.has('cards') || q.has('contrast') || q.has('actions');
+    const adv = q.has('adv');
+    return { adv: this.state.ready && adv && !testMode, only: q.get('only') || '', demos: this.state.ready && !testMode && !adv, guardOut: !!this.state.guardText, guardText: this.state.guardText, size: [10, 100, 1000].includes(n) ? n : 10 };
+  }
+}
+</script>
+</body>
+</html>

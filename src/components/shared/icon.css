@@ -1,0 +1,8 @@
+/* ULIcon: one size scale (--ul-icon-xs/sm/md/lg, em-based), explicit box, never stretches to its container. */
+.ul-icon { --ul-icon-size: var(--ul-icon-md); display: block; flex: none; width: var(--ul-icon-size); height: var(--ul-icon-size); max-width: var(--ul-icon-max); max-height: var(--ul-icon-max); }
+.ul-icon[data-size="xs"] { --ul-icon-size: var(--ul-icon-xs); }
+.ul-icon[data-size="sm"] { --ul-icon-size: var(--ul-icon-sm); }
+.ul-icon[data-size="lg"] { --ul-icon-size: var(--ul-icon-lg); }
+/* Sizing wrappers own the box (fixed px from tokens); the icon fills them. */
+:where(.ul-btn-icon, .ul-act-ic, .ul-act-spin, .ul-field-icon, .ul-option-icon, .ul-tab-icon, .ul-seg-icon, .ul-picker-icon, .ul-select-msg-icon, .ul-choice-msg-icon, .ul-field-msg-icon,
+  .ul-errorstate-ic, .ul-banner-ic, .ul-ntf-ico, .ul-empty-icon, .ul-toast-icon, .ul-side-icon, .ul-palette-ic, [data-ul-icon-box]) > .ul-icon:not([style*="--ul-icon-size"]) { --ul-icon-size: 100%; }

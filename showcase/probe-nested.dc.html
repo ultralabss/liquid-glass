@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<title>probe nested menus</title>
+<link rel="stylesheet" href="../tokens/tokens.css">
+<script src="../dist/ul-glass.js"></script>
+<style>html,body{margin:0;background:#0b0d12;color:#f3f6fb;font-family:system-ui,sans-serif}a{color:#8fb8ff}a:hover{color:#eef2f8}</style>
+</helmet>
+<div data-ul-theme="app" data-ul-accent="violet" data-ul-backdrop="dark" style="padding:24px;display:flex;flex-direction:column;gap:16px;max-width:1100px;box-sizing:border-box;min-height:100vh;background:radial-gradient(circle at 80% 20%, #6d4bd6 0, transparent 40%), linear-gradient(135deg, #12304d, #2a1240)">
+  <h1 style="margin:0;font-size:20px;font-weight:600">Nested menu probe (3 levels)</h1>
+  <p style="margin:0;font-size:13px;color:#c3cbd8">ULMenu: Copy · More ▸ (Share · Export ▸ (PDF · PNG · SVG) · Archive) · Delete. Runs hover into level 3, diagonal, along the parent and keys; prints which menus are open after each step.</p>
+  <div id="menu-host" style="display:flex;gap:12px"></div>
+  <pre style="margin:0;white-space:pre-wrap;font:12px/1.5 ui-monospace,monospace;color:#cfe3ff">{{ out }}</pre>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { out: 'loading…' };
+  componentDidMount() { const go = () => this.run(); if (window.UL) setTimeout(go, 0); else window.addEventListener('ul:ready', go, { once: true }); }
+  mount() {
+    const UL = window.UL, h = React.createElement;
+    const ITEMS = [{ id: 'copy', label: 'Copy' }, { id: 'more', label: 'More', items: [{ id: 'share', label: 'Share' }, { id: 'export', label: 'Export', items: [{ id: 'pdf', label: 'PDF' }, { id: 'png', label: 'PNG' }, { id: 'svg', label: 'SVG' }] }, { id: 'archive', label: 'Archive' }] }, { id: 'del', label: 'Delete', destructive: true }];
+    function Btn() { const [o, setO] = React.useState(false), r = React.useRef(null); window.__nSet = setO; window.__nBtn = r;
+      return h(React.Fragment, null, h('button', { ref: r, type: 'button', onClick: () => setO(!o), style: { minHeight: '44px', padding: '0 16px', borderRadius: '999px', border: '1px solid rgb(255 255 255 / .4)', background: 'rgb(255 255 255 / .1)', color: '#fff' } }, 'Actions'),
+        h(UL.ULMenu, { open: o, onOpenChange: setO, anchorRef: r, items: ITEMS, label: 'Actions' })); }
+    window.ReactDOM.createRoot(document.getElementById('menu-host')).render(h(Btn));
+  }
+  open() { return [...document.querySelectorAll('.ul-anchored[role="menu"]')].filter((s) => !s.hasAttribute('data-closing') && s.getClientRects().length).map((s) => s.getAttribute('aria-label')); }
+  surf(label) { return [...document.querySelectorAll('.ul-anchored[role="menu"]')].find((s) => s.getAttribute('aria-label') === label && !s.hasAttribute('data-closing')); }
+  item(label, text) { const s = this.surf(label); return s && [...s.querySelectorAll('[data-active-level] [data-menu-item]')].find((n) => n.dataset.text === text); }
+  wait(ms) { return new Promise((r) => setTimeout(r, ms)); }
+  mv(x, y) { const t = document.elementFromPoint(x, y) || document.body; t.dispatchEvent(new PointerEvent('pointermove', { bubbles: true, cancelable: true, composed: true, clientX: x, clientY: y, pointerType: 'mouse', pointerId: 1, isPrimary: true })); }
+  async glide(a, b, n = 8) { for (let i = 0; i <= n; i++) { this.mv(a.x + (b.x - a.x) * i / n, a.y + (b.y - a.y) * i / n); await this.wait(16); } }
+  c(el, fx = 0.5) { const r = el.getBoundingClientRect(); return { x: r.left + r.width * fx, y: r.top + r.height / 2 }; }
+  key(k) { const t = document.activeElement || document.body; t.dispatchEvent(new KeyboardEvent('keydown', { key: k, bubbles: true, cancelable: true })); }
+  async reset() { this.key('Escape'); window.__nSet(false); await this.wait(1200); window.__nSet(true); await this.wait(1500); }
+  async toL3() {
+    await this.glide(this.c(this.item('Actions', 'Copy')), this.c(this.item('Actions', 'More')), 3); await this.wait(1500);
+    const share = this.item('More', 'Share'), exp = this.item('More', 'Export'); if (!exp) return false;
+    await this.glide(this.c(this.item('Actions', 'More'), 0.9), this.c(share, 0.3), 4);
+    await this.glide(this.c(share, 0.3), this.c(exp, 0.5), 3); await this.wait(1500);
+    return !!this.item('Export', 'PDF');
+  }
+  async run() {
+    this.mount(); await this.wait(400);
+    const L = [], log = (s) => { L.push(s); this.setState({ out: L.join('\n') }); }, ok = (b) => (b ? 'PASS' : 'FAIL');
+    const want3 = () => { const o = this.open(); return o.length === 3 ? 'PASS' : 'FAIL'; };
+    // A. hover into level 3 and inside it
+    await this.reset();
+    const got = await this.toL3(); log(`A1 hover reaches level 3: ${ok(got)} · open [${this.open()}]`);
+    if (got) {
+      await this.glide(this.c(this.item('More', 'Export'), 0.9), this.c(this.item('Export', 'PDF'), 0.3), 4);
+      await this.glide(this.c(this.item('Export', 'PDF')), this.c(this.item('Export', 'SVG')), 6);
+      await this.wait(1500); log(`A2 pointer moves inside level 3, +1500ms: ${want3()} · open [${this.open()}]`);
+    }
+    // B. diagonal from level 1 "More" toward level 2, crossing "Delete"
+    await this.reset();
+    await this.glide(this.c(this.item('Actions', 'Copy')), this.c(this.item('Actions', 'More')), 3); await this.wait(1500);
+    const arch = this.item('More', 'Archive');
+    if (arch) { await this.glide(this.c(this.item('Actions', 'More'), 0.6), this.c(arch, 0.2), 5); await this.wait(400); }
+    log(`B  diagonal More → Archive (crosses Delete): ${ok(this.open().length === 2)} · open [${this.open()}]`);
+    // C. along the parent: More → Delete closes level 2 only
+    await this.glide(this.c(this.item('Actions', 'More')), this.c(this.item('Actions', 'Delete')), 4); await this.wait(1500);
+    log(`C  along the parent More → Delete: ${ok(this.open().join() === 'Actions')} · open [${this.open()}]`);
+    // D. keys
+    await this.reset();
+    this.item('Actions', 'More').focus(); this.key('ArrowRight'); await this.wait(1500);
+    const f1 = document.activeElement?.dataset?.text; this.key('ArrowDown'); await this.wait(400);
+    const f2 = document.activeElement?.dataset?.text; log(`D1 → opens level 2, ↓ moves inside it: ${ok(this.open().length === 2 && f1 === 'Share' && f2 === 'Export')} · focus ${f1} → ${f2}`);
+    this.key('ArrowRight'); await this.wait(1500); this.key('ArrowDown'); await this.wait(400);
+    const f3 = document.activeElement?.dataset?.text; log(`D2 → opens level 3, ↓ stays in it: ${want3()} · focus ${f3} · open [${this.open()}]`);
+    this.key('ArrowLeft'); await this.wait(1200); log(`D3 ← closes only level 3: ${ok(this.open().length === 2 && document.activeElement?.dataset?.text === 'Export')} · focus ${document.activeElement?.dataset?.text} · open [${this.open()}]`);
+    this.key('ArrowRight'); await this.wait(1500); this.key('Escape'); await this.wait(1200);
+    log(`D4 Esc in level 3 closes only level 3: ${ok(this.open().length === 2)} · open [${this.open()}]`);
+    this.key('Escape'); await this.wait(1200); log(`D5 Esc again closes level 2: ${ok(this.open().length === 1)} · open [${this.open()}]`);
+    this.key('Escape'); await this.wait(1200); log(`D6 Esc again closes level 1: ${ok(this.open().length === 0)} · open [${this.open()}]`);
+    window.__probeDone = L;
+  }
+  renderVals() { return { out: this.state.out }; }
+}
+</script>
+</body>
+</html>

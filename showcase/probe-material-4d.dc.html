@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<title>Probe 4D: flat buttons, picker triggers, OTP</title>
+<link rel="stylesheet" href="../tokens/tokens.css">
+<script src="../dist/ul-glass.min.js"></script>
+<script src="./ul-contrast.js"></script>
+<style>html,body{margin:0;background:#0b0d12;color:#f3f6fb;font-family:system-ui,sans-serif}a{color:#8fb8ff}a:hover{color:#eef2f8}</style>
+</helmet>
+<div data-ul-theme="app" data-ul-backdrop="dark" style="box-sizing:border-box;min-height:100vh;padding:24px;background:linear-gradient(135deg,#2a2150,#0b0d12 55%,#12283a)">
+  <div ref="{{ mount }}"></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  mount = (el) => { this.el = el; };
+  componentDidMount() {
+    const go = () => {
+      const UL = window.UL, h = window.React.createElement;
+      if (!UL || !this.el) return setTimeout(go, 100);
+      const mode = new URLSearchParams(location.search).get('only') || 'buttons';
+      const lab = (t) => h('div', { style: { font: '600 12px system-ui', opacity: .8, width: 150 } }, t);
+      const row = (name, mat, accent, reduce) => h('div', { key: name + accent, 'data-ul-accent': accent, 'data-ul-reduce-transparency': reduce ? 'true' : undefined, style: { display: 'flex', gap: 12, alignItems: 'center', padding: '8px 0' } },
+        lab(name + ' · ' + accent),
+        h(UL.ULProvider, { material: mat },
+          h(UL.ULButton, { variant: 'primary' }, 'Primary'),
+          h(UL.ULButton, { variant: 'secondary' }, 'Secondary'),
+          h(UL.ULButton, { variant: 'plain' }, 'Ghost'),
+          h(UL.ULButton, { variant: 'primary', disabled: true }, 'Disabled'),
+          h(UL.ULButton, { variant: 'secondary', disabled: true }, 'Disabled 2')));
+      const btns = () => ['violet', 'amber'].flatMap((a) => [row('glass', 'glass', a), row('flat', 'flat', a), row('reduced-transp.', 'glass', a, true)]);
+      const form = () => h('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 320px))', gap: 16 } },
+        h(UL.ULTextField, { label: 'Name', defaultValue: 'Ada' }),
+        h(UL.ULDatePicker, { label: 'Date' }),
+        h(UL.ULSelect, { label: 'Plan', options: [{ value: 'a', label: 'Pro' }], defaultValue: 'a' }),
+        UL.ULDateRangePicker ? h(UL.ULDateRangePicker, { label: 'Range' }) : null,
+        UL.ULColorPicker ? h(UL.ULColorPicker, { label: 'Colour' }) : null,
+        UL.ULTimeRangePicker ? h(UL.ULTimeRangePicker, { label: 'Time range' }) : null);
+      const STATES = ['rest', 'hover', 'focus', 'disabled', 'invalid', 'filled'];
+      const opts = [{ value: 'eu', label: 'Europe' }, { value: 'us', label: 'United States' }];
+      const D = new Date(2026, 10, 10);
+      const comp = {
+        text: (s) => h(UL.ULTextField, { label: 'Name', disabled: s === 'disabled', error: s === 'invalid' ? 'Required' : undefined, defaultValue: s === 'filled' ? 'Ada' : undefined, forceState: s === 'hover' || s === 'focus' ? s : undefined }),
+        select: (s) => h(UL.ULSelect, { label: 'Region', options: opts, placeholder: 'Choose', disabled: s === 'disabled', error: s === 'invalid' ? 'Required' : undefined, defaultValue: s === 'filled' ? 'eu' : undefined, forceState: s === 'hover' || s === 'focus' ? s : undefined }),
+        combobox: (s) => h(UL.ULCombobox, { label: 'Owner', options: opts, disabled: s === 'disabled', error: s === 'invalid' ? 'Required' : undefined, defaultValue: s === 'filled' ? 'eu' : undefined, forceState: s === 'hover' || s === 'focus' ? s : undefined }),
+        date: (s) => h(UL.ULDatePicker, { label: 'Date', disabled: s === 'disabled', error: s === 'invalid' ? 'Required' : undefined, defaultValue: s === 'filled' ? D : null }),
+        otp: (s) => h(UL.ULOtpField, { label: 'Code', length: 6, disabled: s === 'disabled', error: s === 'invalid' ? 'Wrong code' : undefined, defaultValue: s === 'filled' ? '123456' : '', forceState: s === 'hover' || s === 'focus' ? s : undefined }),
+        copy: (s) => h(UL.ULCopyField, { label: 'API key', value: 'ul_live_3f9a2c7e1b', masked: s !== 'filled' }),
+      };
+      const W = +(new URLSearchParams(location.search).get('w') || 230);
+      const states = () => h(UL.ULProvider, { material: 'flat' }, h('div', { 'data-ul-accent': 'violet', style: { display: 'grid', gridTemplateColumns: `110px repeat(6, ${W}px)`, gap: '14px 12px', alignItems: 'start' } },
+        h('div'), ...STATES.map((s) => h('div', { key: s, style: { font: '600 12px system-ui' } }, s)),
+        ...Object.keys(comp).flatMap((c) => [h('div', { key: c, style: { font: '600 12px system-ui', paddingTop: 24 } }, c), ...STATES.map((s) => h('div', { key: c + s, 'data-cell': c + ':' + s, style: { minWidth: 0 } }, comp[c](s)))])));
+      const otpw = () => h('div', { style: { display: 'flex', flexDirection: 'column', gap: 18 } }, [375, 480, 720, 320, 280].map((w) => h('div', { key: w, 'data-otpw': w, style: { width: w, boxSizing: 'border-box', padding: 16, border: '1px dashed #567', borderRadius: 12 } }, h('div', { style: { font: '600 12px system-ui', marginBottom: 8 } }, 'container ' + w + 'px'), h(UL.ULOtpField, { label: 'Verification code', length: 6, defaultValue: '1234' }))));
+      if (mode === 'frames') { this.el.innerHTML = [375, 480].map((w) => `<iframe data-fw="${w}" src="./material.dc.html" style="width:${w}px;height:1700px;border:1px solid #456;margin-right:12px;vertical-align:top"></iframe>`).join(''); return; }
+      const root = window.ReactDOM.createRoot(this.el);
+      root.render(mode === 'form' ? form() : mode === 'states' ? states() : mode === 'otp' ? otpw() : h('div', null, btns()));
+      if (mode === 'states') setTimeout(() => {
+        ['hover', 'focus'].forEach((s) => { const t = document.querySelector(`[data-cell="date:${s}"] .ul-select-trigger`); t && t.setAttribute('data-ul-force', s); });
+        const ff = document.querySelector('[data-cell="copy:focus"] .ul-copyfield-copy, [data-cell="copy:focus"] button:last-of-type'); ff && ff.setAttribute('data-ul-force', 'focus');
+      }, 800);
+    };
+    go();
+  }
+  renderVals() { return { mount: this.mount }; }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<title>UltraLabs Glass · Components (2a + 2b)</title>
+<link rel="stylesheet" href="../tokens/tokens.css">
+<script src="./perf-hud.js"></script>
+<script src="../dist/ul-glass.js"></script>
+<script src="./demo-lazy.js"></script>
+<script src="./glass-scroll-harness.js"></script>
+<style>html,body{margin:0;background:#0b0d12;color:#f3f6fb}body{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text",system-ui,sans-serif;-webkit-font-smoothing:antialiased}a{color:#8fb8ff}a:hover{color:#eef2f8}</style>
+</helmet>
+<sc-if value="{{ animBg }}" hint-placeholder-val="{{ false }}"><x-import component-from-global-scope="ul-ambient-bg" from="./ambient-bg.js" animate="true" hint-size="100%,100%"></x-import></sc-if>
+<div data-ul-theme="{{ theme }}" data-ul-accent="{{ accent }}" data-ul-backdrop="{{ backdrop }}" style="position:relative;z-index:1;box-sizing:border-box;min-width:1400px;padding:48px;display:flex;flex-direction:column;gap:40px;background:{{ rootBg }};color:var(--ul-color-text);font-family:var(--ul-font-sans)">
+  <header style="display:flex;flex-direction:column;gap:10px;max-width:960px">
+    <span style="font-family:var(--ul-font-mono);font-size:13px;letter-spacing:.08em;color:var(--ul-color-text-2)">PHASE 2 · 2a + 2b · loads dist/ul-glass.js · Shift+P perf HUD · Shift+T tiers</span>
+    <h1 style="margin:0;font-size:40px;font-weight:700;letter-spacing:-.01em">Buttons, inputs and selection</h1>
+    <p style="margin:0;font-size:15px;line-height:1.6;color:var(--ul-color-text-2);text-wrap:pretty">Every control is built on ULGlass (buttons) or the inset well (fields). Hover, focus and pressed columns are forced with the internal forceState prop so all states are visible at once; the live column reacts to the pointer and keyboard. One section is mounted at a time. The governor refracts up to 150k px² of glass per viewport (max 30 surfaces); small controls stay full, big surfaces drop to lite first.</p>
+  </header>
+
+  <div style="position:sticky;top:0;z-index:20;display:flex;flex-wrap:wrap;align-items:center;gap:12px 28px;padding:14px 18px;border-radius:18px;background:var(--ul-color-surface-solid);box-shadow:0 0 0 1px rgb(255 255 255 / .1)">
+    <sc-for list="{{ controls }}" as="g">
+      <div style="display:flex;align-items:center;gap:8px"><span style="font-family:var(--ul-font-mono);font-size:11px;letter-spacing:.1em;color:var(--ul-color-text-2)">{{ g.t }}</span>
+        <div role="group" aria-label="{{ g.t }}" style="display:flex;gap:4px"><sc-for list="{{ g.opts }}" as="o"><button type="button" aria-pressed="{{ o.on }}" onClick="{{ o.go }}" style="{{ o.s }}">{{ o.t }}</button></sc-for></div>
+      </div>
+    </sc-for>
+  </div>
+
+  <div role="tablist" aria-label="Sections" style="display:flex;flex-wrap:wrap;gap:6px">
+    <sc-for list="{{ tabList }}" as="t"><button type="button" role="tab" aria-selected="{{ t.on }}" onClick="{{ t.go }}" style="{{ t.s }}">{{ t.t }}</button></sc-for>
+  </div>
+
+  <sc-if value="{{ ready }}" hint-placeholder-val="{{ false }}">
+    <sc-if value="{{ tab.buttons }}" hint-placeholder-val="{{ false }}"><section style="display:flex;flex-direction:column;gap:16px;contain:layout paint style">
+      <h2 style="margin:0;font-size:22px;font-weight:600">Variants × states</h2>
+      <div style="position:relative;overflow:hidden;border-radius:28px;padding:28px;background:{{ stage }}">
+        <div style="position:relative;display:grid;grid-template-columns:120px repeat(7, minmax(0, 1fr));gap:18px 14px;align-items:center">
+          <span></span><sc-for list="{{ stateCols }}" as="c"><span style="{{ capS }}">{{ c }}</span></sc-for>
+          <sc-for list="{{ matrix }}" as="row">
+            <span style="{{ capS }}">{{ row.t }}</span>
+            <sc-for list="{{ row.cells }}" as="c"><div style="{{ row.cellS }}"><x-import component-from-global-scope="UL.ULButton" dc-props="{{ c }}" hint-size="120px,44px"></x-import></div></sc-for>
+          </sc-for>
+        </div>
+      </div>
+    </section></sc-if>
+
+    <sc-if value="{{ tab.groups }}" hint-placeholder-val="{{ false }}"><section style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:24px;contain:layout paint style">
+      <div style="display:flex;flex-direction:column;gap:16px">
+        <h2 style="margin:0;font-size:22px;font-weight:600">Sizes, shapes, icon-only</h2>
+        <div style="position:relative;border-radius:28px;padding:28px;display:flex;flex-direction:column;gap:18px;background:{{ stage }}">
+          <sc-for list="{{ sizeRows }}" as="row"><div style="display:flex;flex-wrap:wrap;align-items:center;gap:12px"><span style="{{ capS }};width:90px">{{ row.t }}</span><sc-for list="{{ row.items }}" as="c"><x-import component-from-global-scope="UL.ULButton" dc-props="{{ c }}" hint-size="100px,44px"></x-import></sc-for></div></sc-for>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:16px">
+        <h2 style="margin:0;font-size:22px;font-weight:600">Group, split, toggle, FAB</h2>
+        <div style="position:relative;border-radius:28px;padding:28px;display:flex;flex-direction:column;gap:20px;background:{{ stage }}">
+          <div style="display:flex;flex-wrap:wrap;align-items:center;gap:12px"><span style="{{ capS }};width:90px">group</span>
+            <x-import component-from-global-scope="UL.ULButtonGroup" aria-label="View" hint-size="260px,52px">
+              <sc-for list="{{ groupBtns }}" as="c"><x-import component-from-global-scope="UL.ULToggleButton" dc-props="{{ c }}" hint-size="80px,44px"></x-import></sc-for>
+            </x-import>
+            <x-import component-from-global-scope="UL.ULButtonGroup" attached="{{ no }}" aria-label="Pagination" hint-size="200px,44px">
+              <x-import component-from-global-scope="UL.ULButton" dc-props="{{ prevBtn }}" hint-size="44px,44px"></x-import>
+              <x-import component-from-global-scope="UL.ULButton" dc-props="{{ nextBtn }}" hint-size="44px,44px"></x-import>
+            </x-import>
+          </div>
+          <div style="display:flex;flex-wrap:wrap;align-items:center;gap:12px"><span style="{{ capS }};width:90px">split</span>
+            <x-import component-from-global-scope="UL.ULSplitButton" items="{{ splitItems }}" hint-size="160px,44px">Save</x-import>
+            <x-import component-from-global-scope="UL.ULSplitButton" variant="secondary" items="{{ splitItems }}" disabled="{{ yes }}" hint-size="160px,44px">Save</x-import>
+            <x-import component-from-global-scope="UL.ULSplitButton" size="sm" items="{{ splitItems }}" hint-size="140px,36px">Save</x-import>
+            <x-import component-from-global-scope="UL.ULSplitButton" size="lg" variant="tinted" items="{{ splitItems }}" hint-size="180px,52px">Save</x-import>
+          </div>
+          <div style="display:flex;flex-wrap:wrap;align-items:center;gap:12px"><span style="{{ capS }};width:90px">toggle</span>
+            <sc-for list="{{ toggles }}" as="c"><x-import component-from-global-scope="UL.ULToggleButton" dc-props="{{ c }}" hint-size="120px,44px"></x-import></sc-for>
+          </div>
+          <div style="display:flex;flex-wrap:wrap;align-items:center;gap:12px"><span style="{{ capS }};width:90px">FAB</span>
+            <sc-for list="{{ fabs }}" as="c"><x-import component-from-global-scope="UL.ULFab" dc-props="{{ c }}" hint-size="56px,56px"></x-import></sc-for>
+          </div>
+        </div>
+      </div>
+    </section></sc-if>
+
+    <sc-if value="{{ tab.inputs }}" hint-placeholder-val="{{ false }}"><section style="display:flex;flex-direction:column;gap:16px;contain:layout paint style">
+      <h2 style="margin:0;font-size:22px;font-weight:600">Inputs · states</h2>
+      <div style="position:relative;border-radius:28px;padding:28px;background:{{ stage }}">
+        <x-import component-from-global-scope="UL.ULGlass" tier="lg" backdrop="light" padding="28px" hint-size="100%,600px">
+          <div style="display:grid;grid-template-columns:repeat(4, minmax(0, 1fr));gap:24px 20px">
+            <sc-for list="{{ fieldStates }}" as="f"><div style="display:flex;flex-direction:column;gap:8px"><span style="{{ capS }}">{{ f.t }}</span><x-import component-from-global-scope="UL.ULTextField" dc-props="{{ f.p }}" hint-size="100%,84px"></x-import></div></sc-for>
+          </div>
+        </x-import>
+      </div>
+    </section></sc-if>
+
+    <sc-if value="{{ tab.inputs }}" hint-placeholder-val="{{ false }}"><section style="display:flex;flex-direction:column;gap:16px;contain:layout paint style">
+      <h2 style="margin:0;font-size:22px;font-weight:600">Input types (live)</h2>
+      <div style="position:relative;border-radius:28px;padding:28px;background:{{ stage }}">
+        <x-import component-from-global-scope="UL.ULGlass" tier="lg" backdrop="light" padding="28px" hint-size="100%,520px">
+          <div style="display:grid;grid-template-columns:repeat(3, minmax(0, 1fr));gap:28px 24px;align-items:start">
+            <x-import component-from-global-scope="UL.ULTextField" label="Password" type="password" default-value="correct-horse-77" helper="At least 8 characters." hint-size="100%,84px"></x-import>
+            <div style="display:flex;flex-direction:column;gap:12px"><x-import component-from-global-scope="UL.ULTextField" label="Search apps" type="search" expand-on-focus="{{ yes }}" hint-size="220px,44px"></x-import><span style="{{ capS }}">search · capsule, expands on focus, Esc clears</span></div>
+            <x-import component-from-global-scope="UL.ULNumberField" label="Seats" default-value="{{ three }}" min="{{ one }}" max="{{ fifty }}" helper="↑ ↓ step · PageUp/PageDown ×10 · Home/End" hint-size="100%,84px"></x-import>
+            <x-import component-from-global-scope="UL.ULTextArea" label="Message" helper="Grows from 3 to 8 lines, then scrolls." max-rows="{{ eight }}" hint-size="100%,140px"></x-import>
+            <x-import component-from-global-scope="UL.ULOtpField" label="Verification code" helper="Paste works. Backspace goes back." hint-size="100%,110px"></x-import>
+            <x-import component-from-global-scope="UL.ULTagField" label="Skills" default-value="{{ tags }}" helper="Enter or comma adds. Backspace removes the last." hint-size="100%,110px"></x-import>
+            <x-import component-from-global-scope="UL.ULOtpField" label="Code · error" default-value="1234" error="That code has expired. Request a new one." hint-size="100%,110px"></x-import>
+            <x-import component-from-global-scope="UL.ULTextField" label="Website" floating="{{ no }}" placeholder="https://" leading="{{ globeIc }}" helper="Label above, leading icon." hint-size="100%,100px"></x-import>
+            <x-import component-from-global-scope="UL.ULNumberField" label="Budget (EUR)" default-value="{{ budget }}" step="{{ hundred }}" format="{{ eur }}" disabled="{{ yes }}" helper="Disabled" hint-size="100%,84px"></x-import>
+          </div>
+        </x-import>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <span style="{{ capS }}">directly on the busy backdrop (no panel): wells stay readable, helper text needs a surface</span>
+        <div style="position:relative;border-radius:28px;padding:28px;display:grid;grid-template-columns:repeat(3, minmax(0, 1fr));gap:20px;background:{{ stage }}">
+          <x-import component-from-global-scope="UL.ULTextField" label="E-mail" type="email" default-value="jana@example.com" hint-size="100%,56px"></x-import>
+          <x-import component-from-global-scope="UL.ULTextField" label="Name" hint-size="100%,56px"></x-import>
+          <x-import component-from-global-scope="UL.ULTextField" label="Search" type="search" hint-size="100%,44px"></x-import>
+        </div>
+      </div>
+    </section></sc-if>
+
+    <sc-if value="{{ tab.selection }}" hint-placeholder-val="{{ false }}"><section style="display:flex;flex-direction:column;gap:16px;contain:layout paint style">
+      <h2 style="margin:0;font-size:22px;font-weight:600">Selection (2b)</h2>
+      <p style="margin:0;max-width:960px;font-size:14px;line-height:1.55;color:var(--ul-color-text-2)">Boxes, thumbs, the segmented capsule and triggers are glass (small controls stay full under the area budget). Rows sit on a dark scrim (data-ul-surface="solid", not glass) so labels pass 4.5:1 while the glass still refracts the stage. The right column repeats them inside a glass panel, where they flatten.</p>
+      <div style="position:relative;border-radius:28px;padding:28px;display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:24px;align-items:start;background:{{ stage }}">
+        <div style="display:flex;flex-direction:column;gap:16px">
+          <div data-ul-surface="solid" style="position:relative;display:flex;flex-direction:column;gap:14px;padding:18px 20px;border-radius:20px;background:rgb(var(--ul-color-graphite-rgb) / .72)"><span style="{{ capS }}">checkbox · default · on · mixed · error · loading · disabled · focus</span>
+            <div style="display:flex;flex-wrap:wrap;gap:4px 20px"><sc-for list="{{ checks }}" as="c"><x-import component-from-global-scope="UL.ULCheckbox" dc-props="{{ c }}" hint-size="140px,44px"></x-import></sc-for></div>
+          </div>
+          <div data-ul-surface="solid" style="position:relative;display:flex;flex-direction:column;gap:14px;padding:18px 20px;border-radius:20px;background:rgb(var(--ul-color-graphite-rgb) / .72)"><span style="{{ capS }}">radio group · arrows move and select</span>
+            <x-import component-from-global-scope="UL.ULRadioGroup" dc-props="{{ radioGroup }}" hint-size="100%,80px"><sc-for list="{{ radios }}" as="c"><x-import component-from-global-scope="UL.ULRadio" dc-props="{{ c }}" hint-size="120px,44px"></x-import></sc-for></x-import>
+          </div>
+          <div data-ul-surface="solid" style="position:relative;display:flex;flex-direction:column;gap:14px;padding:18px 20px;border-radius:20px;background:rgb(var(--ul-color-graphite-rgb) / .72)"><span style="{{ capS }}">switch · off · on · pressed · loading · error · disabled</span>
+            <div style="display:flex;flex-wrap:wrap;gap:4px 24px"><sc-for list="{{ switches }}" as="c"><x-import component-from-global-scope="UL.ULSwitch" dc-props="{{ c }}" hint-size="150px,44px"></x-import></sc-for></div>
+          </div>
+          <div data-ul-surface="solid" style="position:relative;display:flex;flex-direction:column;gap:14px;padding:18px 20px;border-radius:20px;background:rgb(var(--ul-color-graphite-rgb) / .72)"><span style="{{ capS }}">slider · range · pressed · disabled (tooltip while dragging)</span>
+            <x-import component-from-global-scope="UL.ULSlider" dc-props="{{ slider1 }}" hint-size="100%,70px"></x-import>
+            <x-import component-from-global-scope="UL.ULRangeSlider" dc-props="{{ slider2 }}" hint-size="100%,70px"></x-import>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px"><x-import component-from-global-scope="UL.ULSlider" dc-props="{{ slider3 }}" hint-size="100%,70px"></x-import><x-import component-from-global-scope="UL.ULSlider" dc-props="{{ slider4 }}" hint-size="100%,70px"></x-import></div>
+          </div>
+          <div style="display:flex;flex-wrap:wrap;align-items:center;gap:16px">
+            <x-import component-from-global-scope="UL.ULSegmentedControl" dc-props="{{ seg1 }}" hint-size="260px,44px"></x-import>
+            <x-import component-from-global-scope="UL.ULSegmentedControl" dc-props="{{ seg2 }}" hint-size="140px,36px"></x-import>
+          </div>
+          <div data-ul-surface="solid" style="position:relative;display:flex;flex-direction:column;gap:14px;padding:18px 20px;border-radius:20px;background:rgb(var(--ul-color-graphite-rgb) / .72)"><span style="{{ capS }}">stepper (step indicator)</span><x-import component-from-global-scope="UL.ULStepper" dc-props="{{ stepper }}" hint-size="100%,110px"></x-import></div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:16px">
+          <div data-ul-surface="solid" style="position:relative;display:flex;flex-direction:column;gap:14px;padding:18px 20px;border-radius:20px;background:rgb(var(--ul-color-graphite-rgb) / .72)"><span style="{{ capS }}">select · combobox · error · loading</span>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+              <x-import component-from-global-scope="UL.ULSelect" dc-props="{{ select1 }}" hint-size="100%,72px"></x-import>
+              <x-import component-from-global-scope="UL.ULCombobox" dc-props="{{ combo1 }}" hint-size="100%,72px"></x-import>
+              <x-import component-from-global-scope="UL.ULSelect" dc-props="{{ select2 }}" hint-size="100%,100px"></x-import>
+              <x-import component-from-global-scope="UL.ULCombobox" dc-props="{{ combo2 }}" hint-size="100%,100px"></x-import>
+            </div>
+          </div>
+          <div data-ul-surface="solid" style="position:relative;display:flex;flex-direction:column;gap:14px;padding:18px 20px;border-radius:20px;background:rgb(var(--ul-color-graphite-rgb) / .72)"><span style="{{ capS }}">date picker · EN · SK · DE · CS</span>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px"><sc-for list="{{ dates }}" as="c"><x-import component-from-global-scope="UL.ULDatePicker" dc-props="{{ c }}" hint-size="100%,72px"></x-import></sc-for></div>
+          </div>
+          <div data-ul-surface="solid" style="position:relative;display:flex;flex-direction:column;gap:14px;padding:18px 20px;border-radius:20px;background:rgb(var(--ul-color-graphite-rgb) / .72)"><span style="{{ capS }}">color picker · presets + custom hex</span><x-import component-from-global-scope="UL.ULColorPicker" dc-props="{{ color1 }}" hint-size="220px,72px"></x-import></div>
+          <x-import component-from-global-scope="UL.ULGlass" tier="lg" backdrop="light" padding="22px" hint-size="100%,360px">
+            <div style="display:flex;flex-direction:column;gap:12px"><span style="font-family:var(--ul-font-mono);font-size:12px;letter-spacing:.06em;color:var(--ul-color-text-2)">inside a glass panel (flattened)</span>
+              <div style="display:flex;flex-wrap:wrap;gap:4px 20px"><x-import component-from-global-scope="UL.ULCheckbox" label="Newsletter" default-checked="{{ yes }}" hint-size="140px,44px"></x-import><x-import component-from-global-scope="UL.ULSwitch" label="Sync" default-checked="{{ yes }}" hint-size="120px,44px"></x-import></div>
+              <x-import component-from-global-scope="UL.ULSlider" dc-props="{{ slider1 }}" hint-size="100%,70px"></x-import>
+              <x-import component-from-global-scope="UL.ULSegmentedControl" dc-props="{{ seg1 }}" hint-size="260px,44px"></x-import>
+              <x-import component-from-global-scope="UL.ULSelect" dc-props="{{ select1 }}" hint-size="100%,72px"></x-import>
+            </div>
+          </x-import>
+        </div>
+      </div>
+      <p style="margin:0;font-size:14px;color:var(--ul-color-text-2)">Scroll behavior bench (tall page, nested container, lock / follow / fixed / close): <a href="./scroll-bench.dc.html">scroll-bench</a></p>
+      <h3 style="margin:8px 0 0;font-size:18px;font-weight:600">Lens bubble</h3>
+      <p style="margin:0;max-width:960px;font-size:14px;line-height:1.55;color:var(--ul-color-text-2)">Press and hold any control: a glass rounded rectangle grows out of the flat thumb or indicator, follows the pointer with an elastic two-edge stretch, and shrinks back once it has settled. Switch: drag to set, decided on release. Tabs and segmented: hold and drag, release selects. Slider: the value commits immediately, the thumb glides on the follow spring and the tooltip moves in the same frame.</p>
+      <div style="position:relative;border-radius:28px;padding:28px;display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:24px;align-items:start;background:{{ stage }}">
+        <div style="display:flex;flex-direction:column;gap:16px;--ul-lens-scale:{{ bench.scale }};--ul-lens-overshoot:{{ bench.os }};--ul-lens-magnify:{{ bench.mag }};--ul-switch-thumb-ratio:{{ bench.ratio }};--ul-lens-overgrow-switch:{{ bench.og }};--ul-lens-overgrow-tabs:{{ bench.og }};--ul-lens-overgrow-slider:{{ bench.ogs }};--ul-lens-drag-stretch:{{ bench.ds }};--ul-slider-follow:{{ bench.follow }};--ul-lens-grow-duration:{{ bench.grow }};--ul-lens-shrink-duration:{{ bench.shrink }};--ul-switch-toggle-duration:{{ bench.toggle }};--ul-lens-settle-duration:{{ bench.settle }};--ul-lens-shrink-start:{{ bench.sstart }};--ul-lens-release-linger:{{ bench.linger }}">
+          <span style="{{ capS }}">bench · bubble {{ bench.state }} · scale {{ bench.scale }} · overshoot {{ bench.os }} · stretch {{ bench.ds }} · magnify {{ bench.mag }} · ratio {{ bench.ratio }} · follow {{ bench.follow }}</span>
+          <div style="display:flex;flex-wrap:wrap;align-items:center;gap:12px 28px;padding:8px 4px">
+            <x-import component-from-global-scope="UL.ULSwitch" dc-props="{{ bench.sw }}" hint-size="150px,44px"></x-import>
+            <x-import component-from-global-scope="UL.ULSwitch" dc-props="{{ bench.sw2 }}" hint-size="150px,44px"></x-import>
+            <x-import component-from-global-scope="UL.ULSwitch" dc-props="{{ bench.swDis }}" hint-size="150px,44px"></x-import>
+            <x-import component-from-global-scope="UL.ULSwitch" dc-props="{{ bench.swLoad }}" hint-size="150px,44px"></x-import>
+            <button type="button" onClick="{{ bench.flip }}" style="min-height:36px;padding:0 14px;border-radius:999px;border:1px solid rgb(255 255 255 / .35);background:rgb(255 255 255 / .1);color:#fff;font:500 13px/1 inherit;cursor:pointer">Toggle Wi-Fi programmatically</button>
+          </div>
+          <div data-ul-surface="solid" style="position:relative;display:flex;flex-direction:column;gap:16px;padding:20px 22px;border-radius:20px;background:rgb(var(--ul-color-graphite-rgb) / .55)">
+            <x-import component-from-global-scope="UL.ULSlider" dc-props="{{ bench.sl }}" hint-size="100%,70px"></x-import>
+            <x-import component-from-global-scope="UL.ULSlider" dc-props="{{ bench.sl2 }}" hint-size="100%,70px"></x-import>
+            <x-import component-from-global-scope="UL.ULRangeSlider" dc-props="{{ bench.rg }}" hint-size="100%,70px"></x-import>
+          </div>
+          <div style="display:flex;flex-wrap:wrap;align-items:center;gap:16px">
+            <x-import component-from-global-scope="UL.ULSegmentedControl" dc-props="{{ bench.seg }}" hint-size="300px,44px"></x-import>
+            <x-import component-from-global-scope="UL.ULTabs" dc-props="{{ bench.tabs }}" hint-size="420px,90px"></x-import>
+          </div>
+          <x-import component-from-global-scope="UL.ULGlass" tier="lg" padding="20px" hint-size="100%,120px">
+            <div style="display:flex;flex-direction:column;gap:10px"><span style="font-family:var(--ul-font-mono);font-size:12px;letter-spacing:.06em;color:var(--ul-color-text-2)">inside a glass panel: the bubble cannot sample glass (bevel look)</span>
+              <div style="display:flex;flex-wrap:wrap;align-items:center;gap:12px 28px"><x-import component-from-global-scope="UL.ULSwitch" dc-props="{{ bench.swGlass }}" hint-size="150px,44px"></x-import><x-import component-from-global-scope="UL.ULSlider" dc-props="{{ bench.slGlass }}" hint-size="260px,70px"></x-import></div>
+            </div>
+          </x-import>
+        </div>
+        <div data-ul-surface="solid" style="position:relative;display:flex;flex-direction:column;gap:12px;padding:18px 20px;border-radius:20px;background:rgb(var(--ul-color-graphite-rgb) / .72)">
+          <span style="{{ capS }}">bench controls</span>
+          <div style="display:flex;flex-wrap:wrap;gap:8px">
+            <sc-for list="{{ bench.opts }}" as="o"><button type="button" onClick="{{ o.go }}" aria-pressed="{{ o.on }}" style="{{ o.s }}">{{ o.t }}</button></sc-for>
+          </div>
+          <sc-for list="{{ bench.knobs }}" as="k"><x-import component-from-global-scope="UL.ULSlider" dc-props="{{ k }}" hint-size="100%,70px"></x-import></sc-for>
+        </div>
+      </div>
+    </section></sc-if>
+
+    <sc-if value="{{ tab.containers }}" hint-placeholder-val="{{ false }}"><section style="display:flex;flex-direction:column;gap:16px;">
+      <h2 style="margin:0;font-size:22px;font-weight:600">Containers + overlays (2c)</h2>
+      <p style="margin:0;max-width:960px;font-size:14px;line-height:1.55;color:var(--ul-color-text-2)">Cards and panels are rigid (pointer light + rim); only sm interactive cards are elastic. Every overlay is ULAnchoredSurface: one morph, one scroll policy, one overlay stack. Motion proof: <a href="./motion-test.dc.html">motion-test</a> · scroll proof: <a href="./scroll-bench.dc.html">scroll-bench</a>.</p>
+      <div style="position:relative;border-radius:28px;padding:28px;background:{{ stage }}">
+        <x-import component-from-global-scope="ULDemos.Containers" from="./demos-2c.js" backdrop="{{ backdrop }}" hint-size="100%,1400px"></x-import>
+      </div>
+    </section></sc-if>
+
+    <sc-if value="{{ tab.data }}" hint-placeholder-val="{{ false }}"><section style="display:flex;flex-direction:column;gap:16px;">
+      <h2 style="margin:0;font-size:22px;font-weight:600">Data (2d)</h2>
+      <p style="margin:0;max-width:960px;font-size:14px;line-height:1.55;color:var(--ul-color-text-2)">Panels (KPI cards, stat tiles, table, chart) are one lite glass surface each; rows, cells and plot marks are never glass. Basic / rich and intensity scale the material. Glass appears only in controls (select-all, buttons), overlays (row actions menu) and the chart value tooltip. The table has a sticky header, sorting, selection, three densities, grid keyboard navigation (one tab stop; arrows, Home / End, Ctrl+Home / End, PageUp / PageDown, Space selects), skeleton loading and an empty state.</p>
+      <div style="position:relative;border-radius:28px;padding:28px;background:{{ stage }}">
+        <x-import component-from-global-scope="ULDemos.Data" from="./demos-2d.js" backdrop="{{ backdrop }}" hint-size="100%,2000px"></x-import>
+      </div>
+    </section></sc-if>
+
+    <sc-if value="{{ tab.blocks }}" hint-placeholder-val="{{ false }}"><section style="display:flex;flex-direction:column;gap:16px;">
+      <h2 style="margin:0;font-size:22px;font-weight:600">Dashboard blocks</h2>
+      <p style="margin:0;max-width:960px;font-size:14px;line-height:1.55;color:var(--ul-color-text-2)">Composition of existing parts only: filter bar, columns menu (also on header right-click), flat cell renderers, a bulk bar that pours in from the bottom edge while rows are selected, time range + refresh, copy field with mask, status, banners, usage, error state, description list.</p>
+      <div style="position:relative;border-radius:28px;padding:28px;background:{{ stage }}">
+        <x-import component-from-global-scope="ULDemos.Blocks" from="./demos-2l.js" hint-size="100%,1600px"></x-import>
+      </div>
+      <div style="position:relative;border-radius:28px;padding:28px;background:{{ stage }}">
+        <x-import component-from-global-scope="ULDemos.Blocks2" from="./demos-2n.js" hint-size="100%,2400px"></x-import>
+      </div>
+    </section></sc-if>
+
+    <sc-if value="{{ tab.actions }}" hint-placeholder-val="{{ false }}"><section style="display:flex;flex-direction:column;gap:16px;">
+      <h2 style="margin:0;font-size:22px;font-weight:600">Actions</h2>
+      <p style="margin:0;max-width:960px;font-size:14px;line-height:1.55;color:var(--ul-color-text-2)">One core (useAsyncAction + ULActionButton): idle → loading → success | error → idle, minimum loading time, double clicks ignored, icon and label swap inside the button, width morph, success ring, error shake. Feedback through the anchored tooltip and one polite live region.</p>
+      <div role="group" aria-label="Action animation speed" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <span style="font-family:var(--ul-font-mono);font-size:12px;letter-spacing:.06em;color:var(--ul-color-text-2)">ACTION TIME SCALE</span>
+        <sc-for list="{{ actTsOpts }}" as="o" hint-placeholder-count="3">
+          <button type="button" aria-pressed="{{ o.on }}" onClick="{{ o.go }}" style="min-height:44px;min-width:64px;padding:0 14px;border-radius:999px;border:1px solid rgb(255 255 255 / .3);background:{{ o.bg }};color:var(--ul-color-text);font:600 13px/1 inherit;cursor:pointer">{{ o.t }}</button>
+        </sc-for>
+        <span style="font-size:12px;color:var(--ul-color-text-2)">Wave, ring, swaps, check, width morph and the success / error timers only. Lens timings stay at 1×.</span>
+      </div>
+      <div style="position:relative;border-radius:28px;padding:28px;background:{{ stage }}">
+        <x-import component-from-global-scope="ULDemos.Actions" from="./demos-2i.js" hint-size="100%,1400px"></x-import>
+      </div>
+    </section></sc-if>
+
+    <sc-if value="{{ tab.live }}" hint-placeholder-val="{{ false }}"><section style="display:flex;flex-direction:column;gap:16px;">
+      <h2 style="margin:0;font-size:22px;font-weight:600">Live data</h2>
+      <p style="margin:0;max-width:960px;font-size:14px;line-height:1.55;color:var(--ul-color-text-2)">A mock socket feeds two keyed stores (one commit per frame). Rate, burst, disconnect, reconnect, duplicates and a slow network are simulated in the page; nothing leaves the browser.</p>
+      <div style="position:relative;border-radius:28px;padding:28px;background:{{ stage }}">
+        <x-import component-from-global-scope="ULDemos.Live" from="./demos-2d.js" hint-size="100%,1600px"></x-import>
+      </div>
+    </section></sc-if>
+
+    <sc-if value="{{ tab.charts }}" hint-placeholder-val="{{ false }}"><section style="display:flex;flex-direction:column;gap:16px;">
+      <h2 style="margin:0;font-size:22px;font-weight:600">Charts</h2>
+      <p style="margin:0;max-width:960px;font-size:14px;line-height:1.55;color:var(--ul-color-text-2)">One shared core (src/charts): scales, axes, legend chips with ULCheckMark, snapped value tooltip, keyboard navigation, data table, CSV / copy. Each chart is one lite glass panel; the plot never refracts. Cards mount lazily and animate only when visible. Faster single page: <a href="./probe-charts.dc.html">probe-charts</a>.</p>
+      <div style="position:relative;border-radius:28px;padding:28px;background:{{ stage }}">
+        <x-import component-from-global-scope="ULDemos.Charts" from="./demos-3a.js" hint-size="100%,2400px"></x-import>
+      </div>
+    </section></sc-if>
+
+    <sc-if value="{{ tab.charts }}" hint-placeholder-val="{{ false }}"><section data-screen-label="Charts (advanced)" style="display:flex;flex-direction:column;gap:16px;">
+      <h2 style="margin:0;font-size:22px;font-weight:600">Charts (advanced)</h2>
+      <p style="margin:0;max-width:960px;font-size:14px;line-height:1.55;color:var(--ul-color-text-2)">Radial, gauge, radar, scatter / bubble, heatmap + calendar, funnel, histogram, treemap, zoom / brush, streaming and the linked demo. Same demos as probe-charts ?adv; the section mounts when scrolled near and each card animates only while visible.</p>
+      <div style="position:relative;border-radius:28px;padding:28px;background:{{ stage }}">
+        <x-import component-from-global-scope="ULDemos.Lazy" from="./demo-lazy.js" min-height="{{ advMin }}" label="charts-adv" hint-size="100%,1600px"><x-import component-from-global-scope="ULDemos.ChartsAdv" from="./demos-3c.js" only="" hint-size="100%,1600px"></x-import></x-import>
+      </div>
+    </section></sc-if>
+
+    <sc-if value="{{ tab.forms }}" hint-placeholder-val="{{ false }}"><section data-screen-label="Forms" style="display:flex;flex-direction:column;gap:16px;">
+      <h2 style="margin:0;font-size:22px;font-weight:600">Forms</h2>
+      <p style="margin:0;max-width:960px;font-size:14px;line-height:1.55;color:var(--ul-color-text-2)">ULField owns label, description and error for any control; ULInputGroup is one inset well with addons, inline buttons, counter and clear. Flat paint, no glass inside the well.</p>
+      <div style="position:relative;border-radius:28px;padding:28px;background:{{ stage }}">
+        <x-import component-from-global-scope="ULDemos.Lazy" from="./demo-lazy.js" min-height="{{ advMin }}" label="forms"><x-import component-from-global-scope="ULDemos.Forms" from="./demos-3e.js" hint-size="100%,1200px"></x-import></x-import>
+      </div>
+    </section></sc-if>
+
+    <sc-if value="{{ tab.batch2 }}" hint-placeholder-val="{{ false }}"><section data-screen-label="Batch 2" style="display:flex;flex-direction:column;gap:16px;">
+      <h2 style="margin:0;font-size:22px;font-weight:600">Navigation, layout + typography (3D)</h2>
+      <p style="margin:0;max-width:960px;font-size:14px;line-height:1.55;color:var(--ul-color-text-2)">Hover card, menubar, navigation menu, native select, calendar, aspect ratio, resizable panels, carousel and typography. Overlays use the shared anchored morph; nothing here adds glass of its own.</p>
+      <div style="position:relative;border-radius:28px;padding:28px;background:{{ stage }}">
+        <x-import component-from-global-scope="ULDemos.Lazy" from="./demo-lazy.js" min-height="{{ advMin }}" label="batch2"><x-import component-from-global-scope="ULDemos.Batch2" from="./demos-3h.js" hint-size="100%,1200px"></x-import></x-import>
+      </div>
+    </section></sc-if>
+
+    <sc-if value="{{ tab.feedback }}" hint-placeholder-val="{{ false }}"><section data-screen-label="Feedback" style="display:flex;flex-direction:column;gap:16px;">
+      <h2 style="margin:0;font-size:22px;font-weight:600">Feedback + structure</h2>
+      <p style="margin:0;max-width:960px;font-size:14px;line-height:1.55;color:var(--ul-color-text-2)">Alerts, alert dialog, confirm popover, toggle group, separator, kbd, item, collapsible and scroll area. In-flow parts are flat or tinted paint; glass stays on overlays and controls.</p>
+      <div style="position:relative;border-radius:28px;padding:28px;background:{{ stage }}">
+        <x-import component-from-global-scope="ULDemos.Lazy" from="./demo-lazy.js" min-height="{{ advMin }}" label="feedback"><x-import component-from-global-scope="ULDemos.Feedback" from="./demos-3f.js" hint-size="100%,1200px"></x-import></x-import>
+      </div>
+    </section></sc-if>
+
+    <sc-if value="{{ tab.contrast }}" hint-placeholder-val="{{ false }}"><section style="display:flex;flex-direction:column;gap:12px;max-width:1100px;contain:layout paint style">
+      <h2 style="margin:0;font-size:22px;font-weight:600">Contrast (worst case, computed live)</h2>
+      <p style="margin:0;font-size:14px;line-height:1.55;color:var(--ul-color-text-2)">Buttons: primary text under full pointer light on the brightest allowed backdrop of each class, every accent preset. Fields: text over the well composited on white. Theme: {{ theme }}.</p>
+      <div style="display:grid;grid-template-columns:1.6fr repeat(3, 1fr);border-radius:14px;overflow:hidden;box-shadow:0 0 0 1px rgb(255 255 255 / .12);font-size:14px">
+        <sc-for list="{{ contrast.head }}" as="h"><span style="padding:10px 12px;background:var(--ul-color-surface-solid);font-family:var(--ul-font-mono);font-size:12px;color:var(--ul-color-text-2)">{{ h }}</span></sc-for>
+        <sc-for list="{{ contrast.cells }}" as="c"><span style="{{ c.s }}">{{ c.t }}</span></sc-for>
+      </div>
+    </section></sc-if>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;perfBudget&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;auto&quot;,&quot;fixed&quot;,&quot;unlimited&quot;],&quot;default&quot;:&quot;auto&quot;,&quot;tsType&quot;:&quot;'auto'|'fixed'|'unlimited'&quot;,&quot;section&quot;:&quot;Performance&quot;},&quot;perfFixed&quot;:{&quot;editor&quot;:&quot;range&quot;,&quot;min&quot;:0,&quot;max&quot;:600,&quot;step&quot;:10,&quot;unit&quot;:&quot;k px²&quot;,&quot;default&quot;:150,&quot;tsType&quot;:&quot;number&quot;,&quot;section&quot;:&quot;Performance&quot;}}">
+// Static, high-frequency test backdrop (stripes, grid, big type, rings, hard-edged shapes) so refraction is visible.
+const STAGE_SVG = "<svg xmlns='http://www.w3.org/2000/svg' width='1400' height='720' viewBox='0 0 1400 720' preserveAspectRatio='xMidYMid slice'>"
+  + "<g fill='#ff5a36'><circle cx='130' cy='120' r='74'/></g><g fill='#ffd23f'><rect x='640' y='430' width='150' height='150' rx='18'/></g><g fill='#2fd6c4'><polygon points='1000,500 1130,710 870,710'/></g><g fill='#3b6bff'><rect x='1220' y='380' width='160' height='60'/></g>"
+  + "<g fill='none' stroke='#fff' stroke-opacity='.6' stroke-width='3'><circle cx='1180' cy='150' r='112'/><circle cx='1180' cy='150' r='72'/><circle cx='300' cy='540' r='92'/></g>"
+  + "<text x='-24' y='690' font-family='Helvetica,Arial,sans-serif' font-weight='900' font-size='300' letter-spacing='-10' fill='none' stroke='#fff' stroke-opacity='.62' stroke-width='3'>ULTRA</text>"
+  + "<text x='540' y='300' font-family='Helvetica,Arial,sans-serif' font-weight='900' font-size='170' fill='#fff' fill-opacity='.2'>LABS</text>"
+  + "<g stroke='#fff' stroke-opacity='.85' stroke-width='3'><line x1='0' y1='330' x2='1400' y2='240'/><line x1='0' y1='346' x2='1400' y2='256'/><line x1='0' y1='362' x2='1400' y2='272'/></g></svg>";
+const STAGE = 'url("data:image/svg+xml,' + encodeURIComponent(STAGE_SVG) + '") center / cover no-repeat, '
+  + 'repeating-linear-gradient(90deg, rgb(255 255 255 / .28) 0 2px, transparent 2px 11px) 0 62% / 100% 70px no-repeat, '
+  + 'linear-gradient(rgb(255 255 255 / .13) 1px, transparent 1px) 0 0 / 24px 24px, linear-gradient(90deg, rgb(255 255 255 / .13) 1px, transparent 1px) 0 0 / 24px 24px, '
+  + 'radial-gradient(circle at 72% 100%, #3b6bff 0, transparent 42%), radial-gradient(circle at 12% 40%, #ff5a3666 0, transparent 30%), linear-gradient(135deg, #12304d, #2a1240)';
+class Component extends DCLogic {
+  state = { ready: !!window.UL, theme: 'app', accent: 'violet', backdrop: 'dark', fallback: false, slow: false, rows: [], tab: new URLSearchParams(location.search).get('tab') || localStorage.getItem('ul-components-tab') || 'buttons', animBg: false, lensOn: true, lScale: 1.3, lOs: 0.04, lMag: 1.06, bSw: true, lRatio: 1.57, lOg: 5, lGrow: 570, lShrink: 600, lToggle: 560, lSettle: 420, lSStart: 0.45, lLinger: 570, lDs: 0.14, lFollow: 75 };
+  componentDidMount() { this.go = () => this.setState({ ready: true }, () => { const tick = () => { const r = document.querySelector('[data-ul-theme]'); if (r && getComputedStyle(r).getPropertyValue('--ul-color-text').trim()) this.measure(); else setTimeout(tick, 100); }; tick(); }); if (window.UL) this.go(); else window.addEventListener('ul:ready', this.go, { once: true }); }
+  componentWillUnmount() { window.removeEventListener('ul:ready', this.go); }
+  componentDidUpdate() {
+    const UL = window.UL, s = this.state; if (!UL) return;
+    const p = this.prev || {}; this.prev = { fallback: s.fallback, slow: s.slow, theme: s.theme, budget: this.budget() };
+    if (p.budget !== this.prev.budget) UL.configureGlass({ budget: this.prev.budget });
+    if (!!p.tiers !== !!s.tiers && window.__ulPerf) window.__ulPerf.showTiers(!!s.tiers);
+    this.prev.tiers = s.tiers;
+    if (p.tab !== s.tab) { this.prev.tab = s.tab; localStorage.setItem('ul-components-tab', s.tab); } else this.prev.tab = s.tab;
+    if (p.fallback !== s.fallback) UL.configureGlass({ forceFallback: s.fallback });
+    if (p.slow !== s.slow) UL.configureMorph({ timeScale: s.slow ? 4 : 1 });
+    if (p.theme !== undefined && p.theme !== s.theme) requestAnimationFrame(() => this.measure());
+  }
+  budget() { const m = this.props.perfBudget ?? 'auto'; return m === 'unlimited' ? Infinity : m === 'fixed' ? Number(this.props.perfFixed ?? 150) * 1000 : 'auto'; }
+  measure() {
+    const UL = window.UL; if (!UL) return;
+    const root = document.querySelector('[data-ul-theme]'); if (!root) return;
+    const t = UL.readContrastTokens(root), cs = getComputedStyle(root);
+    const accents = UL.ACCENT_PRESETS.map((p) => [p, cs.getPropertyValue('--ul-accent-' + p).trim()]);
+    const kx = (k) => Math.min(1, Math.max(0, (k - t.k.subtle) / (1 - t.k.subtle)));
+    const worst = (strength, bd, color) => { const list = color ? [['danger', color]] : accents; let m = 99, who = ''; for (const [n, c] of list) { const r = UL.contrastRatio(t.text, UL.worstSurface(t, UL.toRGB(c), bd, kx(t.k[strength]), undefined, true)); if (r < m) { m = r; who = n; } } return [m, who]; };
+    const danger = cs.getPropertyValue('--ul-color-danger').trim();
+    const rows = [
+      ['Primary (vivid)', ...['dark', 'mid', 'light'].map((b) => worst('vivid', b))],
+      ['Tinted', ...['dark', 'mid', 'light'].map((b) => worst('tinted', b))],
+      ['Secondary (subtle)', ...['dark', 'mid', 'light'].map((b) => worst('subtle', b))],
+      ['Destructive (danger, vivid)', ...['dark', 'mid', 'light'].map((b) => worst('vivid', b, danger))],
+    ];
+    const g = UL.toRGB(cs.getPropertyValue('--ul-color-graphite').trim()), mixW = (a) => g.map((v) => a * v + (1 - a) * 1);
+    const well = mixW(0.88), wellH = mixW(0.92);
+    const v = (k) => UL.toRGB(cs.getPropertyValue(k).trim());
+    const fRows = [['Field text (--ul-color-text)', v('--ul-color-text')], ['Label + helper (--ul-color-text-2)', v('--ul-color-text-2')], ['Placeholder (--ul-color-text-3)', v('--ul-color-text-3')], ['Error (--ul-color-danger)', v('--ul-color-danger')]]
+      .map(([n, c]) => [n, [UL.contrastRatio(c, well), 'well'], [UL.contrastRatio(c, wellH), 'hover/focus'], null]);
+    const panel = UL.worstSurface(t, UL.toRGB(cs.getPropertyValue('--ul-accent-amber').trim()), 'light', kx(t.k.subtle));
+    const errText = v('--ul-color-danger').map((x) => x * 0.5 + 0.5); // --ul-field-error-text
+    fRows.push(['Helper on lg panel (backdrop light, amber)', [UL.contrastRatio(t.text2, panel), 'text-2'], [UL.contrastRatio(errText, panel), 'error text'], null]);
+    const bare = mixW(0.84); // --ul-field-msg-backing (graphite 84%) over white, the worst busy backdrop
+    fRows.push(['Helper / error on --ul-field-msg-backing (field on a busy backdrop, no panel)', [UL.contrastRatio(t.text2, bare), 'text-2'], [UL.contrastRatio(errText, bare), 'error text'], null]);
+    // 2b selection
+    const strip = mixW(0.72); // data-ul-surface scrim (graphite 72 %) over white
+    const ov = (c) => { let m = 99; for (const [, a] of accents) m = Math.min(m, UL.contrastRatio(c, UL.worstSurface(t, UL.toRGB(a), 'light', kx(t.k.subtle)))); return m; };
+    const [vv] = worst('vivid', 'light'), [vt] = worst('tinted', 'light'), [vs] = worst('subtle', 'light');
+    const sRows = [
+      ['2b · labels on the scrim strip (checkbox, radio, switch, slider)', [UL.contrastRatio(t.text, strip), 'text'], [UL.contrastRatio(t.text2, strip), 'text-2'], null],
+      ['2b · list, calendar, swatch text on the overlay (light, all accents)', [ov(t.text), 'text'], [ov(t.text2), 'text-2'], null],
+      ['2b · check mark, selected day, current step (vivid, all accents)', null, null, [vv, 'white on vivid']],
+      ['2b · segmented label on the capsule / select trigger (subtle / tinted)', null, [vt, 'tinted'], [vs, 'subtle']],
+      ['2b · slider value tooltip (opaque)', [UL.contrastRatio(UL.toRGB('#f4f2f8'), UL.toRGB('#0b0912')), 'tooltip'], null, null],
+    ];
+    this.setState({ rows: [...rows, ...fRows, ...sRows] });
+  }
+  renderVals() {
+    const s = this.state, UL = window.UL, h = React.createElement;
+    const ic = (name) => (UL ? h(UL.ULIcon, { name }) : null);
+    const pill = (on) => ({ minHeight: '32px', padding: '0 12px', borderRadius: '999px', border: '1px solid ' + (on ? 'rgb(255 255 255 / .55)' : 'rgb(255 255 255 / .16)'), background: on ? 'rgb(255 255 255 / .14)' : 'transparent', color: 'var(--ul-color-text)', font: 'inherit', fontSize: '13px', cursor: 'pointer' });
+    const opt = (key, vals) => vals.map(([t, v]) => ({ t, on: s[key] === v ? 'true' : 'false', s: pill(s[key] === v), go: () => this.setState({ [key]: v }) }));
+    const VAR = ['primary', 'secondary', 'tinted', 'plain', 'destructive'];
+    const COLS = ['default', 'hover', 'focus', 'pressed', 'disabled', 'loading', 'live'];
+    const label = { primary: 'Save changes', secondary: 'Cancel', tinted: 'Preview', plain: 'Learn more', destructive: 'Delete' };
+    const cell = (v, st) => ({ variant: v, children: label[v], icon: v === 'destructive' ? ic('x') : undefined, forceState: ['hover', 'focus', 'pressed'].includes(st) ? st : undefined, disabled: st === 'disabled', loading: st === 'loading', backdrop: s.backdrop });
+    const B = (o) => ({ backdrop: s.backdrop, ...o });
+    const tone = (k) => (k ? 'var(--ul-color-success)' : 'var(--ul-color-danger)');
+    const cells = [];
+    s.rows.forEach(([n, a, b, c]) => {
+      cells.push({ t: n, s: { padding: '10px 12px', borderTop: '1px solid rgb(255 255 255 / .08)' } });
+      [a, b, c].forEach((x) => cells.push(x ? { t: x[0].toFixed(2) + ':1 · ' + x[1], s: { padding: '10px 12px', borderTop: '1px solid rgb(255 255 255 / .08)', fontFamily: 'var(--ul-font-mono)', fontSize: '13px', color: tone(x[0] >= 4.5) } } : { t: '', s: { borderTop: '1px solid rgb(255 255 255 / .08)' } }));
+    });
+    return {
+      ready: s.ready && !!UL, theme: s.theme, accent: s.accent, backdrop: s.backdrop,
+      yes: true, no: false, one: 1, three: 3, eight: 8, fifty: 50, hundred: 100, budget: 4500, eur: { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }, tags: ['React', 'TypeScript'], globeIc: ic('search'),
+      controls: [
+        { t: 'THEME', opts: opt('theme', [['app', 'app'], ['marketing', 'marketing']]) },
+        { t: 'ACCENT', opts: opt('accent', [['ice', 'ice'], ['violet', 'violet'], ['emerald', 'emerald'], ['amber', 'amber'], ['rose', 'rose']]) },
+        { t: 'BACKDROP', opts: opt('backdrop', [['dark', 'dark'], ['light (reading)', 'light']]) },
+        { t: 'MATERIAL', opts: opt('fallback', [['refraction', false], ['blur-only (WebKit)', true]]) },
+        { t: 'MOTION', opts: opt('slow', [['×1', false], ['×0.25', true]]) },
+        { t: 'BACKGROUND', opts: opt('animBg', [['static', false], ['animated', true]]) },
+        { t: 'TIERS', opts: opt('tiers', [['off', false], ['outline', true]]) },
+      ],
+      animBg: s.animBg, rootBg: s.animBg ? 'transparent' : 'var(--ul-color-graphite)',
+      tab: { buttons: s.tab === 'buttons', groups: s.tab === 'groups', inputs: s.tab === 'inputs', selection: s.tab === 'selection', containers: s.tab === 'containers', data: s.tab === 'data', live: s.tab === 'live', actions: s.tab === 'actions', blocks: s.tab === 'blocks', charts: s.tab === 'charts', forms: s.tab === 'forms', feedback: s.tab === 'feedback', batch2: s.tab === 'batch2', contrast: s.tab === 'contrast' },
+      actTsOpts: [1, 0.5, 0.25].map((v) => ({ t: v + '×', on: String((s.actTs || 1) === v), bg: (s.actTs || 1) === v ? 'rgb(255 255 255 / .22)' : 'transparent', go: () => { window.UL && window.UL.setActionTimeScale && window.UL.setActionTimeScale(v); this.setState({ actTs: v }); } })),
+      tabList: [['buttons', 'Variants × states'], ['groups', 'Sizes, groups, FAB'], ['inputs', 'Inputs'], ['selection', 'Selection (2b)'], ['containers', 'Containers (2c)'], ['data', 'Data (2d)'], ['live', 'Live'], ['actions', 'Actions'], ['blocks', 'Dashboard blocks'], ['charts', 'Charts'], ['forms', 'Forms'], ['feedback', 'Feedback'], ['batch2', 'Navigation + layout (3D)'], ['contrast', 'Contrast']].map(([k, t]) => ({ t, on: s.tab === k ? 'true' : 'false', s: { ...pill(s.tab === k), minHeight: '40px', padding: '0 16px', fontSize: '14px' }, go: () => this.setState({ tab: k }) })),
+      stage: s.animBg ? 'transparent' : STAGE, advMin: 1600,
+      capS: { fontFamily: 'var(--ul-font-mono)', fontSize: '12px', letterSpacing: '.06em', color: 'var(--ul-color-text)', textShadow: '0 1px 2px rgb(0 0 0 / .8)' },
+      stateCols: COLS,
+      matrix: VAR.map((v) => ({ t: v, cellS: v === 'plain' ? { padding: '6px', borderRadius: '14px', background: 'var(--ul-color-surface-solid)', justifySelf: 'start' } : {}, cells: COLS.map((st) => cell(v, st)) })),
+      sizeRows: [
+        { t: 'sizes', items: ['sm', 'md', 'lg'].map((z) => B({ variant: 'primary', size: z, children: 'Size ' + z })) },
+        { t: 'shapes', items: [B({ variant: 'secondary', shape: 'capsule', children: 'Capsule' }), B({ variant: 'secondary', shape: 'rounded', children: 'Rounded' }), B({ variant: 'secondary', shape: 'circle', icon: ic('plus'), 'aria-label': 'Add' })] },
+        { t: 'icon-only', items: ['sm', 'md', 'lg'].map((z) => B({ variant: 'tinted', size: z, icon: ic('search'), 'aria-label': 'Search' })).concat([B({ variant: 'secondary', icon: ic('eye'), 'aria-label': 'Show', loading: true })]) },
+        { t: 'focus', items: [B({ variant: 'primary', size: 'sm', children: 'Small', forceState: 'focus' }), B({ variant: 'secondary', children: 'Capsule', forceState: 'focus' }), B({ variant: 'tinted', size: 'lg', shape: 'rounded', children: 'Rounded', forceState: 'focus' }), B({ variant: 'secondary', shape: 'circle', icon: ic('plus'), 'aria-label': 'Add', forceState: 'focus' }), B({ variant: 'destructive', size: 'sm', icon: ic('x'), 'aria-label': 'Remove', forceState: 'focus' })] },
+        { t: 'with icon', items: [B({ variant: 'primary', icon: ic('plus'), children: 'New project' }), B({ variant: 'secondary', iconEnd: ic('chevron-down'), children: 'Sort' }), B({ variant: 'primary', href: '#', children: 'Link button' })] },
+      ],
+      groupBtns: [['Day', true], ['Week', false], ['Month', false]].map(([t, on]) => ({ variant: 'plain', children: t, defaultPressed: on })),
+      prevBtn: B({ variant: 'secondary', icon: ic('minus'), 'aria-label': 'Previous page' }), nextBtn: B({ variant: 'secondary', icon: ic('plus'), 'aria-label': 'Next page' }),
+      splitItems: [{ label: 'Save as draft' }, { label: 'Save and close' }, { label: 'Discard changes', destructive: true }],
+      toggles: [B({ variant: 'secondary', icon: ic('eye'), children: 'Preview', defaultPressed: false }), B({ variant: 'secondary', icon: ic('eye'), children: 'Preview', defaultPressed: true }), B({ variant: 'secondary', icon: ic('eye'), 'aria-label': 'Preview', defaultPressed: true })],
+      fabs: [B({ icon: ic('plus'), 'aria-label': 'New project' }), B({ icon: ic('plus'), label: 'New project' }), B({ variant: 'secondary', icon: ic('search'), 'aria-label': 'Search' })],
+      fieldStates: [
+        ['default', {}], ['hover', { forceState: 'hover' }], ['focus', { forceState: 'focus' }], ['filled', { defaultValue: 'jana@example.com' }],
+        ['disabled', { disabled: true, defaultValue: 'jana@example.com' }], ['loading', { loading: true, defaultValue: 'jana@example.com', helper: 'Checking…' }], ['error', { defaultValue: 'jana@', error: 'Enter an e-mail address like name@example.com.' }], ['live', {}],
+      ].map(([t, p]) => ({ t, p: { label: 'E-mail', type: 'email', helper: 'We only use it to reply.', ...p } })),
+      contrast: { head: ['element', 'dark / well', 'mid / hover', 'light (reading)'], cells },
+      checks: [['Default', {}], ['On', { defaultChecked: true }], ['Mixed', { indeterminate: true }], ['Required', { error: 'Accept the terms to continue.' }], ['Saving', { loading: true, defaultChecked: true }], ['Disabled', { disabled: true }], ['Focus', { forceState: 'focus', defaultChecked: true }]].map(([label, p]) => ({ label, ...p })),
+      radioGroup: { label: 'Billing', defaultValue: 'monthly', orientation: 'horizontal', helper: 'You can switch at any time.' },
+      radios: [['monthly', 'Monthly'], ['yearly', 'Yearly', 'Save 15 %'], ['custom', 'Custom', undefined, true]].map(([value, label, description, disabled]) => ({ value, label, description, disabled })),
+      switches: [['Off', {}], ['On', { defaultChecked: true }], ['Pressed', { defaultChecked: true, forceState: 'pressed' }], ['Syncing', { loading: true, defaultChecked: true }], ['Required', { error: 'Turn on to continue.' }], ['Disabled', { disabled: true, defaultChecked: true }]].map(([label, p]) => ({ label, ...p })),
+      bench: (() => {
+        const pill = (on) => ({ minHeight: '34px', padding: '0 12px', borderRadius: '999px', border: '1px solid ' + (on ? 'rgb(255 255 255 / .55)' : 'rgb(255 255 255 / .16)'), background: on ? 'rgb(255 255 255 / .16)' : 'transparent', color: '#fff', font: '500 13px/1 inherit', cursor: 'pointer' });
+        const o = (t, on, go) => ({ t, on: String(on), s: pill(on), go });
+        const L = s.lensOn;
+        const knob = (label, key, lo, hi, k, dec) => ({ label, min: lo, max: hi, step: 1, value: Math.round(s[key] * k), format: (v) => (v / k).toFixed(dec), onValueChange: (v) => this.setState({ [key]: v / k }), lens: L });
+        return {
+          scale: s.lScale.toFixed(2), os: s.lOs.toFixed(3), mag: s.lMag.toFixed(3), state: L ? 'on' : 'off',
+          settle: Math.round(s.lSettle) + 'ms', sstart: s.lSStart.toFixed(2), linger: Math.round(s.lLinger) + 'ms', grow: Math.round(s.lGrow) + 'ms', shrink: Math.round(s.lShrink) + 'ms', toggle: Math.round(s.lToggle) + 'ms',
+          ratio: s.lRatio.toFixed(2), og: s.lOg + 'px', ogs: Math.max(6, s.lOg + 1) + 'px', ds: s.lDs.toFixed(2), follow: Math.round(s.lFollow) + 'ms',
+          sw: { label: 'Wi-Fi', checked: s.bSw, onCheckedChange: (v) => this.setState({ bSw: v }), lens: L },
+          sw2: { label: 'Bluetooth', defaultChecked: false, lens: L },
+          swDis: { label: 'Disabled', defaultChecked: true, disabled: true, lens: L },
+          swLoad: { label: 'Syncing', defaultChecked: true, loading: true, lens: L },
+          swGlass: { label: 'In glass', defaultChecked: true, lens: L },
+          flip: () => this.setState((x) => ({ bSw: !x.bSw })),
+          sl: { label: 'Brightness', defaultValue: 62, format: (v) => v + ' %', lens: L },
+          sl2: { label: 'Stepped (step 10)', defaultValue: 40, step: 10, format: (v) => v + ' %', lens: L },
+          slGlass: { label: 'Volume', defaultValue: 30, lens: L },
+          rg: { label: 'Price', defaultValue: [180, 640], min: 0, max: 1000, step: 10, format: (v) => '€' + v, lens: L, thumbLabels: ['Minimum price', 'Maximum price'] },
+          seg: { 'aria-label': 'Range', options: [{ value: 'd', label: 'Day' }, { value: 'w', label: 'Week' }, { value: 'm', label: 'Month' }, { value: 'y', label: 'Year' }], defaultValue: 'w', lens: L },
+          tabs: { 'aria-label': 'Sections', lens: L, defaultValue: 'over', items: [{ value: 'over', label: 'Overview', content: 'Overview panel' }, { value: 'act', label: 'Activity', content: 'Activity panel' }, { value: 'set', label: 'Settings', content: 'Settings panel' }, { value: 'bill', label: 'Billing', content: 'Billing panel' }] },
+          opts: [o('bubble on', L, () => this.setState({ lensOn: true })), o('bubble off', !L, () => this.setState({ lensOn: false })), o('×1', !s.slow, () => this.setState({ slow: false })), o('×0.25 slow motion', s.slow, () => this.setState({ slow: true }))],
+          knobs: [
+            knob('Switch thumb ratio', 'lRatio', 100, 200, 100, 2),
+            knob('Overgrow (switch / tabs px; slider = +1, min 6)', 'lOg', 0, 8, 1, 0),
+            knob('Lens scale', 'lScale', 110, 150, 100, 2),
+            knob('Drag stretch', 'lDs', 0, 30, 100, 2),
+            knob('Overshoot', 'lOs', 0, 100, 1000, 3),
+            knob('Magnification', 'lMag', 100, 112, 100, 2),
+            knob('Slider follow (ms)', 'lFollow', 30, 200, 1, 0),
+            knob('Grow (ms)', 'lGrow', 200, 1200, 1, 0),
+            knob('Shrink (ms)', 'lShrink', 200, 1400, 1, 0),
+            knob('Switch toggle (ms)', 'lToggle', 250, 1000, 1, 0),
+            knob('Settle (ms)', 'lSettle', 150, 1000, 1, 0),
+            knob('Shrink start (× settle)', 'lSStart', 10, 90, 100, 2),
+            knob('Release linger cap (ms)', 'lLinger', 150, 1200, 1, 0),
+          ],
+        };
+      })(),
+      slider1: { label: 'Opacity', defaultValue: 40, format: (v) => v + ' %' },
+      slider2: { label: 'Budget', min: 0, max: 20000, step: 500, defaultValue: [4000, 12000], format: (v) => new Intl.NumberFormat('en', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(v), thumbLabels: ['Minimum budget', 'Maximum budget'] },
+      slider3: { label: 'Pressed', defaultValue: 65, forceState: 'pressed' },
+      slider4: { label: 'Disabled', defaultValue: 30, disabled: true },
+      seg1: { 'aria-label': 'Range', options: [{ value: 'day', label: 'Day' }, { value: 'week', label: 'Week' }, { value: 'month', label: 'Month' }], defaultValue: 'week' },
+      seg2: { 'aria-label': 'View', size: 'sm', options: [{ value: 'grid', icon: ic('layout-grid'), 'aria-label': 'Grid' }, { value: 'list', icon: ic('menu'), 'aria-label': 'List' }, { value: 'off', label: 'Off', disabled: true }], defaultValue: 'grid' },
+      stepper: { 'aria-label': 'Project brief', current: 1, steps: [{ label: 'Goal' }, { label: 'Scope', description: 'Pages and features' }, { label: 'Budget' }, { label: 'Contact' }] },
+      select1: { label: 'Country', placeholder: 'Choose a country', defaultValue: 'sk', options: [['sk', 'Slovakia'], ['cz', 'Czechia'], ['de', 'Germany'], ['at', 'Austria'], ['pl', 'Poland'], ['hu', 'Hungary'], ['ch', 'Switzerland', true]].map(([value, label, disabled]) => ({ value, label, disabled })) },
+      select2: { label: 'Plan', options: [], error: 'Choose a plan.', loading: true },
+      combo1: { label: 'City', options: ['Bratislava', 'Brno', 'Berlin', 'Budapest', 'Košice', 'Kraków', 'Prague', 'Vienna', 'Žilina'].map((c) => ({ value: c.toLowerCase(), label: c })), helper: 'Type to filter. Accents optional.' },
+      combo2: { label: 'Owner', options: [], emptyText: 'No people match.', error: 'Pick an owner.' },
+      dates: [['en', 'Start date'], ['sk', 'Dátum začiatku'], ['de', 'Startdatum'], ['cs', 'Datum zahájení']].map(([locale, label]) => ({ locale, label, defaultValue: new Date(2026, 10, 18), min: new Date(2026, 10, 3) })),
+      color1: { label: 'Accent', defaultValue: 'violet', presets: (UL ? UL.ACCENT_PRESETS : []).map((p) => (p === 'emerald' ? { value: p, disabled: true } : p)) },
+    };
+  }
+}
+</script>
+</body>
+</html>
