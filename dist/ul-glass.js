@@ -1998,6 +1998,7 @@ var UL = (() => {
     }
     if (bisect.noMapRegen && s.key) return;
     s.pending = false;
+    s.lastMeasure = now();
     const cs = getComputedStyle(el);
     const num6 = (name, fallback) => {
       const v = parseFloat(cs.getPropertyValue(name));
@@ -2515,6 +2516,7 @@ var UL = (() => {
           bindFilter(s);
         }
       }
+      if (s.mode === "refract" && s.q > 0 && now() - (s.lastMeasure ?? 0) > 120) schedule(s);
       clearTimeout(s.roTimer);
       s.roTimer = window.setTimeout(() => schedule(s), 100);
     });

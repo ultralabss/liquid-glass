@@ -128,6 +128,8 @@ interface GlassState {
   fadeHeld?: boolean;
   ro?: ResizeObserver;
   roTimer: number;
+  /** performance.now() of the last measure (throttles map regeneration during a live resize). */
+  lastMeasure?: number;
   pressBound: boolean;
   hot: number;
   hotUntil: number;
@@ -559,6 +561,7 @@ function measure(s: GlassState) {
   if (scrolling && s.key) { s.pending = true; whenIdle(() => { if (s.pending) schedule(s); }); return; }
   if (bisect.noMapRegen && s.key) return;
   s.pending = false;
+  s.lastMeasure = now();
   const cs = getComputedStyle(el);
   const num = (name: string, fallback: number) => { const v = parseFloat(cs.getPropertyValue(name)); return Number.isFinite(v) ? v : fallback; };
   const w = el.offsetWidth, h = el.offsetHeight;
@@ -955,7 +958,10 @@ function observeSize(s: GlassState) {
       if (w && h && (Math.abs(w - m.width) > perf.bucket || Math.abs(h - m.height) > perf.bucket)) { s.stretch = { w, h }; s.morphed = true; bindFilter(s); }
       else if (s.stretch && !s.held) { s.stretch = undefined; bindFilter(s); }
     }
-    clearTimeout(s.roTimer); // debounce regeneration on resize: rAF + ~100ms
+    // Regenerate the exact map at most every ~120 ms WHILE resizing (leading throttle) so the lens converges on the true map in
+    // steps instead of one big swap from a stretched map at the end; the trailing call settles it. Held maps swap in without lite.
+    if (s.mode === 'refract' && s.q > 0 && now() - (s.lastMeasure ?? 0) > 120) schedule(s);
+    clearTimeout(s.roTimer);
     s.roTimer = window.setTimeout(() => schedule(s), 100);
   });
   s.ro.observe(s.el);
