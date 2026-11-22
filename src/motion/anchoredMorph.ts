@@ -267,6 +267,13 @@ export class AnchoredMorph {
   private tau = 0;
   private anim: Animation | null = null;
   private stageAnim: Animation | null = null;
+  /** Backdrop shell (UL-635): the only blurred element while the morph runs; see ensureShell(). */
+  private shell: HTMLElement | null = null;
+  private shellAnim: Animation | null = null;
+  private shellRaf = 0;
+  private shellTimer = 0;
+  private shellFade: Animation | null = null;
+  private shellFilter: string | null = null;
   private seg: { t0: number; t1: number; dur: number } | null = null;
   private loop = 0;
   private fin: Final | null = null;
@@ -556,7 +563,76 @@ export class AnchoredMorph {
   }
 
   /* ---------- lifecycle ---------- */
-  private begin() {
+
+  /*
+   * Backdrop shell (UL-635). A backdrop-filter on an element whose transform / clip-path / size animation ends (or whose
+   * clip-path, overflow and will-change are cleared at settle) makes Chrome rebuild its backdrop: one frame of unblurred
+   * page. Same fix as the island -> contact dialog morph: while the morph runs the blur lives on a sibling shell that
+   * plays the SAME keyframes, the surface has backdrop-filter: none; at settle the surface first goes static, then on the
+   * next frame gets its blur back while the shell hides in the same commit, and the shell is removed a frame later.
+   * The shell carries the plain CSS part of the surface's backdrop (SVG url() filters are dropped while moving).
+   */
+  private ensureShell(): void {
+    const s = this.surface, parent = s.parentElement;
+    cancelAnimationFrame(this.shellRaf); this.shellRaf = 0; clearTimeout(this.shellTimer); this.shellTimer = 0; this.shellFade?.cancel(); this.shellFade = null;
+    if (!parent) return;
+    if (this.shellFilter == null || !s.style.getPropertyValue('backdrop-filter')) {
+      const cs = getComputedStyle(s);
+      const raw = cs.backdropFilter || (cs as unknown as { webkitBackdropFilter?: string }).webkitBackdropFilter || 'none';
+      const plain = raw === 'none' ? '' : raw.replace(/url\([^)]*\)/g, '').trim();
+      this.shellFilter = plain || 'none';
+    }
+    if (this.shellFilter === 'none') { this.dropShell(); return; }
+    const cs = getComputedStyle(s);
+    const sh = this.shell ?? (this.shell = document.createElement('div'));
+    sh.className = 'ul-morph-shell';
+    sh.setAttribute('aria-hidden', 'true');
+    if (sh.parentElement !== parent || sh.nextSibling !== s) parent.insertBefore(sh, s);
+    const st = sh.style;
+    st.cssText = '';
+    st.position = cs.position === 'static' ? 'absolute' : cs.position;
+    st.left = cs.left; st.top = cs.top; st.right = 'auto'; st.bottom = 'auto'; st.margin = '0';
+    st.zIndex = cs.zIndex; st.translate = cs.translate; st.boxSizing = 'border-box';
+    st.width = cs.width; st.height = cs.height; st.borderRadius = cs.borderTopLeftRadius;
+    st.pointerEvents = 'none'; st.visibility = 'visible'; st.background = 'transparent';
+    st.setProperty('backdrop-filter', this.shellFilter);
+    st.setProperty('-webkit-backdrop-filter', this.shellFilter);
+    s.style.setProperty('backdrop-filter', 'none', 'important');
+    s.style.setProperty('-webkit-backdrop-filter', 'none', 'important');
+  }
+  /** Interrupted / not a shell run: no shell, the surface owns its blur again at once. */
+  private dropShell(): void {
+    cancelAnimationFrame(this.shellRaf); this.shellRaf = 0; clearTimeout(this.shellTimer); this.shellTimer = 0; this.shellFade?.cancel(); this.shellFade = null;
+    this.shellAnim?.cancel(); this.shellAnim = null;
+    this.shell?.remove();
+    this.surface.style.removeProperty('backdrop-filter');
+    this.surface.style.removeProperty('-webkit-backdrop-filter');
+  }
+  /** Settled: frame 0 the surface is already static (no blur), frame 1 blur back on the surface + shell hidden, frame 2 shell gone. */
+  private handoverShell(): void {
+    const s = this.surface, sh = this.shell, sa = this.shellAnim;
+    this.shellAnim = null;
+    if (!sh || !sh.isConnected) { this.dropShell(); return; }
+    cancelAnimationFrame(this.shellRaf);
+    // Frame 1: the surface gets its own backdrop back, but the shell STAYS under it. Chrome needs a few frames to build
+    // the surface's url(#ul-refraction-…) filter; until it has, it paints the surface with no backdrop at all, and with
+    // the shell already gone that was the bare, unblurred frame after settle (UL-635). With the shell underneath, the
+    // gap shows the shell's blur instead. Then the shell fades out and is removed.
+    this.shellRaf = requestAnimationFrame(() => {
+      this.shellRaf = 0;
+      s.style.removeProperty('backdrop-filter');
+      s.style.removeProperty('-webkit-backdrop-filter');
+      this.shellTimer = window.setTimeout(() => {
+        this.shellTimer = 0;
+        if (!sh.isConnected) return;
+        const fade = sh.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 180, easing: 'linear', fill: 'forwards' });
+        this.shellFade = fade;
+        fade.onfinish = () => { if (this.shellFade !== fade) return; this.shellFade = null; sa?.cancel(); fade.cancel(); sh.remove(); };
+      }, 160);
+    });
+  }
+    private begin() {
+    this.ensureShell();
     const s = this.surface, fin = this.fin!;
     s.style.visibility = '';
     s.setAttribute('data-ul-morphing', '');
@@ -589,7 +665,9 @@ export class AnchoredMorph {
     b?.cancel();
     const s = this.surface;
     s.removeAttribute('data-ul-morphing');
-    s.style.willChange = '';
+    // Keep the surface on its own compositor layer once it settles: dropping will-change: transform demotes the layer
+    // and Chrome re-creates the backdrop-filter render surface, a one-frame flash of the unblurred page (UL-635).
+    s.style.willChange = 'transform';
     if (this.prevOverflow !== null) { s.style.overflow = this.prevOverflow; this.prevOverflow = null; }
     if (this.prevPadding !== null) { s.style.padding = this.prevPadding; this.prevPadding = null; if (this.stage) this.stage.style.margin = ''; }
     s.style.removeProperty('--ul-rim');
@@ -598,6 +676,7 @@ export class AnchoredMorph {
     this.hideGoo();
     this.clearHole();
     if (settled) releaseGlassTier(s); // an interrupted run hands over to the next one: no tier change mid-travel
+    if (settled) this.handoverShell(); else this.dropShell();
   }
 
   /** Visual rect of the surface right now (animation applied), in the surface's local px. Read BEFORE stop(). */
@@ -636,21 +715,24 @@ export class AnchoredMorph {
     }
     this.ensureHole();
     const ha = this.holeRect(); // anchor's CURRENT rect at the start of this run (enter, exit or reversal)
-    const anim = s.animate(poses.map((f, i) => ({
+    const keys = poses.map((f, i) => ({
       offset: i / N,
       transform: `translate(${f.x.toFixed(2)}px, ${f.y.toFixed(2)}px)`,
       width: `${f.w.toFixed(2)}px`,
       height: `${f.h.toFixed(2)}px`,
       borderRadius: `${f.r.toFixed(2)}px`,
       ...(this.opts.anchorOnTop === false ? {} : { clipPath: this.clipFor(g, f, ha) }), // the hole is keyframed: always in sync with the pose, no per-frame style writes
-    })) as Keyframe[], { duration: dur, easing: 'linear', fill: 'both' });
+    })) as Keyframe[];
+    const anim = s.animate(keys, { duration: dur, easing: 'linear', fill: 'both' });
+    this.shellAnim?.cancel();
+    this.shellAnim = this.shell?.isConnected ? this.shell.animate(keys, { duration: dur, easing: 'linear', fill: 'both' }) : null;
     this.stageAnim = this.stage
       ? this.stage.animate(poses.map((f, i) => {
         const [dx, dy] = TRAVEL[this.side] ?? TRAVEL.bottom, d = (1 - f.c) * tok.offset;
         return { offset: i / N, opacity: f.c.toFixed(3), transform: `translate(${(f.cx - dx * d).toFixed(2)}px, ${(f.cy - dy * d).toFixed(2)}px)` };
       }), { duration: dur, easing: 'linear', fill: 'both' })
       : null;
-    startNow(anim, this.stageAnim);
+    startNow(anim, this.stageAnim, this.shellAnim);
     this.anim = anim;
     this.seg = { t0, t1, dur };
     const useGoo = !!this.goo && tok.goo && !reduced();
@@ -840,6 +922,7 @@ export class AnchoredMorph {
   destroy() {
     this.stopOpenBehavior();
     this.stop();
+    this.dropShell();
     // invariant: nothing temporary survives a close (the owner unmounts the nodes; reused nodes start clean)
     const s = this.surface;
     for (const p of ['left', 'top', 'visibility', 'transform-origin', 'opacity', 'pointer-events', 'translate', 'clip-path', 'overflow', 'will-change']) s.style.removeProperty(p);

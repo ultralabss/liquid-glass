@@ -79,6 +79,8 @@ interface FilterRec {
 }
 
 interface GlassState {
+  /** Has run an AnchoredMorph: at rest it keeps its private filter (no url swap on a visible overlay). */
+  morphed?: boolean;
   el: HTMLElement;
   opts: GlassOptions;
   /** Current rendered mode. */
@@ -462,9 +464,16 @@ function unbindFilter(s: GlassState) {
   setUrl(s, '');
 }
 
+const stickyPriv = (s: GlassState) => !!s.priv && !!s.morphed;
+/** Same params on a filter with another pass count (sticky private filter keeps its structure). */
+function withPasses(s: GlassState, p: FilterParams, n: number): FilterParams {
+  const b = p.scales[0] ?? 0;
+  return { ...p, n, scales: n === 3 ? [b, b * (1 - 0.05 * s.aberration), b * (1 - 0.1 * s.aberration)] : [b] };
+}
 const waitingMaps = new WeakSet<object>();
 /** Point the surface at a filter matching its current params: its own while animating, a shared one at rest. */
 function bindFilter(s: GlassState) {
+  if (s.el.hasAttribute('data-ul-morphing')) s.morphed = true;
   if (s.mode !== 'refract') { unbindFilter(s); return; }
   if (s.maps && !s.maps.ready) {
     // never show a partially built surface: stay on the calm blur state, crossfade in once the map is decoded
@@ -478,9 +487,13 @@ function bindFilter(s: GlassState) {
     }));
     return;
   }
-  const p = paramsOf(s);
+  let p = paramsOf(s);
   if (!p) return;
-  if (isLive(s)) {
+  // Anchored overlays keep the private filter they morphed with once they settle: switching backdrop-filter to another
+  // url(#…) on a visible surface makes Chrome drop the backdrop for a frame (the post-enter flash, UL-635).
+  const sticky = !isLive(s) && stickyPriv(s);
+  if (sticky && s.priv!.n !== p.n) p = withPasses(s, p, s.priv!.n);
+  if (isLive(s) || sticky) {
     if (!s.priv || s.priv.n !== p.n) { dropPriv(s); s.priv = takePriv(p.n); s.priv.last = {}; privCount++; }
     writeFilter(s.priv, p);
     setUrl(s, s.priv.id);
@@ -711,6 +724,11 @@ function resolveMode(s: GlassState): GlassMode {
   const q = config.forceQuality ?? s.opts.quality ?? 'auto';
   if (q === 'flat' || isFlatMaterial(s.el)) return 'flat';
   if (!s.canRefract) return 'fallback';
+  // Anchored overlays (menus, selects, popovers) never refract. Their backdrop-filter has to change at least once when
+  // they settle (the morph cannot carry an SVG filter), and Chrome paints a url(#ul-refraction-…) filter with NO backdrop
+  // until it has built it: the post-settle flash (UL-635), ~0.5 s on the first open while the map decodes, one frame after.
+  // Lite is CSS-only (blur + colour), built instantly, the same pattern as the island → contact dialog (plain blur).
+  if (s.el.classList.contains('ul-anchored')) return 'lite';
   if (q === 'full') return 'refract';
   if (q === 'lite') return 'lite';
   return s.granted ? 'refract' : 'lite';

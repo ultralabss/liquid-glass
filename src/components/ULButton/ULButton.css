@@ -37,6 +37,8 @@
 .ul-btn[data-size="lg"] .ul-btn-icon { width: var(--ul-control-icon-lg); height: var(--ul-control-icon-lg); }
 /* one line, vertically centred; inline icons in the label (ULIcon is display:block) sit on the same axis */
 .ul-btn-label { position: relative; z-index: 1; display: inline-flex; align-items: center; gap: 6px; min-width: 0; white-space: nowrap; }
+/* .ul-btn has line-height 1: room for descenders (g, j, p, y) when a consumer clips the label (ellipsis); the negative margin keeps the layout */
+.ul-btn-label { padding-block: .2em; margin-block: -.2em; }
 .ul-btn > .ul-btn-icon { z-index: 1; }
 /* fx layers (hold fill, success ripple): a direct child of the button, inset 0, clipped to its radius; plain paint under the
    content, never a second glass surface and never inside the backdrop-filter (that only samples what is BEHIND the button) */

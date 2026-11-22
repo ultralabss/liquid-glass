@@ -70,3 +70,8 @@
 .ul-nsel-control option, .ul-nsel-control optgroup { color: initial; background: initial; }
 .ul-nsel-chev { position: absolute; inset-inline-end: var(--ul-space-3); top: 50%; translate: 0 -50%; pointer-events: none; color: var(--ul-color-text-2); }
 .ul-nsel-control:disabled + .ul-nsel-chev { opacity: var(--ul-control-disabled-opacity); }
+
+/* list inside an anchored glass surface: the scroll box reaches the surface's padding edge (negative margin + same padding),
+   so the floating lens can overshoot its item into the surface padding instead of being cut at the list edge, and is
+   still clipped at the menu's own rounded edge (never floats above the menu). */
+.ul-anchored .ul-listbox { margin: calc(-1 * var(--ul-glass-padding, 8px)); padding: var(--ul-glass-padding, 8px); border-radius: var(--ul-glass-radius, 0px); max-height: calc(var(--ul-selection-list-max-h) + 2 * var(--ul-glass-padding, 8px)); scroll-padding-block: var(--ul-glass-padding, 8px); }

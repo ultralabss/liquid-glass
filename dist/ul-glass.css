@@ -2140,6 +2140,10 @@ html[data-ul-hit=off] .ul-hit-layer {
   min-width: 0;
   white-space: nowrap;
 }
+.ul-btn-label {
+  padding-block: .2em;
+  margin-block: -.2em;
+}
 .ul-btn > .ul-btn-icon {
   z-index: 1;
 }
@@ -3699,6 +3703,13 @@ button.ul-step-hit:focus-visible {
 }
 .ul-nsel-control:disabled + .ul-nsel-chev {
   opacity: var(--ul-control-disabled-opacity);
+}
+.ul-anchored .ul-listbox {
+  margin: calc(-1 * var(--ul-glass-padding, 8px));
+  padding: var(--ul-glass-padding, 8px);
+  border-radius: var(--ul-glass-radius, 0px);
+  max-height: calc(var(--ul-selection-list-max-h) + 2 * var(--ul-glass-padding, 8px));
+  scroll-padding-block: var(--ul-glass-padding, 8px);
 }
 
 /* src/components/ULPickers/ULPickers.css */
