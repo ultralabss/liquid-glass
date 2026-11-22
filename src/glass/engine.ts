@@ -5,11 +5,17 @@
  * React components call attachGlass/detachGlass.
  */
 import { springs } from '../motion/spring.ts';
+import { isDev } from '../components/shared/dev.ts';
 
 export type GlassTier = 'sm' | 'md' | 'lg' | 'xl';
 /** refract = full (SVG lens). lite = blur + saturate (Chromium, governed). fallback = blur-only because the browser can't refract. flat = no backdrop-filter. */
 export type GlassMode = 'refract' | 'lite' | 'fallback' | 'flat';
-/** Requested quality. auto (default) lets the governor decide within the refraction budget. */
+/**
+ * Requested quality. auto (default) lets the governor decide within the refraction budget. `full` asks for refraction
+ * regardless of budget (area and count), but it is a request, not a guarantee: no refraction without a Chromium engine,
+ * with reduced transparency, on mobile above --ul-mobile-refraction-max-area, for nested glass, flat material or
+ * anchored overlays (`.ul-anchored`, always lite, see CHANGELOG 0.1.1).
+ */
 export type GlassQuality = 'full' | 'lite' | 'flat' | 'auto';
 /** Governor priority: overlay > focused/hovered > island > closest to viewport center. */
 export type GlassPriority = 'overlay' | 'island' | 'normal';
@@ -112,6 +118,10 @@ interface GlassState {
   liveAccent: boolean;
   pending: boolean;
   geo?: { w: number; h: number };
+  /** Existing map stretched to the live element size (resize in progress / new map still decoding); no regeneration. */
+  stretch?: { w: number; h: number };
+  /** Map for the new size, still decoding: the old lens stays on until it is ready, then they swap (no drop to lite). */
+  held?: { maps: DisplacementMaps; key: string };
   /** A tier change arrived while an anchored morph ran; applied when the morph ends (releaseGlassTier). */
   tierHeld?: boolean;
   /** The map decoded while a morph ran: the lite → refract crossfade waits for the morph to settle (never mid-travel). */
@@ -440,14 +450,14 @@ function dropPriv(s: GlassState) { if (s.priv) { privFree.push(s.priv); s.priv =
 // Chromium re-rasterised backdrop tiles during scroll (the red / green / blue scroll flash). The chroma fringe now lives in
 // CSS on the bezel (ULGlass.css --ul-glass-fringe), so no channel-separated state can ever reach the screen.
 const passesFor = (s: GlassState) => (bisect.threePass && !bisect.noAberration && s.aberration > 0 && !degraded && (s.area >= perf.aberrationArea || (s.area < perf.smallArea && (s.hot > 0 || s.hotUntil > now()))) ? 3 : 1);
-const isLive = (s: GlassState) => s.animating || s.liveRamp || s.liveAccent || !!s.geo || s.el.hasAttribute('data-ul-morphing');
+const isLive = (s: GlassState) => s.animating || s.liveRamp || s.liveAccent || !!s.geo || !!s.stretch || s.el.hasAttribute('data-ul-morphing');
 
 function paramsOf(s: GlassState): FilterParams | null {
   if (!s.maps) return null;
   const n = passesFor(s);
   const base = s.base * s.k * s.q * config.strength * (isMobileGlass() ? rootNum('--ul-mobile-refraction-scale', 0.5) : 1);
   const scales = n === 3 ? [1, 1 - 0.05 * s.aberration, 1 - 0.1 * s.aberration].map((f) => base * f) : [base];
-  return { n, w: s.geo?.w ?? s.maps.width, h: s.geo?.h ?? s.maps.height, mapKey: s.key, map: s.maps.map, rim: s.maps.rim, scales, color: s.color, a: bisect.noTint ? 0 : s.a * s.q };
+  return { n, w: s.geo?.w ?? s.stretch?.w ?? s.maps.width, h: s.geo?.h ?? s.stretch?.h ?? s.maps.height, mapKey: s.key, map: s.maps.map, rim: s.maps.rim, scales, color: s.color, a: bisect.noTint ? 0 : s.a * s.q };
 }
 
 const LITE_TERM = ' var(--ul-lite-filter)';
@@ -487,6 +497,12 @@ function bindFilter(s: GlassState) {
     }));
     return;
   }
+  // Cold start: a ready map (cache hit, or a decode listener that lost its map to a size change) with q still 0 never got a
+  // crossfade, so the lens would stay at strength 0 until some later size change. Ramp it in here, whichever path got us here.
+  if (s.q === 0 && s.target === 'refract' && !s.liveRamp && !s.el.hasAttribute('data-ul-morphing')) {
+    setLite(s, 1);
+    if (reducedMotion()) { s.q = 1; setLite(s, 0); } else { crossfade(s, 1); return; }
+  }
   let p = paramsOf(s);
   if (!p) return;
   // Anchored overlays keep the private filter they morphed with once they settle: switching backdrop-filter to another
@@ -511,6 +527,17 @@ function bindFilter(s: GlassState) {
   dropPriv(s);
 }
 const applyScale = bindFilter;
+
+/** The map for the new size is decoded: replace the held (stretched) one. Stale holds (a newer resize replaced them) are ignored. */
+function swapHeld(s: GlassState, hold: { maps: DisplacementMaps; key: string }) {
+  if (s.held !== hold || !s.el.isConnected) return;
+  s.held = undefined;
+  if (s.mode !== 'refract') { s.stretch = undefined; return; }
+  s.key = hold.key; s.maps = hold.maps;
+  const w = s.el.offsetWidth, h = s.el.offsetHeight; // still resizing: keep stretching to the live size until the next measure
+  s.stretch = Math.abs(w - hold.maps.width) > perf.bucket || Math.abs(h - hold.maps.height) > perf.bucket ? { w, h } : undefined;
+  bindFilter(s);
+}
 
 function applyDebug(s: GlassState) {
   const el = s.el;
@@ -561,7 +588,16 @@ function measure(s: GlassState) {
   const arrow = arrowOf(s, cs, w, h);
   const ak = arrow ? `a${arrow.edge}${arrow.pos}` : '';
   const key = `${W}x${H}r${rk}b${bezel}m${magnify}s${s.base}${lens}${ak}`;
-  if (key !== s.key) { s.key = key; s.maps = getMaps(key, () => generateDisplacementMap(W, H, r, bezel, { mode: lens, magnify, scale: s.base, arrow: arrow ?? undefined })); }
+  if (key === s.key) { s.held = undefined; s.stretch = undefined; }
+  else {
+    const next = getMaps(key, () => generateDisplacementMap(W, H, r, bezel, { mode: lens, magnify, scale: s.base, arrow: arrow ?? undefined }));
+    if (s.maps?.ready && !next.ready && s.mode === 'refract' && s.q > 0) {
+      // Resize: keep the old lens on (stretched to the live size) until the new map decodes, then swap. No drop to lite.
+      const hold = { maps: next, key };
+      s.held = hold; s.stretch = { w, h }; s.morphed = true;
+      next.decoded?.then(() => whenIdle(() => swapHeld(s, hold)));
+    } else { s.key = key; s.maps = next; s.held = undefined; s.stretch = undefined; }
+  }
   readAccent(s, cs);
   bindFilter(s);
   applyDebug(s);
@@ -790,6 +826,7 @@ function applyTier(s: GlassState, instant = false) {
     crossfade(s, 0, () => { if (s.target === 'lite') { setMode(s, 'lite'); unbindFilter(s); setLite(s, 1); } });
   } else {
     cancelQ(s);
+    s.held = undefined; s.stretch = undefined;
     setMode(s, next);
     unbindFilter(s); // next is never 'refract' here (handled above); was `if (next !== 'refract')` + `next === 'refract' ? 1 : 0`
     s.q = 0;
@@ -911,6 +948,13 @@ function observeSize(s: GlassState) {
   if (s.ro) return;
   s.ro = new ResizeObserver(() => {
     if (!s.key) { schedule(s); return; }
+    // Live resize (CSS transition): stretch the existing lens to the element's current size every frame (cheap, no map
+    // regeneration); the debounced measure below builds the exact map once the size settles.
+    if (s.mode === 'refract' && s.maps?.ready && s.q > 0 && !s.geo && !s.el.hasAttribute('data-ul-morphing')) {
+      const w = s.el.offsetWidth, h = s.el.offsetHeight, m = s.maps;
+      if (w && h && (Math.abs(w - m.width) > perf.bucket || Math.abs(h - m.height) > perf.bucket)) { s.stretch = { w, h }; s.morphed = true; bindFilter(s); }
+      else if (s.stretch && !s.held) { s.stretch = undefined; bindFilter(s); }
+    }
     clearTimeout(s.roTimer); // debounce regeneration on resize: rAF + ~100ms
     s.roTimer = window.setTimeout(() => schedule(s), 100);
   });
@@ -1023,6 +1067,7 @@ function init(s: GlassState) {
   if (!perfRead) readPerf();
   // Hard rule: glass never samples glass. Any glass inside glass is flattened.
   s.nested = !!el.parentElement?.closest('.ul-glass');
+  if (s.nested && isDev()) console.debug('[UL] nested glass is flattened (glass never samples glass)', el);
   s.canRefract = supportsRefraction() && !mobileTooBig(el);
   s.target = '';
   const pri = s.opts.priority ?? 'normal';
@@ -1047,7 +1092,7 @@ function teardown(s: GlassState) {
   s.ro?.disconnect(); s.ro = undefined;
   io?.unobserve(el);
   unbindFilter(s);
-  s.key = ''; s.maps = undefined; s.target = '';
+  s.key = ''; s.maps = undefined; s.target = ''; s.held = undefined; s.stretch = undefined;
   unbindPress(s);
   if (motions.delete(el)) { el.style.translate = ''; el.style.transform = ''; el.style.removeProperty('--ul-flare'); }
   setLite(s, null);

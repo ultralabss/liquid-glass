@@ -75,6 +75,8 @@
   --ul-glass-shadow: var(--ul-glass-md-shadow);
   --ul-glass-radius: var(--ul-glass-md-radius);
   --ul-glass-padding: 0px;
+  --ul-clarity-k: clamp(.15, 2 * (1 - var(--ul-glass-clarity)), 2);
+  --ul-clarity-blur: clamp(.55, .55 + .45 * var(--ul-clarity-k), 1.25);
   --ul-ax: clamp(0, (var(--ul-accent-k) - var(--ul-accent-strength-subtle)) / (1 - var(--ul-accent-strength-subtle)), 1);
   --ul-ax-t: calc((var(--ul-accent-strength-tinted) - var(--ul-accent-strength-subtle)) / (1 - var(--ul-accent-strength-subtle)));
   --ul-a-tint: calc(var(--ul-accent-tint-subtle) + var(--ul-ax) * (var(--ul-accent-tint-vivid) - var(--ul-accent-tint-subtle)));
@@ -97,7 +99,7 @@
   --ul-sc-d: calc(var(--ul-scrim-dark-subtle) + var(--ul-sp) * (var(--ul-scrim-dark-tinted) - var(--ul-scrim-dark-subtle)) + var(--ul-sq) * (var(--ul-scrim-dark-vivid) - var(--ul-scrim-dark-tinted)));
   --ul-sc-m: calc(var(--ul-scrim-mid-subtle) + var(--ul-sp) * (var(--ul-scrim-mid-tinted) - var(--ul-scrim-mid-subtle)) + var(--ul-sq) * (var(--ul-scrim-mid-vivid) - var(--ul-scrim-mid-tinted)));
   --ul-sc-l: calc(var(--ul-scrim-light-subtle) + var(--ul-sp) * (var(--ul-scrim-light-tinted) - var(--ul-scrim-light-subtle)) + var(--ul-sq) * (var(--ul-scrim-light-vivid) - var(--ul-scrim-light-tinted)));
-  --ul-glass-scrim: calc(var(--ul-sc-d) + var(--ul-bd-mid, 0) * (var(--ul-sc-m) - var(--ul-sc-d)) + var(--ul-bd-light, 0) * (var(--ul-sc-l) - var(--ul-sc-d)));
+  --ul-glass-scrim: min(1, var(--ul-clarity-k) * (var(--ul-sc-d) + var(--ul-bd-mid, 0) * (var(--ul-sc-m) - var(--ul-sc-d)) + var(--ul-bd-light, 0) * (var(--ul-sc-l) - var(--ul-sc-d))));
   --ul-glass-backing: color-mix(in srgb, var(--ul-glass-deep) calc(var(--ul-glass-scrim) * 100%), transparent);
   position: relative;
   isolation: isolate;
@@ -113,12 +115,12 @@
     linear-gradient(var(--ul-glass-backing), var(--ul-glass-backing)),
     linear-gradient(
       180deg,
-      color-mix(in srgb, var(--ul-glass-tint-color) calc((var(--ul-glass-tint) * 1.5 + var(--ul-a-body-x)) * 100%), transparent) 0%,
-      color-mix(in srgb, var(--ul-glass-tint-color) calc((var(--ul-glass-tint) + var(--ul-a-body-x)) * 100%), transparent) 42%,
-      color-mix(in srgb, var(--ul-glass-tint-color) calc((var(--ul-glass-tint) * .8 + var(--ul-a-body-x)) * 100%), transparent) 100%),
+      color-mix(in srgb, var(--ul-glass-tint-color) min(100%, (var(--ul-glass-tint) * 1.5 + var(--ul-a-body-x)) * var(--ul-clarity-k) * 100%), transparent) 0%,
+      color-mix(in srgb, var(--ul-glass-tint-color) min(100%, (var(--ul-glass-tint) + var(--ul-a-body-x)) * var(--ul-clarity-k) * 100%), transparent) 42%,
+      color-mix(in srgb, var(--ul-glass-tint-color) min(100%, (var(--ul-glass-tint) * .8 + var(--ul-a-body-x)) * var(--ul-clarity-k) * 100%), transparent) 100%),
     linear-gradient(var(--ul-lite-wash), var(--ul-lite-wash));
-  -webkit-backdrop-filter: blur(var(--ul-glass-blur)) saturate(calc(var(--ul-glass-saturate) * (1 + var(--ul-a-sat)))) brightness(var(--ul-glass-brightness));
-  backdrop-filter: var(--ul-glass-filter,) blur(var(--ul-glass-blur)) saturate(calc(var(--ul-glass-saturate) * (1 + var(--ul-a-sat)))) brightness(var(--ul-glass-brightness));
+  -webkit-backdrop-filter: blur(calc(var(--ul-glass-blur) * var(--ul-clarity-blur))) saturate(calc(var(--ul-glass-saturate) * (1 + var(--ul-a-sat)))) brightness(var(--ul-glass-brightness));
+  backdrop-filter: var(--ul-glass-filter,) blur(calc(var(--ul-glass-blur) * var(--ul-clarity-blur))) saturate(calc(var(--ul-glass-saturate) * (1 + var(--ul-a-sat)))) brightness(var(--ul-glass-brightness));
   box-shadow:
     inset 0 1px 0 0 rgb(var(--ul-color-white-rgb) / .2),
     inset 0 -1px 1px 0 rgb(var(--ul-color-white-rgb) / .05),

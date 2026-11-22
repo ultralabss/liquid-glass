@@ -2,7 +2,7 @@ import * as React from 'react';
 import { attachGlass, detachGlass, materialize, type GlassTier, type LensMode, type GlassQuality, type GlassPriority } from './engine.ts';
 import { GlassGroupContext } from './ULGlassGroup.tsx';
 import { accentAttrs, type Accent, type AccentStrength, type Backdrop } from './accent.tsx';
-import { useMaterial, type Material, type MaterialCategory } from './material.tsx';
+import { useMaterial, useClarity, type Material, type MaterialCategory } from './material.tsx';
 import './ULGlass.css';
 
 export type GlassVariant = 'clear' | 'chrome';
@@ -46,7 +46,8 @@ export interface ULGlassProps extends React.HTMLAttributes<HTMLElement>, ULGlass
   /** Pointer light, rim rotation and elasticity. */
   light?: boolean;
   /**
-   * full: SVG refraction + aberration + rim + light. lite: blur + saturate, rim, tint, light on hover.
+   * full: SVG refraction + aberration + rim + light, regardless of the area budget (a request, not a guarantee: needs Chromium,
+   * and nested glass, flat material and anchored overlays never refract). lite: blur + saturate, rim, tint, light on hover.
    * flat: no backdrop-filter. auto (default): the governor grants full within the refraction budget.
    */
   quality?: GlassQuality;
@@ -67,6 +68,13 @@ export interface ULGlassProps extends React.HTMLAttributes<HTMLElement>, ULGlass
   /** What sits behind this surface; selects the contrast scrim. Omit to inherit (default dark). */
   backdrop?: Backdrop;
   /**
+   * Clarity 0..1 (Apple's Clear ↔ Tinted): how much body tint, backing scrim and frost this surface carries.
+   * 0.5 = the designed material, 1 = clear, 0 = tinted. Omit to inherit the nearest ULProvider `clarity`, else the token
+   * --ul-glass-clarity (a CSS ancestor can also set it). Never touches the lens.
+   * @default undefined (inherited; 0.5)
+   */
+  clarity?: number;
+  /**
    * "glass" | "flat". Flat = the reduced-transparency fallback (no backdrop-filter, refraction, gloss rim, pointer light);
    * outside the refraction budget. Omit to resolve: nearest ULProvider scope > category default > global default.
    * @default undefined (resolved; "glass" for every category except inputs)
@@ -85,11 +93,12 @@ export const ULGlass = React.forwardRef<HTMLElement, ULGlassProps>(function ULGl
   {
     as: Tag = 'div', tier = 'md', variant = 'clear', mode = 'standard', radius, padding, refraction = 1,
     blur, bezel, scale, aberration, magnify, interactive = false, elasticity, legacyElastic = false, pressable = false, pressScale,
-    light = true, visible = true, debug = false, quality = 'auto', priority, accent, accentStrength, backdrop, material, materialCategory = 'surfaces', className, style, children, ...rest
+    light = true, visible = true, debug = false, quality = 'auto', priority, accent, accentStrength, backdrop, clarity, material, materialCategory = 'surfaces', className, style, children, ...rest
   },
   ref,
 ) {
   const mat = useMaterial(materialCategory, material);
+  const clar = useClarity(clarity);
   if (mat.flat) { quality = 'flat'; light = false; }
   const node = React.useRef<HTMLElement | null>(null);
   const inGroup = React.useContext(GlassGroupContext) !== null;
@@ -122,6 +131,7 @@ export const ULGlass = React.forwardRef<HTMLElement, ULGlassProps>(function ULGl
   if (scale != null) vars['--ul-glass-refraction'] = String(scale);
   if (aberration != null) vars['--ul-glass-aberration'] = String(aberration);
   if (magnify != null) vars['--ul-glass-magnify'] = String(magnify);
+  if (clar != null) vars['--ul-glass-clarity'] = String(clar);
   const acc = accentAttrs(accent, accentStrength);
 
   return (

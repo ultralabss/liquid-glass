@@ -4,7 +4,7 @@ export { ULGlassGroup, GlassGroupContext } from './glass/ULGlassGroup.tsx';
 export type { ULGlassGroupProps } from './glass/ULGlassGroup.tsx';
 export {
   attachGlass, detachGlass, configureGlass, supportsRefraction, generateDisplacementMap,
-  materialize, rampGlass, isMobileGlass, refreshGlass, setGlassMaterialize, setGlassGeometry, measureGlassNow, releaseGlassTier, setGlassHot, wakeGlass, getGlassMode, getGlassMaps, getGlassStats, trackPointer, untrackPointer, mapCost, isGlassScrolling, prewarmGlass,
+  materialize, rampGlass, isMobileGlass, refreshGlass, decideGlassTier, setGlassMaterialize, setGlassGeometry, measureGlassNow, releaseGlassTier, setGlassHot, wakeGlass, getGlassMode, getGlassMaps, getGlassStats, trackPointer, untrackPointer, mapCost, isGlassScrolling, prewarmGlass,
 } from './glass/engine.ts';
 export type { MapArrow, GlassTier, GlassMode, GlassQuality, GlassPriority, GlassStats, LensMode, MapOptions, GlassOptions, GlassConfig, DisplacementMaps } from './glass/engine.ts';
 export { concentric } from './glass/radius.ts';
@@ -159,6 +159,6 @@ export type { ULCarouselProps } from './components/ULBatch2/carousel.tsx';
 export { ULHeading, ULText, ULCode, ULBlockquote, ULList, ULLink, ULProse } from './components/ULBatch2/typography.tsx';
 export type { ULHeadingProps, ULTextProps, ULBlockquoteProps, ULListProps, ULLinkProps, TypeSize } from './components/ULBatch2/typography.tsx';
 
-export { ULProvider, useMaterial, resolveMaterial, mergeMaterialScope, MATERIAL_DEFAULTS, MATERIAL_CATEGORIES } from './glass/material.tsx';
+export { ULProvider, useMaterial, useClarity, resolveMaterial, mergeMaterialScope, MATERIAL_DEFAULTS, MATERIAL_CATEGORIES } from './glass/material.tsx';
 export type { Material, MaterialCategory, MaterialConfig, ULProviderProps } from './glass/material.tsx';
 export { isFlatMaterial } from './glass/engine.ts';

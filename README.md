@@ -32,6 +32,8 @@ Releasing: [docs/release-checklist.md](docs/release-checklist.md).
 
 Put the app over a detailed background (imagery, gradients, type). Glass over a flat color has nothing to refract.
 
+Glass samples what is behind it, so an ancestor that creates a backdrop root (`clip-path`, `filter`, `mask`, `opacity < 1`, `mix-blend-mode`) flattens it; `.ul-glass` sets `isolation: isolate`. Keep those off the path between the glass and the page. `padding` is a prop (`ULGlass` ignores Tailwind padding classes). `quality="full"` skips the refraction budget but not capability: no Chromium, reduced transparency, nested glass, flat material and anchored overlays never refract.
+
 ### ULGlass props
 | prop | type | default | notes |
 |---|---|---|---|
@@ -47,6 +49,7 @@ Put the app over a detailed background (imagery, gradients, type). Glass over a 
 | `accent` | preset \| color | inherited | colors body, backdrop, rim, glow, pointer light |
 | `accentStrength` | `'subtle' \| 'tinted' \| 'vivid'` \| 0..1 | inherited (tinted once accented) | how strongly |
 | `backdrop` | `'dark' \| 'mid' \| 'light'` | inherited (dark) | selects the contrast scrim |
+| `clarity` | 0..1 | inherited (`0.5`) | Clear ↔ Tinted: body tint, backing scrim and frost. `1` clear, `0` tinted; never touches the lens. Set once for a subtree with `<ULProvider clarity={…}>` (reaches portaled menus too) |
 | `interactive` | boolean | `false` | elastic control (buttons, chips, thumbs) |
 | `pressable` | boolean | `false` | press scale + flare |
 

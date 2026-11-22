@@ -271,6 +271,7 @@ var UL = (() => {
     createSpring: () => createSpring,
     createVirtualAnchor: () => createVirtualAnchor,
     debugFlags: () => debugFlags,
+    decideGlassTier: () => decideGlassTier,
     defaultColumnsState: () => defaultColumnsState,
     detachGlass: () => detachGlass,
     detectPlatform: () => detectPlatform,
@@ -388,6 +389,7 @@ var UL = (() => {
     useCellIndicator: () => useCellIndicator,
     useChartTween: () => useChartTween,
     useChartWidth: () => useWidth,
+    useClarity: () => useClarity,
     useCoalescedAction: () => useCoalescedAction,
     useColumnsState: () => useColumnsState,
     useContextMenuTarget: () => useContextMenuTarget,
@@ -420,7 +422,7 @@ var UL = (() => {
   });
 
   // src/glass/ULGlass.tsx
-  var React4 = __toESM(__require("react"), 1);
+  var React5 = __toESM(__require("react"), 1);
 
   // tokens/tokens.json
   var tokens_default = {
@@ -481,6 +483,7 @@ var UL = (() => {
       flat: 0.06
     },
     glass: {
+      clarity: 0.5,
       saturate: "140%",
       brightness: "1.04",
       sm: {
@@ -1472,6 +1475,50 @@ var UL = (() => {
     snappy: createSpring(tokens_default.spring.snappy)
   };
 
+  // src/components/shared/dev.ts
+  var React = __toESM(__require("react"), 1);
+  var isDev = () => typeof window !== "undefined" && window.__UL_PROD__ !== true;
+  var warned = /* @__PURE__ */ new WeakMap();
+  function warnOnce(el, key, msg) {
+    if (!isDev()) return;
+    let s = warned.get(el);
+    if (!s) {
+      s = /* @__PURE__ */ new Set();
+      warned.set(el, s);
+    }
+    if (s.has(key)) return;
+    s.add(key);
+    console.warn(`[UL] ${msg}`, el);
+  }
+  function surfaceBehind(el) {
+    for (let n = el.parentElement; n; n = n.parentElement) {
+      const tag = n.getAttribute("data-ul-surface");
+      if (tag === "busy" || tag === "solid" || tag === "glass") return tag;
+      if (n.classList.contains("ul-glass")) return "glass";
+      const cs = getComputedStyle(n);
+      if (cs.backgroundImage && cs.backgroundImage !== "none") return "busy";
+      const m = cs.backgroundColor.match(/[\d.]+/g);
+      if (m && (m.length < 4 || +m[3] > 0.9)) return "solid";
+    }
+    return "solid";
+  }
+  function useBareOnBusy(ref, warn) {
+    const [bare, setBare] = React.useState(false);
+    React.useLayoutEffect(() => {
+      const el = ref.current;
+      if (!el) return;
+      setBare(surfaceBehind(el) === "busy");
+      const t = window.setTimeout(() => {
+        if (!el.isConnected) return;
+        const busy = surfaceBehind(el) === "busy";
+        setBare(busy);
+        if (busy && warn) warnOnce(el, "surface", warn);
+      }, 1200);
+      return () => clearTimeout(t);
+    }, []);
+    return bare;
+  }
+
   // src/glass/engine.ts
   var mapCost = { plain: 0, arrow: 0, nPlain: 0, nArrow: 0, maxArrow: 0 };
   var SVG_NS = "http://www.w3.org/2000/svg";
@@ -1806,13 +1853,13 @@ var UL = (() => {
     }
   }
   var passesFor = (s) => bisect.threePass && !bisect.noAberration && s.aberration > 0 && !degraded && (s.area >= perf.aberrationArea || s.area < perf.smallArea && (s.hot > 0 || s.hotUntil > now())) ? 3 : 1;
-  var isLive = (s) => s.animating || s.liveRamp || s.liveAccent || !!s.geo || s.el.hasAttribute("data-ul-morphing");
+  var isLive = (s) => s.animating || s.liveRamp || s.liveAccent || !!s.geo || !!s.stretch || s.el.hasAttribute("data-ul-morphing");
   function paramsOf(s) {
     if (!s.maps) return null;
     const n = passesFor(s);
     const base = s.base * s.k * s.q * config.strength * (isMobileGlass() ? rootNum("--ul-mobile-refraction-scale", 0.5) : 1);
     const scales = n === 3 ? [1, 1 - 0.05 * s.aberration, 1 - 0.1 * s.aberration].map((f) => base * f) : [base];
-    return { n, w: s.geo?.w ?? s.maps.width, h: s.geo?.h ?? s.maps.height, mapKey: s.key, map: s.maps.map, rim: s.maps.rim, scales, color: s.color, a: bisect.noTint ? 0 : s.a * s.q };
+    return { n, w: s.geo?.w ?? s.stretch?.w ?? s.maps.width, h: s.geo?.h ?? s.stretch?.h ?? s.maps.height, mapKey: s.key, map: s.maps.map, rim: s.maps.rim, scales, color: s.color, a: bisect.noTint ? 0 : s.a * s.q };
   }
   var LITE_TERM = " var(--ul-lite-filter)";
   function setUrl(s, id) {
@@ -1861,6 +1908,16 @@ var UL = (() => {
       }));
       return;
     }
+    if (s.q === 0 && s.target === "refract" && !s.liveRamp && !s.el.hasAttribute("data-ul-morphing")) {
+      setLite(s, 1);
+      if (reducedMotion()) {
+        s.q = 1;
+        setLite(s, 0);
+      } else {
+        crossfade(s, 1);
+        return;
+      }
+    }
     let p = paramsOf(s);
     if (!p) return;
     const sticky = !isLive(s) && stickyPriv(s);
@@ -1901,6 +1958,19 @@ var UL = (() => {
     dropPriv(s);
   }
   var applyScale = bindFilter;
+  function swapHeld(s, hold) {
+    if (s.held !== hold || !s.el.isConnected) return;
+    s.held = void 0;
+    if (s.mode !== "refract") {
+      s.stretch = void 0;
+      return;
+    }
+    s.key = hold.key;
+    s.maps = hold.maps;
+    const w = s.el.offsetWidth, h = s.el.offsetHeight;
+    s.stretch = Math.abs(w - hold.maps.width) > perf.bucket || Math.abs(h - hold.maps.height) > perf.bucket ? { w, h } : void 0;
+    bindFilter(s);
+  }
   function applyDebug(s) {
     const el = s.el;
     if (s.opts.debug && s.maps) {
@@ -1966,9 +2036,23 @@ var UL = (() => {
     const arrow = arrowOf(s, cs, w, h);
     const ak = arrow ? `a${arrow.edge}${arrow.pos}` : "";
     const key = `${W}x${H}r${rk}b${bezel}m${magnify}s${s.base}${lens}${ak}`;
-    if (key !== s.key) {
-      s.key = key;
-      s.maps = getMaps(key, () => generateDisplacementMap(W, H, r, bezel, { mode: lens, magnify, scale: s.base, arrow: arrow ?? void 0 }));
+    if (key === s.key) {
+      s.held = void 0;
+      s.stretch = void 0;
+    } else {
+      const next = getMaps(key, () => generateDisplacementMap(W, H, r, bezel, { mode: lens, magnify, scale: s.base, arrow: arrow ?? void 0 }));
+      if (s.maps?.ready && !next.ready && s.mode === "refract" && s.q > 0) {
+        const hold = { maps: next, key };
+        s.held = hold;
+        s.stretch = { w, h };
+        s.morphed = true;
+        next.decoded?.then(() => whenIdle(() => swapHeld(s, hold)));
+      } else {
+        s.key = key;
+        s.maps = next;
+        s.held = void 0;
+        s.stretch = void 0;
+      }
     }
     readAccent(s, cs);
     bindFilter(s);
@@ -2242,6 +2326,8 @@ var UL = (() => {
       });
     } else {
       cancelQ(s);
+      s.held = void 0;
+      s.stretch = void 0;
       setMode(s, next);
       unbindFilter(s);
       s.q = 0;
@@ -2418,6 +2504,17 @@ var UL = (() => {
         schedule(s);
         return;
       }
+      if (s.mode === "refract" && s.maps?.ready && s.q > 0 && !s.geo && !s.el.hasAttribute("data-ul-morphing")) {
+        const w = s.el.offsetWidth, h = s.el.offsetHeight, m = s.maps;
+        if (w && h && (Math.abs(w - m.width) > perf.bucket || Math.abs(h - m.height) > perf.bucket)) {
+          s.stretch = { w, h };
+          s.morphed = true;
+          bindFilter(s);
+        } else if (s.stretch && !s.held) {
+          s.stretch = void 0;
+          bindFilter(s);
+        }
+      }
       clearTimeout(s.roTimer);
       s.roTimer = window.setTimeout(() => schedule(s), 100);
     });
@@ -2549,6 +2646,7 @@ var UL = (() => {
     const el = s.el;
     if (!perfRead) readPerf();
     s.nested = !!el.parentElement?.closest(".ul-glass");
+    if (s.nested && isDev()) console.debug("[UL] nested glass is flattened (glass never samples glass)", el);
     s.canRefract = supportsRefraction() && !mobileTooBig(el);
     s.target = "";
     const pri = s.opts.priority ?? "normal";
@@ -2579,6 +2677,8 @@ var UL = (() => {
     s.key = "";
     s.maps = void 0;
     s.target = "";
+    s.held = void 0;
+    s.stretch = void 0;
     unbindPress(s);
     if (motions.delete(el)) {
       el.style.translate = "";
@@ -3141,12 +3241,12 @@ var UL = (() => {
   }
 
   // src/glass/ULGlassGroup.tsx
-  var React = __toESM(__require("react"), 1);
-  var GlassGroupContext = React.createContext(null);
+  var React2 = __toESM(__require("react"), 1);
+  var GlassGroupContext = React2.createContext(null);
   function ULGlassGroup({ spacing, direction = "row", className, style, children, ...rest }) {
-    const value = React.useMemo(() => ({ spacing }), [spacing]);
+    const value = React2.useMemo(() => ({ spacing }), [spacing]);
     const vars = spacing != null ? { "--ul-glass-group-spacing": `${spacing}px` } : {};
-    return /* @__PURE__ */ React.createElement(GlassGroupContext.Provider, { value }, /* @__PURE__ */ React.createElement(
+    return /* @__PURE__ */ React2.createElement(GlassGroupContext.Provider, { value }, /* @__PURE__ */ React2.createElement(
       "div",
       {
         ...rest,
@@ -3159,7 +3259,7 @@ var UL = (() => {
   }
 
   // src/glass/accent.tsx
-  var React2 = __toESM(__require("react"), 1);
+  var React3 = __toESM(__require("react"), 1);
   var ACCENT_PRESETS = ["ice", "violet", "emerald", "amber", "rose"];
   var ACCENT_STRENGTHS = ["subtle", "tinted", "vivid"];
   var isAccentPreset = (v) => ACCENT_PRESETS.includes(v);
@@ -3199,7 +3299,7 @@ var UL = (() => {
   }
   function ULAccentScope({ accent, strength, backdrop, contents = true, as: Tag = "div", style, children, ...rest }) {
     const a = accentAttrs(accent, strength);
-    return /* @__PURE__ */ React2.createElement(
+    return /* @__PURE__ */ React3.createElement(
       Tag,
       {
         ...rest,
@@ -3213,11 +3313,11 @@ var UL = (() => {
   }
 
   // src/glass/material.tsx
-  var React3 = __toESM(__require("react"), 1);
+  var React4 = __toESM(__require("react"), 1);
   var MATERIAL_CATEGORIES = ["inputs", "controls", "surfaces", "overlays", "chrome"];
   var MATERIAL_DEFAULTS = { inputs: "flat", controls: "glass", surfaces: "glass", overlays: "glass", chrome: "glass" };
   var GLOBAL_MATERIAL = "glass";
-  var MaterialCtx = React3.createContext({});
+  var MaterialCtx = React4.createContext({});
   function resolveMaterial(category, instance, scope = {}) {
     if (instance) return { material: instance, source: "instance" };
     if (category && scope[category]) return { material: scope[category], source: "scope" };
@@ -3234,20 +3334,28 @@ var UL = (() => {
     return out;
   }
   function useMaterial(category, instance) {
-    const scope = React3.useContext(MaterialCtx);
+    const scope = React4.useContext(MaterialCtx);
     const r = resolveMaterial(category, instance, scope);
     return { material: r.material, flat: r.material === "flat", attr: r.material === "flat" || r.source === "instance" || r.source === "scope" ? r.material : void 0 };
   }
-  function ULProvider({ material, children }) {
-    const parent = React3.useContext(MaterialCtx);
+  var ClarityCtx = React4.createContext(void 0);
+  var clamp01 = (n) => Math.min(1, Math.max(0, n));
+  function useClarity(instance) {
+    const scope = React4.useContext(ClarityCtx);
+    const v = instance ?? scope;
+    return v == null || !Number.isFinite(Number(v)) ? void 0 : clamp01(Number(v));
+  }
+  function ULProvider({ material, clarity, children }) {
+    const parent = React4.useContext(MaterialCtx);
+    const parentClarity = React4.useContext(ClarityCtx);
     const key = typeof material === "string" ? material : JSON.stringify(material ?? null);
-    const value = React3.useMemo(() => mergeMaterialScope(parent, material), [parent, key]);
-    return /* @__PURE__ */ React3.createElement(MaterialCtx.Provider, { value }, children);
+    const value = React4.useMemo(() => mergeMaterialScope(parent, material), [parent, key]);
+    return /* @__PURE__ */ React4.createElement(MaterialCtx.Provider, { value }, /* @__PURE__ */ React4.createElement(ClarityCtx.Provider, { value: clarity ?? parentClarity }, children));
   }
 
   // src/glass/ULGlass.tsx
   var len = (v) => typeof v === "number" || /^[\d.]+$/.test(v) ? `${v}px` : v;
-  var ULGlass = React4.forwardRef(function ULGlass2({
+  var ULGlass = React5.forwardRef(function ULGlass2({
     as: Tag = "div",
     tier = "md",
     variant = "clear",
@@ -3273,6 +3381,7 @@ var UL = (() => {
     accent,
     accentStrength,
     backdrop,
+    clarity,
     material,
     materialCategory = "surfaces",
     className,
@@ -3281,28 +3390,29 @@ var UL = (() => {
     ...rest
   }, ref) {
     const mat = useMaterial(materialCategory, material);
+    const clar = useClarity(clarity);
     if (mat.flat) {
       quality = "flat";
       light = false;
     }
-    const node = React4.useRef(null);
-    const inGroup = React4.useContext(GlassGroupContext) !== null;
-    const setRef = React4.useCallback((el) => {
+    const node = React5.useRef(null);
+    const inGroup = React5.useContext(GlassGroupContext) !== null;
+    const setRef = React5.useCallback((el) => {
       node.current = el;
       if (typeof ref === "function") ref(el);
       else if (ref) ref.current = el;
     }, [ref]);
-    React4.useLayoutEffect(() => {
+    React5.useLayoutEffect(() => {
       if (node.current) attachGlass(node.current, { refraction: Number(refraction), light, debug, mode, interactive, elasticity: elasticity == null ? void 0 : Number(elasticity), legacyElastic, pressable, pressScale: pressScale == null ? void 0 : Number(pressScale), quality, priority });
     }, [refraction, light, debug, mode, interactive, elasticity, legacyElastic, pressable, pressScale, quality, priority, tier, radius, padding, blur, bezel, scale, aberration, magnify]);
-    React4.useLayoutEffect(() => {
+    React5.useLayoutEffect(() => {
       const el = node.current;
       return () => {
         if (el) detachGlass(el);
       };
     }, []);
-    const mounted = React4.useRef(false);
-    React4.useLayoutEffect(() => {
+    const mounted = React5.useRef(false);
+    React5.useLayoutEffect(() => {
       if (node.current) materialize(node.current, visible2, { immediate: !mounted.current });
       mounted.current = true;
     }, [visible2]);
@@ -3314,8 +3424,9 @@ var UL = (() => {
     if (scale != null) vars["--ul-glass-refraction"] = String(scale);
     if (aberration != null) vars["--ul-glass-aberration"] = String(aberration);
     if (magnify != null) vars["--ul-glass-magnify"] = String(magnify);
+    if (clar != null) vars["--ul-glass-clarity"] = String(clar);
     const acc = accentAttrs(accent, accentStrength);
-    return /* @__PURE__ */ React4.createElement(
+    return /* @__PURE__ */ React5.createElement(
       Tag,
       {
         ref: setRef,
@@ -3650,9 +3761,9 @@ ${r.examples.join("\n")}` : "";
   initGlassDebug();
 
   // src/hooks/usePointerLight.ts
-  var React5 = __toESM(__require("react"), 1);
+  var React6 = __toESM(__require("react"), 1);
   function usePointerLight(ref, enabled = true) {
-    React5.useEffect(() => {
+    React6.useEffect(() => {
       const el = ref.current;
       if (!el || !enabled) return;
       trackPointer(el);
@@ -3661,14 +3772,14 @@ ${r.examples.join("\n")}` : "";
   }
 
   // src/hooks/useReducedMotion.ts
-  var React6 = __toESM(__require("react"), 1);
+  var React7 = __toESM(__require("react"), 1);
   function useMediaQuery(query) {
-    const subscribe = React6.useCallback((cb) => {
+    const subscribe = React7.useCallback((cb) => {
       const m = matchMedia(query);
       m.addEventListener("change", cb);
       return () => m.removeEventListener("change", cb);
     }, [query]);
-    return React6.useSyncExternalStore(subscribe, () => matchMedia(query).matches, () => false);
+    return React7.useSyncExternalStore(subscribe, () => matchMedia(query).matches, () => false);
   }
   var useReducedMotion = () => useMediaQuery("(prefers-reduced-motion: reduce)");
   var useReducedTransparency = () => useMediaQuery("(prefers-reduced-transparency: reduce)");
@@ -5471,10 +5582,10 @@ ${r.examples.join("\n")}` : "";
   }
 
   // src/components/ULTabs/ULTabs.tsx
-  var React14 = __toESM(__require("react"), 1);
+  var React15 = __toESM(__require("react"), 1);
 
   // src/components/shared/icons.tsx
-  var React7 = __toESM(__require("react"), 1);
+  var React8 = __toESM(__require("react"), 1);
   var P = {
     eye: "M2.06 12.35a1 1 0 0 1 0-.7 10.75 10.75 0 0 1 19.88 0 1 1 0 0 1 0 .7 10.75 10.75 0 0 1-19.88 0 M12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6",
     "eye-off": "M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68 M6.61 6.61A13.53 13.53 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61 M14.12 14.12a3 3 0 1 1-4.24-4.24 M2 2l20 20",
@@ -5523,7 +5634,7 @@ ${r.examples.join("\n")}` : "";
   function ULIcon({ name, path, size, filled, className, style, children, viewBox = "0 0 24 24", ...rest }) {
     const named = size == null || typeof size === "string" && NAMED.has(size);
     const dim = named ? void 0 : typeof size === "number" ? `${size}px` : String(size);
-    return /* @__PURE__ */ React7.createElement(
+    return /* @__PURE__ */ React8.createElement(
       "svg",
       {
         viewBox,
@@ -5541,41 +5652,41 @@ ${r.examples.join("\n")}` : "";
         focusable: "false",
         ...rest
       },
-      children ?? /* @__PURE__ */ React7.createElement("path", { d: path ?? P[name ?? ""] ?? "" })
+      children ?? /* @__PURE__ */ React8.createElement("path", { d: path ?? P[name ?? ""] ?? "" })
     );
   }
   var Icon = ULIcon;
   function useDomId(prefix, given) {
-    const auto = React7.useId().replace(/:/g, "");
+    const auto = React8.useId().replace(/:/g, "");
     return given || `${prefix}${auto}`;
   }
   var cx = (...c) => c.filter(Boolean).join(" ");
 
   // src/components/ULContainers/contextTarget.tsx
-  var React13 = __toESM(__require("react"), 1);
+  var React14 = __toESM(__require("react"), 1);
 
   // src/components/ULContainers/ULMenu.tsx
-  var React12 = __toESM(__require("react"), 1);
+  var React13 = __toESM(__require("react"), 1);
 
   // src/components/ULAnchoredSurface/ULAnchoredSurface.tsx
-  var React9 = __toESM(__require("react"), 1);
+  var React10 = __toESM(__require("react"), 1);
   var import_react_dom = __require("react-dom");
 
   // src/hooks/useAnchoredMorph.ts
-  var React8 = __toESM(__require("react"), 1);
+  var React9 = __toESM(__require("react"), 1);
   function useAnchoredMorph({ open, anchorRef, side = "bottom", align = "center", offset, scrollBehavior, onAnchorHidden, onRequestClose, layout, manual, anchorOnTop, coverAnchor, overlap, scrimRef }) {
-    const closeRef = React8.useRef(onRequestClose);
+    const closeRef = React9.useRef(onRequestClose);
     closeRef.current = onRequestClose;
-    const requestClose = React8.useCallback(() => closeRef.current?.(), []);
-    const surfaceRef = React8.useRef(null);
-    const stageRef = React8.useRef(null);
-    const gooRef = React8.useRef(null);
-    const ctrl = React8.useRef(null);
-    const [mounted, setMounted] = React8.useState(open);
-    const lastAnchor = React8.useRef(null);
+    const requestClose = React9.useCallback(() => closeRef.current?.(), []);
+    const surfaceRef = React9.useRef(null);
+    const stageRef = React9.useRef(null);
+    const gooRef = React9.useRef(null);
+    const ctrl = React9.useRef(null);
+    const [mounted, setMounted] = React9.useState(open);
+    const lastAnchor = React9.useRef(null);
     if (anchorRef.current) lastAnchor.current = anchorRef.current;
     if (open && !mounted) setMounted(true);
-    React8.useLayoutEffect(() => {
+    React9.useLayoutEffect(() => {
       if (!mounted) return;
       const surface = surfaceRef.current, anchor = anchorRef.current ?? lastAnchor.current;
       if (!surface || !anchor) {
@@ -5605,12 +5716,12 @@ ${r.examples.join("\n")}` : "";
         alive = false;
       };
     }, [open, mounted, side, align, offset, layout]);
-    React8.useLayoutEffect(() => {
+    React9.useLayoutEffect(() => {
       if (mounted) return;
       ctrl.current?.destroy();
       ctrl.current = null;
     }, [mounted]);
-    React8.useEffect(() => () => {
+    React9.useEffect(() => () => {
       ctrl.current?.destroy();
       ctrl.current = null;
     }, []);
@@ -5796,7 +5907,7 @@ ${r.examples.join("\n")}` : "";
     const role = rest.role;
     const covered = (anchorVisibility ?? (modal || role === "alertdialog" ? "covered" : "above")) === "covered";
     const sb = scrollBehavior ?? (scrollLock === true ? "lock" : scrollLock === false ? "follow" : modal || role === "menu" || role === "listbox" || role === "dialog" || role === "alertdialog" ? "lock" : role === "status" || role === "alert" ? "fixed" : "follow");
-    const scrimRef = React9.useRef(null);
+    const scrimRef = React10.useRef(null);
     const m = useAnchoredMorph({
       open,
       anchorRef,
@@ -5813,38 +5924,38 @@ ${r.examples.join("\n")}` : "";
       coverAnchor: covered,
       overlap: covered ? overlapAnchor : void 0
     });
-    const promote = React9.useRef(null);
+    const promote = React10.useRef(null);
     if (m.mounted && promote.current === null) promote.current = (covered || topLayerOpen() > 0) && !(manual && stack2 === false);
     if (!m.mounted) promote.current = null;
     const lift = (n) => {
       if (n && promote.current) toTopLayer(n);
     };
-    const setSurface = React9.useCallback((n) => {
+    const setSurface = React10.useCallback((n) => {
       m.surfaceRef.current = n;
       lift(n);
     }, []);
-    const setScrim = React9.useCallback((n) => {
+    const setScrim = React10.useCallback((n) => {
       scrimRef.current = n;
       lift(n);
     }, []);
-    const setGoo = React9.useCallback((n) => {
+    const setGoo = React10.useCallback((n) => {
       m.gooRef.current = n;
       lift(n);
     }, []);
-    React9.useEffect(() => {
+    React10.useEffect(() => {
       if (!m.mounted || !promote.current) return;
       topLayerCount++;
       return () => {
         topLayerCount--;
       };
     }, [m.mounted]);
-    React9.useLayoutEffect(() => {
+    React10.useLayoutEffect(() => {
       if (!open || !m.mounted || !promote.current) return;
       lift(scrimRef.current);
       lift(m.gooRef.current);
       lift(m.surfaceRef.current);
     }, [open, m.mounted]);
-    React9.useEffect(() => {
+    React10.useEffect(() => {
       if (!covered) return;
       const a = anchorRef.current, warm = () => prewarmGlass();
       const ric = window.requestIdleCallback;
@@ -5860,17 +5971,17 @@ ${r.examples.join("\n")}` : "";
         a.removeEventListener("pointerdown", warm);
       };
     }, [covered, anchorRef.current]);
-    const closeRef = React9.useRef(onClose);
+    const closeRef = React10.useRef(onClose);
     closeRef.current = onClose;
-    const kids = React9.useRef(children);
+    const kids = React10.useRef(children);
     if (open) kids.current = children;
     const content = open ? children : kids.current;
     if (outerRef) outerRef.current = m.surfaceRef.current;
     if (morphRef) morphRef.current = m.morphRef.current;
-    const depthRef = React9.useRef(0), wasOpen = React9.useRef(false);
+    const depthRef = React10.useRef(0), wasOpen = React10.useRef(false);
     if (open && !wasOpen.current) depthRef.current = overlayDepth();
     wasOpen.current = open;
-    React9.useEffect(() => {
+    React10.useEffect(() => {
       const el = m.surfaceRef.current;
       if (outerRef) outerRef.current = el;
       if (morphRef) morphRef.current = m.morphRef.current;
@@ -5898,10 +6009,10 @@ ${r.examples.join("\n")}` : "";
         document.removeEventListener("keydown", key);
       };
     }, [open, m.mounted, closeOnOutside, modal]);
-    const closeEscRef = React9.useRef(closeOnEscape);
+    const closeEscRef = React10.useRef(closeOnEscape);
     closeEscRef.current = closeOnEscape;
     if (!m.mounted) return null;
-    const tree = /* @__PURE__ */ React9.createElement(React9.Fragment, null, scrim ? /* @__PURE__ */ React9.createElement("div", { ref: setScrim, className: "ul-scrim", "aria-hidden": "true", style: { opacity: 0 } }) : null, /* @__PURE__ */ React9.createElement("div", { ref: setGoo, className: "ul-morph-goo", "aria-hidden": "true" }, /* @__PURE__ */ React9.createElement("span", null), /* @__PURE__ */ React9.createElement("span", null), /* @__PURE__ */ React9.createElement("span", null)), /* @__PURE__ */ React9.createElement(
+    const tree = /* @__PURE__ */ React10.createElement(React10.Fragment, null, scrim ? /* @__PURE__ */ React10.createElement("div", { ref: setScrim, className: "ul-scrim", "aria-hidden": "true", style: { opacity: 0 } }) : null, /* @__PURE__ */ React10.createElement("div", { ref: setGoo, className: "ul-morph-goo", "aria-hidden": "true" }, /* @__PURE__ */ React10.createElement("span", null), /* @__PURE__ */ React10.createElement("span", null), /* @__PURE__ */ React10.createElement("span", null)), /* @__PURE__ */ React10.createElement(
       ULGlass,
       {
         ref: setSurface,
@@ -5919,13 +6030,13 @@ ${r.examples.join("\n")}` : "";
         "data-layout": layout ?? "anchored",
         className: className ? `ul-anchored ${className}` : "ul-anchored"
       },
-      /* @__PURE__ */ React9.createElement("div", { ref: m.stageRef, className: "ul-morph-stage" }, /* @__PURE__ */ React9.createElement("div", { className: "ul-morph-content" }, content)),
-      arrow ? /* @__PURE__ */ React9.createElement("span", { className: "ul-pop-arrow", "aria-hidden": "true" }) : null
+      /* @__PURE__ */ React10.createElement("div", { ref: m.stageRef, className: "ul-morph-stage" }, /* @__PURE__ */ React10.createElement("div", { className: "ul-morph-content" }, content)),
+      arrow ? /* @__PURE__ */ React10.createElement("span", { className: "ul-pop-arrow", "aria-hidden": "true" }) : null
     ));
-    if (!portal || typeof document === "undefined") return /* @__PURE__ */ React9.createElement("div", { style: { display: "contents", "--ul-depth": depthRef.current } }, tree);
+    if (!portal || typeof document === "undefined") return /* @__PURE__ */ React10.createElement("div", { style: { display: "contents", "--ul-depth": depthRef.current } }, tree);
     const sc = scopeOf(anchorRef.current);
     sc.style = { ...sc.style ?? { display: "contents" }, "--ul-depth": depthRef.current };
-    return (0, import_react_dom.createPortal)(/* @__PURE__ */ React9.createElement("div", { ...sc }, tree), document.body);
+    return (0, import_react_dom.createPortal)(/* @__PURE__ */ React10.createElement("div", { ...sc }, tree), document.body);
   }
 
   // src/components/ULIsland/navIndicator.ts
@@ -6136,7 +6247,7 @@ ${r.examples.join("\n")}` : "";
   }
 
   // src/components/shared/ULCheckMark.tsx
-  var React10 = __toESM(__require("react"), 1);
+  var React11 = __toESM(__require("react"), 1);
   var num = (cs, k, f) => {
     const v = parseFloat(cs.getPropertyValue(k));
     return Number.isFinite(v) ? v : f;
@@ -6165,19 +6276,19 @@ ${r.examples.join("\n")}` : "";
     }
   }
   function ULCheckMark({ checked, className }) {
-    const ref = React10.useRef(null);
-    const prev = React10.useRef(checked);
-    React10.useLayoutEffect(() => {
+    const ref = React11.useRef(null);
+    const prev = React11.useRef(checked);
+    React11.useLayoutEffect(() => {
       const el = ref.current;
       if (!el || prev.current === checked) return;
       prev.current = checked;
       animateCheck(el, checked);
     }, [checked]);
-    return /* @__PURE__ */ React10.createElement("span", { ref, className: className ? `ul-check ${className}` : "ul-check", "data-on": checked ? "" : void 0, "aria-hidden": "true" }, /* @__PURE__ */ React10.createElement("svg", { viewBox: "0 0 24 24", focusable: "false" }, /* @__PURE__ */ React10.createElement("path", { d: "M5 12.6l4.3 4.3L19.2 7", pathLength: 1 })));
+    return /* @__PURE__ */ React11.createElement("span", { ref, className: className ? `ul-check ${className}` : "ul-check", "data-on": checked ? "" : void 0, "aria-hidden": "true" }, /* @__PURE__ */ React11.createElement("svg", { viewBox: "0 0 24 24", focusable: "false" }, /* @__PURE__ */ React11.createElement("path", { d: "M5 12.6l4.3 4.3L19.2 7", pathLength: 1 })));
   }
 
   // src/components/ULStructure/kbd.tsx
-  var React11 = __toESM(__require("react"), 1);
+  var React12 = __toESM(__require("react"), 1);
   var kloc = (l) => {
     const k = (l || (typeof document !== "undefined" ? document.documentElement.lang : "") || "en").slice(0, 2).toLowerCase();
     return ["en", "sk", "de", "cs"].includes(k) ? k : "en";
@@ -6211,15 +6322,15 @@ ${r.examples.join("\n")}` : "";
     });
   }
   function ULKbd({ keys, children, platform = "auto", size = "md", locale, className }) {
-    const [plat, setPlat] = React11.useState(platform === "auto" ? "other" : platform);
-    React11.useEffect(() => {
+    const [plat, setPlat] = React12.useState(platform === "auto" ? "other" : platform);
+    React12.useEffect(() => {
       setPlat(platform === "auto" ? detectPlatform() : platform);
     }, [platform]);
-    if (keys == null) return /* @__PURE__ */ React11.createElement("kbd", { className: cx("ul-kbd", className), "data-size": size }, /* @__PURE__ */ React11.createElement("kbd", { className: "ul-kbd-key" }, children));
+    if (keys == null) return /* @__PURE__ */ React12.createElement("kbd", { className: cx("ul-kbd", className), "data-size": size }, /* @__PURE__ */ React12.createElement("kbd", { className: "ul-kbd-key" }, children));
     const seq = Array.isArray(keys) ? keys : [keys], l = kloc(locale);
     const combos = seq.map((c) => formatKeys(c, plat, locale));
     const spoken = combos.map((c) => c.map((k) => k.name).join(" + ")).join(` ${THEN[l]} `);
-    return /* @__PURE__ */ React11.createElement("kbd", { className: cx("ul-kbd", className), "data-size": size, "data-platform": plat, "aria-label": spoken }, combos.map((c, i) => /* @__PURE__ */ React11.createElement(React11.Fragment, { key: i }, i ? /* @__PURE__ */ React11.createElement("span", { className: "ul-kbd-then", "aria-hidden": "true" }, THEN[l]) : null, /* @__PURE__ */ React11.createElement("span", { className: "ul-kbd-combo", "aria-hidden": "true" }, c.map((k, j) => /* @__PURE__ */ React11.createElement(React11.Fragment, { key: j }, j && plat !== "mac" ? /* @__PURE__ */ React11.createElement("span", { className: "ul-kbd-plus" }, "+") : null, /* @__PURE__ */ React11.createElement("kbd", { className: "ul-kbd-key" }, k.cap)))))));
+    return /* @__PURE__ */ React12.createElement("kbd", { className: cx("ul-kbd", className), "data-size": size, "data-platform": plat, "aria-label": spoken }, combos.map((c, i) => /* @__PURE__ */ React12.createElement(React12.Fragment, { key: i }, i ? /* @__PURE__ */ React12.createElement("span", { className: "ul-kbd-then", "aria-hidden": "true" }, THEN[l]) : null, /* @__PURE__ */ React12.createElement("span", { className: "ul-kbd-combo", "aria-hidden": "true" }, c.map((k, j) => /* @__PURE__ */ React12.createElement(React12.Fragment, { key: j }, j && plat !== "mac" ? /* @__PURE__ */ React12.createElement("span", { className: "ul-kbd-plus" }, "+") : null, /* @__PURE__ */ React12.createElement("kbd", { className: "ul-kbd-key" }, k.cap)))))));
   }
 
   // src/motion/viewSwap.ts
@@ -6323,24 +6434,24 @@ ${r.examples.join("\n")}` : "";
     return innerWidth - r.right - m < r.width + gap && r.left - m < r.width + gap;
   }
   function MenuList({ open, items, label: label2, onClose, onAction, closeOnSelect, depth, initial, morphRef, backLabel = "Back" }) {
-    const box = React12.useRef(null);
-    const lens = React12.useRef(null);
-    const ind = React12.useRef(null);
-    const [sub, setSub] = React12.useState(-1);
-    const subRef = React12.useRef(-1);
+    const box = React13.useRef(null);
+    const lens = React13.useRef(null);
+    const ind = React13.useRef(null);
+    const [sub, setSub] = React13.useState(-1);
+    const subRef = React13.useRef(-1);
     subRef.current = sub;
-    const timer = React12.useRef(0);
-    const typed = React12.useRef({ s: "", t: 0 });
-    const tri = React12.useRef(null);
-    const subSurf = React12.useRef(null);
-    const [levels, setLevels] = React12.useState([{ key: "root", items, label: label2 ?? "", from: -1 }]);
-    const [leaving, setLeaving] = React12.useState(null);
-    const levelEls = React12.useRef(/* @__PURE__ */ new Map());
-    const swapA = React12.useRef(newSwapAnims());
-    const swapDir = React12.useRef(1), focusAfter = React12.useRef(0);
+    const timer = React13.useRef(0);
+    const typed = React13.useRef({ s: "", t: 0 });
+    const tri = React13.useRef(null);
+    const subSurf = React13.useRef(null);
+    const [levels, setLevels] = React13.useState([{ key: "root", items, label: label2 ?? "", from: -1 }]);
+    const [leaving, setLeaving] = React13.useState(null);
+    const levelEls = React13.useRef(/* @__PURE__ */ new Map());
+    const swapA = React13.useRef(newSwapAnims());
+    const swapDir = React13.useRef(1), focusAfter = React13.useRef(0);
     const top = levels[levels.length - 1];
     const cur = top.key === "root" ? items : top.items;
-    React12.useEffect(() => {
+    React13.useEffect(() => {
       if (!open) {
         setLevels([{ key: "root", items, label: label2 ?? "", from: -1 }]);
         setLeaving(null);
@@ -6352,7 +6463,7 @@ ${r.examples.join("\n")}` : "";
       const f = els();
       if (f.length) f[(i + f.length) % f.length].focus({ preventScroll: true });
     };
-    React12.useEffect(() => {
+    React13.useEffect(() => {
       if (!box.current || !lens.current) return;
       ind.current = createNavIndicator({ container: box.current, lens: lens.current, items: '[data-active-level] [data-menu-item]:not([aria-disabled="true"])', rest: () => subRef.current >= 0 ? activeLevel()?.querySelector(`[data-index="${subRef.current}"]`) ?? null : null });
       return () => {
@@ -6360,7 +6471,7 @@ ${r.examples.join("\n")}` : "";
         clearTimeout(timer.current);
       };
     }, []);
-    React12.useEffect(() => {
+    React13.useEffect(() => {
       if (!open || !initial) return;
       const start = document.activeElement, t0 = performance.now();
       let id = 0, done = false;
@@ -6391,7 +6502,7 @@ ${r.examples.join("\n")}` : "";
         surf?.removeEventListener("ul:morph", onMorph);
       };
     }, [open]);
-    React12.useEffect(() => {
+    React13.useEffect(() => {
       ind.current?.update();
     }, [sub, top.key]);
     const drillIn = (it, i) => {
@@ -6410,7 +6521,7 @@ ${r.examples.join("\n")}` : "";
       setLevels((l) => l.slice(0, -1));
       return true;
     };
-    React12.useLayoutEffect(() => {
+    React13.useLayoutEffect(() => {
       const s = box.current?.closest(".ul-anchored");
       if (!s || !leaving || leaving.key === top.key) return;
       const X = levelEls.current.get(leaving.key), Y = levelEls.current.get(top.key);
@@ -6421,7 +6532,7 @@ ${r.examples.join("\n")}` : "";
       runViewSwap({ surface: s, from: X, to: Y, dir: swapDir.current, morph: morphRef?.current ?? null, anims: swapA.current, onDone: () => setLeaving(null) });
       requestAnimationFrame(() => focusAt(swapDir.current < 0 ? Math.max(0, els().findIndex((n) => Number(n.dataset.index) === focusAfter.current)) : 0));
     }, [top.key]);
-    React12.useLayoutEffect(() => {
+    React13.useLayoutEffect(() => {
       if (leaving) return;
       levelEls.current.forEach((el, k) => {
         el.style.cssText = "";
@@ -6445,7 +6556,7 @@ ${r.examples.join("\n")}` : "";
       if (it.id) onAction?.(it.id, it);
       if (closeOnSelect && it.type !== "checkbox" && it.type !== "radio") onClose(true);
     };
-    const subInitial = React12.useRef(null);
+    const subInitial = React13.useRef(null);
     const own = (e) => !!box.current && box.current.contains(e.target);
     const onKey = (e) => {
       if (!own(e)) return;
@@ -6552,7 +6663,7 @@ ${r.examples.join("\n")}` : "";
       const delay = parseFloat(getComputedStyle(box.current).getPropertyValue("--ul-menu-submenu-delay")) || 120;
       timer.current = window.setTimeout(() => setSub(items[idx]?.items && !items[idx].disabled && !noRoomBeside(box.current) ? idx : -1), delay);
     };
-    const itemRefs = React12.useRef([]);
+    const itemRefs = React13.useRef([]);
     const closeSub = (all) => {
       const i = subRef.current;
       setSub(-1);
@@ -6560,10 +6671,10 @@ ${r.examples.join("\n")}` : "";
       else requestAnimationFrame(() => itemRefs.current[i]?.focus({ preventScroll: true }));
     };
     const renderRows = (list, root2) => list.map((it, i) => {
-      if (it.type === "separator") return /* @__PURE__ */ React12.createElement("div", { key: i, role: "separator", className: "ul-menu-sep" });
-      if (it.type === "label") return /* @__PURE__ */ React12.createElement("div", { key: i, role: "presentation", className: "ul-menu-label" }, it.label);
+      if (it.type === "separator") return /* @__PURE__ */ React13.createElement("div", { key: i, role: "separator", className: "ul-menu-sep" });
+      if (it.type === "label") return /* @__PURE__ */ React13.createElement("div", { key: i, role: "presentation", className: "ul-menu-label" }, it.label);
       const role = it.type === "checkbox" ? "menuitemcheckbox" : it.type === "radio" ? "menuitemradio" : "menuitem";
-      return /* @__PURE__ */ React12.createElement(React12.Fragment, { key: it.id ?? i }, /* @__PURE__ */ React12.createElement(
+      return /* @__PURE__ */ React13.createElement(React13.Fragment, { key: it.id ?? i }, /* @__PURE__ */ React13.createElement(
         "div",
         {
           ref: root2 ? (n) => {
@@ -6583,12 +6694,12 @@ ${r.examples.join("\n")}` : "";
           "data-open": root2 && sub === i ? "" : void 0,
           onClick: () => activate(it, i, false)
         },
-        role !== "menuitem" ? /* @__PURE__ */ React12.createElement(ULCheckMark, { checked: !!it.checked, className: "ul-menu-check" }) : /* @__PURE__ */ React12.createElement("span", { className: "ul-menu-check", "aria-hidden": "true" }),
-        it.icon ? /* @__PURE__ */ React12.createElement("span", { className: "ul-btn-icon", "aria-hidden": "true" }, it.icon) : null,
-        /* @__PURE__ */ React12.createElement("span", { className: "ul-menu-text" }, it.label),
-        it.shortcut ? /* @__PURE__ */ React12.createElement(ULKbd, { keys: it.shortcut, size: "sm", className: "ul-menu-kbd" }) : null,
-        it.items ? /* @__PURE__ */ React12.createElement("span", { className: "ul-menu-chev", "aria-hidden": "true" }, /* @__PURE__ */ React12.createElement(Icon, { name: "chevron-right" })) : null
-      ), it.items && root2 ? /* @__PURE__ */ React12.createElement(
+        role !== "menuitem" ? /* @__PURE__ */ React13.createElement(ULCheckMark, { checked: !!it.checked, className: "ul-menu-check" }) : /* @__PURE__ */ React13.createElement("span", { className: "ul-menu-check", "aria-hidden": "true" }),
+        it.icon ? /* @__PURE__ */ React13.createElement("span", { className: "ul-btn-icon", "aria-hidden": "true" }, it.icon) : null,
+        /* @__PURE__ */ React13.createElement("span", { className: "ul-menu-text" }, it.label),
+        it.shortcut ? /* @__PURE__ */ React13.createElement(ULKbd, { keys: it.shortcut, size: "sm", className: "ul-menu-kbd" }) : null,
+        it.items ? /* @__PURE__ */ React13.createElement("span", { className: "ul-menu-chev", "aria-hidden": "true" }, /* @__PURE__ */ React13.createElement(Icon, { name: "chevron-right" })) : null
+      ), it.items && root2 ? /* @__PURE__ */ React13.createElement(
         SubMenu,
         {
           open: open && sub === i,
@@ -6605,9 +6716,9 @@ ${r.examples.join("\n")}` : "";
       ) : null);
     });
     const mounted = leaving && !levels.some((l) => l.key === leaving.key) ? [...levels, leaving] : levels;
-    return /* @__PURE__ */ React12.createElement("div", { ref: box, className: "ul-menu ul-menu--glass", role: "none", onKeyDown: onKey, onPointerMove: onMove2, onPointerLeave: () => clearTimeout(timer.current) }, /* @__PURE__ */ React12.createElement(ULGlass, { as: "span", ref: lens, "aria-hidden": "true", tier: "sm", radius: "var(--ul-item-radius, var(--ul-radius-sm))", className: "ul-menu-lens", materialCategory: "overlays" }), mounted.map((lv) => {
+    return /* @__PURE__ */ React13.createElement("div", { ref: box, className: "ul-menu ul-menu--glass", role: "none", onKeyDown: onKey, onPointerMove: onMove2, onPointerLeave: () => clearTimeout(timer.current) }, /* @__PURE__ */ React13.createElement(ULGlass, { as: "span", ref: lens, "aria-hidden": "true", tier: "sm", radius: "var(--ul-item-radius, var(--ul-radius-sm))", className: "ul-menu-lens", materialCategory: "overlays" }), mounted.map((lv) => {
       const on2 = lv.key === top.key, root2 = lv.key === "root", parent = levels[levels.indexOf(lv) - 1] ?? leaving;
-      return /* @__PURE__ */ React12.createElement(
+      return /* @__PURE__ */ React13.createElement(
         "div",
         {
           key: lv.key,
@@ -6622,7 +6733,7 @@ ${r.examples.join("\n")}` : "";
           hidden: !on2 && !(leaving && leaving.key === lv.key),
           ...on2 ? {} : { inert: "" }
         },
-        root2 ? null : /* @__PURE__ */ React12.createElement(React12.Fragment, null, /* @__PURE__ */ React12.createElement(
+        root2 ? null : /* @__PURE__ */ React13.createElement(React13.Fragment, null, /* @__PURE__ */ React13.createElement(
           "div",
           {
             role: "menuitem",
@@ -6634,18 +6745,18 @@ ${r.examples.join("\n")}` : "";
             "aria-label": `${backLabel}: ${parent?.key === "root" ? label2 ?? "" : parent?.label ?? ""}`.replace(/: $/, ""),
             onClick: () => drillOut()
           },
-          /* @__PURE__ */ React12.createElement("span", { className: "ul-menu-check ul-menu-back-ic", "aria-hidden": "true" }, /* @__PURE__ */ React12.createElement(Icon, { name: "chevron-left" })),
-          /* @__PURE__ */ React12.createElement("span", { className: "ul-menu-text" }, lv.label)
-        ), /* @__PURE__ */ React12.createElement("div", { role: "separator", className: "ul-menu-sep" })),
+          /* @__PURE__ */ React13.createElement("span", { className: "ul-menu-check ul-menu-back-ic", "aria-hidden": "true" }, /* @__PURE__ */ React13.createElement(Icon, { name: "chevron-left" })),
+          /* @__PURE__ */ React13.createElement("span", { className: "ul-menu-text" }, lv.label)
+        ), /* @__PURE__ */ React13.createElement("div", { role: "separator", className: "ul-menu-sep" })),
         renderRows(root2 ? items : lv.items, root2)
       );
     }));
   }
   function SubMenu({ open, anchor, items, label: label2, depth, initial, surfRef, onClose, onAction, closeOnSelect }) {
-    const aRef = React12.useMemo(() => ({ current: anchor }), [anchor]);
+    const aRef = React13.useMemo(() => ({ current: anchor }), [anchor]);
     aRef.current = anchor;
-    const morphRef = React12.useRef(null);
-    return /* @__PURE__ */ React12.createElement(
+    const morphRef = React13.useRef(null);
+    return /* @__PURE__ */ React13.createElement(
       ULAnchoredSurface,
       {
         open: open && !!anchor,
@@ -6662,18 +6773,18 @@ ${r.examples.join("\n")}` : "";
         closeOnOutside: false,
         className: "ul-menu-surface"
       },
-      /* @__PURE__ */ React12.createElement("span", { className: "ul-sub-bridge", "aria-hidden": "true" }),
-      /* @__PURE__ */ React12.createElement(MenuList, { open, items, label: label2, depth, initial, onClose: (all) => onClose(all), onAction, closeOnSelect, morphRef })
+      /* @__PURE__ */ React13.createElement("span", { className: "ul-sub-bridge", "aria-hidden": "true" }),
+      /* @__PURE__ */ React13.createElement(MenuList, { open, items, label: label2, depth, initial, onClose: (all) => onClose(all), onAction, closeOnSelect, morphRef })
     );
   }
   function ULMenu({ open, onOpenChange, anchorRef, items, label: label2, side = "bottom", align = "start", offset, onAction, closeOnSelect = true, initialFocus = "first", accent, backdrop, className, surfaceRef, backLabel }) {
-    const morphRef = React12.useRef(null);
-    const close = React12.useCallback((refocus = true) => {
+    const morphRef = React13.useRef(null);
+    const close = React13.useCallback((refocus = true) => {
       onOpenChange?.(false);
       const a = document.activeElement;
       if (refocus && (!a || a === document.body || a.closest(".ul-menu-surface"))) requestAnimationFrame(() => anchorRef.current?.focus?.({ preventScroll: true }));
     }, [onOpenChange]);
-    return /* @__PURE__ */ React12.createElement(
+    return /* @__PURE__ */ React13.createElement(
       ULAnchoredSurface,
       {
         open,
@@ -6692,14 +6803,14 @@ ${r.examples.join("\n")}` : "";
         morphRef,
         className: cx("ul-menu-surface", className)
       },
-      /* @__PURE__ */ React12.createElement(MenuList, { open, items, label: label2, depth: 0, initial: initialFocus, onClose: () => close(true), onAction, closeOnSelect, morphRef, backLabel })
+      /* @__PURE__ */ React13.createElement(MenuList, { open, items, label: label2, depth: 0, initial: initialFocus, onClose: () => close(true), onAction, closeOnSelect, morphRef, backLabel })
     );
   }
   function ULMenuButton({ children, items, label: label2, onAction, side, align, buttonProps, className, closeOnSelect }) {
-    const [open, setOpen] = React12.useState(false);
-    const [initial, setInitial] = React12.useState("first");
-    const ref = React12.useRef(null);
-    return /* @__PURE__ */ React12.createElement(React12.Fragment, null, /* @__PURE__ */ React12.createElement(
+    const [open, setOpen] = React13.useState(false);
+    const [initial, setInitial] = React13.useState("first");
+    const ref = React13.useRef(null);
+    return /* @__PURE__ */ React13.createElement(React13.Fragment, null, /* @__PURE__ */ React13.createElement(
       "button",
       {
         ref,
@@ -6719,16 +6830,16 @@ ${r.examples.join("\n")}` : "";
         }
       },
       children
-    ), /* @__PURE__ */ React12.createElement(ULMenu, { open, onOpenChange: setOpen, anchorRef: ref, items, label: label2, onAction, side, align, initialFocus: initial, closeOnSelect }));
+    ), /* @__PURE__ */ React13.createElement(ULMenu, { open, onOpenChange: setOpen, anchorRef: ref, items, label: label2, onAction, side, align, initialFocus: initial, closeOnSelect }));
   }
   function ULContextMenu({ children, items, label: label2, onAction, disabled, closeOnSelect, accent, backdrop, className, surfaceRef }) {
-    const [open, setOpen] = React12.useState(false);
-    const va = React12.useRef(null);
-    const aRef = React12.useRef(null);
-    const target = React12.useRef(null);
-    const isOpen = React12.useRef(false), pend = React12.useRef(0);
+    const [open, setOpen] = React13.useState(false);
+    const va = React13.useRef(null);
+    const aRef = React13.useRef(null);
+    const target = React13.useRef(null);
+    const isOpen = React13.useRef(false), pend = React13.useRef(0);
     isOpen.current = open;
-    React12.useEffect(() => () => {
+    React13.useEffect(() => () => {
       va.current?.destroy();
       cancelAnimationFrame(pend.current);
     }, []);
@@ -6737,7 +6848,7 @@ ${r.examples.join("\n")}` : "";
       pend.current = 0;
       setOpen(v);
     };
-    const ownSurf = React12.useRef(null), surf = surfaceRef ?? ownSurf;
+    const ownSurf = React13.useRef(null), surf = surfaceRef ?? ownSurf;
     const at = (x, y) => {
       const wasOpen = isOpen.current;
       if (!va.current) va.current = createVirtualAnchor(pointRect(x, y));
@@ -6754,9 +6865,9 @@ ${r.examples.join("\n")}` : "";
         setOpen(true);
       });
     };
-    const child = React12.Children.only(children);
+    const child = React13.Children.only(children);
     const p = child.props;
-    return /* @__PURE__ */ React12.createElement(React12.Fragment, null, React12.cloneElement(child, {
+    return /* @__PURE__ */ React13.createElement(React13.Fragment, null, React13.cloneElement(child, {
       ref: (n) => {
         target.current = n;
       },
@@ -6773,7 +6884,7 @@ ${r.examples.join("\n")}` : "";
         const r = (document.activeElement ?? target.current)?.getBoundingClientRect();
         if (r) at(r.left + Math.min(16, r.width / 2), r.bottom - Math.min(8, r.height / 2));
       }
-    }), /* @__PURE__ */ React12.createElement(
+    }), /* @__PURE__ */ React13.createElement(
       ULMenu,
       {
         open,
@@ -6812,22 +6923,22 @@ ${r.examples.join("\n")}` : "";
   }
   function ULCommandPalette({ open, onOpenChange, items, triggerRef, hotkey = true, placeholder = "Search commands\u2026", label: label2 = "Command palette", emptyText = "No matching commands", recentLabel = "Recent", recent, onRecentChange, reading, accent, className, surfaceRef }) {
     const id = useDomId("ul-cmd");
-    const [q, setQ] = React12.useState("");
-    const [active2, setActive] = React12.useState(0);
-    const [ownRecent, setOwnRecent] = React12.useState([]);
+    const [q, setQ] = React13.useState("");
+    const [active2, setActive] = React13.useState(0);
+    const [ownRecent, setOwnRecent] = React13.useState([]);
     const rec2 = recent ?? ownRecent;
-    const box = React12.useRef(null), lens = React12.useRef(null), ind = React12.useRef(null);
-    const openRef = React12.useRef(open);
+    const box = React13.useRef(null), lens = React13.useRef(null), ind = React13.useRef(null);
+    const openRef = React13.useRef(open);
     openRef.current = open;
-    const va = React12.useRef(null);
-    const vRef = React12.useRef(null);
+    const va = React13.useRef(null);
+    const vRef = React13.useRef(null);
     const hasTrigger = !!triggerRef?.current;
     if (typeof document !== "undefined" && open && !hasTrigger) {
       if (!va.current) va.current = createVirtualAnchor(centerRect());
       vRef.current = va.current.el;
     }
-    React12.useEffect(() => () => va.current?.destroy(), []);
-    React12.useEffect(() => {
+    React13.useEffect(() => () => va.current?.destroy(), []);
+    React13.useEffect(() => {
       if (!hotkey) return;
       const k2 = (e) => {
         if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
@@ -6838,13 +6949,13 @@ ${r.examples.join("\n")}` : "";
       addEventListener("keydown", k2);
       return () => removeEventListener("keydown", k2);
     }, [hotkey, onOpenChange]);
-    React12.useEffect(() => {
+    React13.useEffect(() => {
       if (open) {
         setQ("");
         setActive(0);
       }
     }, [open]);
-    const groups2 = React12.useMemo(() => {
+    const groups2 = React13.useMemo(() => {
       const on2 = items;
       if (!q) {
         const r = rec2.map((rid) => items.find((i) => i.id === rid)).filter(Boolean).slice(0, parseInt(typeof document !== "undefined" ? getComputedStyle(document.documentElement).getPropertyValue("--ul-palette-recent") : "5", 10) || 5);
@@ -6868,7 +6979,7 @@ ${r.examples.join("\n")}` : "";
     }, [items, q, rec2]);
     const flat = groups2.flatMap((g2) => g2.items);
     const act = Math.min(active2, flat.length - 1);
-    React12.useEffect(() => {
+    React13.useEffect(() => {
       if (!open) return;
       const t = requestAnimationFrame(() => {
         if (!box.current || !lens.current || ind.current) return;
@@ -6880,10 +6991,10 @@ ${r.examples.join("\n")}` : "";
         ind.current = null;
       };
     }, [open]);
-    React12.useEffect(() => {
+    React13.useEffect(() => {
       ind.current?.update();
     }, [act, q]);
-    React12.useEffect(() => {
+    React13.useEffect(() => {
       const el = box.current?.querySelector("[data-active]"), b = box.current;
       if (!el || !b) return;
       const top = el.offsetTop, bot = top + el.offsetHeight;
@@ -6918,7 +7029,7 @@ ${r.examples.join("\n")}` : "";
       }
     };
     let k = -1;
-    return /* @__PURE__ */ React12.createElement(
+    return /* @__PURE__ */ React13.createElement(
       ULAnchoredSurface,
       {
         open,
@@ -6939,7 +7050,7 @@ ${r.examples.join("\n")}` : "";
         className: cx("ul-palette", className),
         initialFocus: "input"
       },
-      /* @__PURE__ */ React12.createElement("div", { className: "ul-palette-search" }, /* @__PURE__ */ React12.createElement("span", { className: "ul-palette-ic", "aria-hidden": "true" }, /* @__PURE__ */ React12.createElement(Icon, { name: "search" })), /* @__PURE__ */ React12.createElement(
+      /* @__PURE__ */ React13.createElement("div", { className: "ul-palette-search" }, /* @__PURE__ */ React13.createElement("span", { className: "ul-palette-ic", "aria-hidden": "true" }, /* @__PURE__ */ React13.createElement(Icon, { name: "search" })), /* @__PURE__ */ React13.createElement(
         "input",
         {
           role: "combobox",
@@ -6959,11 +7070,11 @@ ${r.examples.join("\n")}` : "";
           autoComplete: "off",
           spellCheck: false
         }
-      ), /* @__PURE__ */ React12.createElement("kbd", { className: "ul-menu-kbd" }, "Esc")),
-      /* @__PURE__ */ React12.createElement("div", { ref: box, id: `${id}-l`, role: "listbox", "aria-label": label2, className: "ul-palette-list" }, /* @__PURE__ */ React12.createElement(ULGlass, { as: "span", ref: lens, "aria-hidden": "true", tier: "sm", radius: "var(--ul-item-radius, var(--ul-radius-sm))", className: "ul-menu-lens", materialCategory: "overlays" }), flat.length === 0 ? /* @__PURE__ */ React12.createElement("p", { className: "ul-palette-empty", role: "status" }, emptyText) : null, groups2.map((g2, gi) => /* @__PURE__ */ React12.createElement("div", { key: g2.name + gi, role: "group", "aria-labelledby": g2.name ? `${id}-g${gi}` : void 0, className: "ul-palette-group" }, g2.name ? /* @__PURE__ */ React12.createElement("div", { id: `${id}-g${gi}`, className: "ul-menu-label", role: "presentation" }, g2.name) : null, g2.items.map((c) => {
+      ), /* @__PURE__ */ React13.createElement("kbd", { className: "ul-menu-kbd" }, "Esc")),
+      /* @__PURE__ */ React13.createElement("div", { ref: box, id: `${id}-l`, role: "listbox", "aria-label": label2, className: "ul-palette-list" }, /* @__PURE__ */ React13.createElement(ULGlass, { as: "span", ref: lens, "aria-hidden": "true", tier: "sm", radius: "var(--ul-item-radius, var(--ul-radius-sm))", className: "ul-menu-lens", materialCategory: "overlays" }), flat.length === 0 ? /* @__PURE__ */ React13.createElement("p", { className: "ul-palette-empty", role: "status" }, emptyText) : null, groups2.map((g2, gi) => /* @__PURE__ */ React13.createElement("div", { key: g2.name + gi, role: "group", "aria-labelledby": g2.name ? `${id}-g${gi}` : void 0, className: "ul-palette-group" }, g2.name ? /* @__PURE__ */ React13.createElement("div", { id: `${id}-g${gi}`, className: "ul-menu-label", role: "presentation" }, g2.name) : null, g2.items.map((c) => {
         k++;
         const i = k;
-        return /* @__PURE__ */ React12.createElement(
+        return /* @__PURE__ */ React13.createElement(
           "div",
           {
             key: c.id + "-" + i,
@@ -6977,12 +7088,12 @@ ${r.examples.join("\n")}` : "";
             onPointerDown: (e) => e.preventDefault(),
             onClick: () => run(c)
           },
-          c.icon ? /* @__PURE__ */ React12.createElement("span", { className: "ul-btn-icon", "aria-hidden": "true" }, c.icon) : /* @__PURE__ */ React12.createElement("span", { className: "ul-menu-check", "aria-hidden": "true" }),
-          /* @__PURE__ */ React12.createElement("span", { className: "ul-menu-text" }, c.label),
-          c.shortcut ? /* @__PURE__ */ React12.createElement(ULKbd, { keys: c.shortcut, size: "sm", className: "ul-menu-kbd" }) : null
+          c.icon ? /* @__PURE__ */ React13.createElement("span", { className: "ul-btn-icon", "aria-hidden": "true" }, c.icon) : /* @__PURE__ */ React13.createElement("span", { className: "ul-menu-check", "aria-hidden": "true" }),
+          /* @__PURE__ */ React13.createElement("span", { className: "ul-menu-text" }, c.label),
+          c.shortcut ? /* @__PURE__ */ React13.createElement(ULKbd, { keys: c.shortcut, size: "sm", className: "ul-menu-kbd" }) : null
         );
       })))),
-      /* @__PURE__ */ React12.createElement("div", { className: "ul-sr-only", role: "status", "aria-live": "polite" }, q ? `${flat.length} results` : "")
+      /* @__PURE__ */ React13.createElement("div", { className: "ul-sr-only", role: "status", "aria-live": "polite" }, q ? `${flat.length} results` : "")
     );
   }
 
@@ -7003,14 +7114,14 @@ ${r.examples.join("\n")}` : "";
   }
   function useContextMenuTarget(o) {
     const on2 = !!o.contextMenu;
-    const [state, setState] = React13.useState(null);
-    const va = React13.useRef(null), aRef = React13.useRef(null);
-    const opts = React13.useRef(o);
+    const [state, setState] = React14.useState(null);
+    const va = React14.useRef(null), aRef = React14.useRef(null);
+    const opts = React14.useRef(o);
     opts.current = o;
-    const lp = React13.useRef(null);
-    const pend = React13.useRef(0), isOpen = React13.useRef(false), surf = React13.useRef(null);
+    const lp = React14.useRef(null);
+    const pend = React14.useRef(0), isOpen = React14.useRef(false), surf = React14.useRef(null);
     isOpen.current = !!state?.open;
-    React13.useEffect(() => () => {
+    React14.useEffect(() => () => {
       va.current?.destroy();
       cancelAnimationFrame(pend.current);
       if (lp.current) clearTimeout(lp.current.timer);
@@ -7019,7 +7130,7 @@ ${r.examples.join("\n")}` : "";
       const r = opts.current.resolve ? opts.current.resolve(hit, root2) : { kind: "self", el: root2 };
       return r ? { component: opts.current.component, ...r } : null;
     };
-    const openFor = React13.useCallback((t, x, y) => {
+    const openFor = React14.useCallback((t, x, y) => {
       const items = resolveMenu(opts.current.contextMenu, t);
       if (!items) return false;
       if (x == null || y == null) {
@@ -7048,12 +7159,12 @@ ${r.examples.join("\n")}` : "";
       });
       return true;
     }, []);
-    const close = React13.useCallback(() => {
+    const close = React14.useCallback(() => {
       cancelAnimationFrame(pend.current);
       pend.current = 0;
       setState((s) => s ? { ...s, open: false } : s);
     }, []);
-    const bind = React13.useMemo(() => {
+    const bind = React14.useMemo(() => {
       if (!on2) return {};
       return {
         "aria-haspopup": "menu",
@@ -7104,7 +7215,7 @@ ${r.examples.join("\n")}` : "";
         }
       };
     }, [on2, openFor]);
-    const menu = state ? /* @__PURE__ */ React13.createElement(
+    const menu = state ? /* @__PURE__ */ React14.createElement(
       ULMenu,
       {
         open: state.open,
@@ -7154,8 +7265,8 @@ ${r.examples.join("\n")}` : "";
   }
   function ULContextTarget({ children, component = "custom", target, disabled, ...p }) {
     const api = useContextMenuTarget({ ...p, contextMenu: disabled ? void 0 : p.contextMenu, component, resolve: (_h, root2) => ({ kind: target?.kind ?? "self", id: target?.id, data: target?.data, el: root2 }) });
-    const child = React13.Children.only(children);
-    return /* @__PURE__ */ React13.createElement(React13.Fragment, null, React13.cloneElement(child, mergeCtx(child.props, api.bind)), api.menu);
+    const child = React14.Children.only(children);
+    return /* @__PURE__ */ React14.createElement(React14.Fragment, null, React14.cloneElement(child, mergeCtx(child.props, api.bind)), api.menu);
   }
   var CTX_KEYS = ["contextMenu", "onContextMenuOpen", "onContextMenuClose", "onContextMenuAction", "contextMenuNative", "contextMenuLabel"];
   function splitCtx(props) {
@@ -7168,7 +7279,7 @@ ${r.examples.join("\n")}` : "";
   }
   function withContextMenu(el, p, component, target, items, contents = false) {
     if (!p.contextMenu) return el;
-    return /* @__PURE__ */ React13.createElement(CtxWrap, { p, component, target, items, contents }, el);
+    return /* @__PURE__ */ React14.createElement(CtxWrap, { p, component, target, items, contents }, el);
   }
   function CtxWrap({ p, component, target, items, contents, children }) {
     const api = useContextMenuTarget({ ...p, component, resolve: (hit, root2) => {
@@ -7182,35 +7293,35 @@ ${r.examples.join("\n")}` : "";
       return { kind: target?.kind ?? "self", id: target?.id, data: target?.data, el };
     } });
     const bind = items ? { ...api.bind, "aria-haspopup": void 0 } : api.bind;
-    if (contents) return /* @__PURE__ */ React13.createElement("span", { className: "ul-ctx-target", style: { display: "contents" }, ...bind }, children, api.menu);
-    return /* @__PURE__ */ React13.createElement(React13.Fragment, null, React13.cloneElement(children, mergeCtx(children.props, bind)), api.menu);
+    if (contents) return /* @__PURE__ */ React14.createElement("span", { className: "ul-ctx-target", style: { display: "contents" }, ...bind }, children, api.menu);
+    return /* @__PURE__ */ React14.createElement(React14.Fragment, null, React14.cloneElement(children, mergeCtx(children.props, bind)), api.menu);
   }
 
   // src/components/ULTabs/ULTabs.tsx
   function ULTabs(props) {
     const [c, rest] = splitCtx(props);
-    return withContextMenu(/* @__PURE__ */ React14.createElement(TabsBase, { ...rest }), c, "tabs", void 0, { selector: '[role="tab"]', kind: "tab", data: (id) => props.items.find((i) => i.value === id) });
+    return withContextMenu(/* @__PURE__ */ React15.createElement(TabsBase, { ...rest }), c, "tabs", void 0, { selector: '[role="tab"]', kind: "tab", data: (id) => props.items.find((i) => i.value === id) });
   }
   function TabsBase({ items, value, defaultValue, onValueChange, orientation = "horizontal", lens = true, accent, keepMounted = false, className, "aria-label": ariaLabel, ...rest }) {
-    const [own, setOwn] = React14.useState(defaultValue ?? items.find((i) => !i.disabled)?.value);
+    const [own, setOwn] = React15.useState(defaultValue ?? items.find((i) => !i.disabled)?.value);
     const v = value ?? own;
     const uid2 = useDomId("ul-tabs");
     const vert = orientation === "vertical";
-    const list = React14.useRef(null);
-    const sel = React14.useRef(null);
-    const prevSel = React14.useRef(null);
-    const fromDrag = React14.useRef(false);
-    const viaKey = React14.useRef(false);
-    const lensOn = React14.useRef(lens);
+    const list = React15.useRef(null);
+    const sel = React15.useRef(null);
+    const prevSel = React15.useRef(null);
+    const fromDrag = React15.useRef(false);
+    const viaKey = React15.useRef(false);
+    const lensOn = React15.useRef(lens);
     lensOn.current = lens;
     const pick = (val, focus = false) => {
       if (value === void 0) setOwn(val);
       onValueChange?.(val);
       if (focus) requestAnimationFrame(() => list.current?.querySelector(`[data-value="${CSS.escape(val)}"]`)?.focus());
     };
-    const pickRef = React14.useRef(pick);
+    const pickRef = React15.useRef(pick);
     pickRef.current = pick;
-    React14.useEffect(() => {
+    React15.useEffect(() => {
       const l = list.current;
       if (!l) return;
       sel.current = createLensSelect({
@@ -7230,7 +7341,7 @@ ${r.examples.join("\n")}` : "";
         sel.current = null;
       };
     }, [vert]);
-    React14.useLayoutEffect(() => {
+    React15.useLayoutEffect(() => {
       const now2 = list.current?.querySelector('[aria-selected="true"]') ?? null;
       if (!fromDrag.current && prevSel.current && now2 && now2 !== prevSel.current) sel.current?.travel(prevSel.current, now2, viaKey.current ? "key" : "click");
       else if (now2) sel.current?.syncRest();
@@ -7250,12 +7361,12 @@ ${r.examples.join("\n")}` : "";
     };
     const acc = accentAttrs(accent);
     const current = items.find((i) => i.value === v);
-    const visited = React14.useRef(/* @__PURE__ */ new Set());
+    const visited = React15.useRef(/* @__PURE__ */ new Set());
     if (v) visited.current.add(v);
-    const panel2 = (it, on2) => /* @__PURE__ */ React14.createElement("div", { key: it.value, id: `${uid2}-p-${it.value}`, role: "tabpanel", "aria-labelledby": `${uid2}-t-${it.value}`, tabIndex: 0, hidden: !on2, className: "ul-tabs-panel" }, it.content);
-    return /* @__PURE__ */ React14.createElement("div", { ...rest, className: cx("ul-tabs", className), "data-orientation": orientation, "data-ul-accent": acc["data-ul-accent"], style: { ...acc.style, ...rest.style } }, /* @__PURE__ */ React14.createElement("div", { ref: list, role: "tablist", "aria-label": ariaLabel, "aria-orientation": orientation, className: "ul-tabs-list", onKeyDown: onKey }, items.map((it) => {
+    const panel2 = (it, on2) => /* @__PURE__ */ React15.createElement("div", { key: it.value, id: `${uid2}-p-${it.value}`, role: "tabpanel", "aria-labelledby": `${uid2}-t-${it.value}`, tabIndex: 0, hidden: !on2, className: "ul-tabs-panel" }, it.content);
+    return /* @__PURE__ */ React15.createElement("div", { ...rest, className: cx("ul-tabs", className), "data-orientation": orientation, "data-ul-accent": acc["data-ul-accent"], style: { ...acc.style, ...rest.style } }, /* @__PURE__ */ React15.createElement("div", { ref: list, role: "tablist", "aria-label": ariaLabel, "aria-orientation": orientation, className: "ul-tabs-list", onKeyDown: onKey }, items.map((it) => {
       const on2 = it.value === v;
-      return /* @__PURE__ */ React14.createElement(
+      return /* @__PURE__ */ React15.createElement(
         "button",
         {
           key: it.value,
@@ -7274,8 +7385,8 @@ ${r.examples.join("\n")}` : "";
             pick(it.value);
           }
         },
-        it.icon ? /* @__PURE__ */ React14.createElement("span", { className: "ul-tab-icon", "aria-hidden": "true" }, it.icon) : null,
-        /* @__PURE__ */ React14.createElement("span", { className: "ul-tab-label" }, it.label)
+        it.icon ? /* @__PURE__ */ React15.createElement("span", { className: "ul-tab-icon", "aria-hidden": "true" }, it.icon) : null,
+        /* @__PURE__ */ React15.createElement("span", { className: "ul-tab-label" }, it.label)
       );
     })), keepMounted ? items.filter((it) => it.content !== void 0 && visited.current.has(it.value)).map((it) => panel2(it, it.value === v)) : current && current.content !== void 0 ? panel2(current, true) : null);
   }
@@ -7431,7 +7542,7 @@ ${r.examples.join("\n")}` : "";
   }
 
   // src/components/ULIsland/ULIsland.tsx
-  var React15 = __toESM(__require("react"), 1);
+  var React16 = __toESM(__require("react"), 1);
 
   // src/components/ULIsland/headerConfig.ts
   var STUDIO_URL = "https://studio.ultralabs.app";
@@ -7575,20 +7686,20 @@ ${r.examples.join("\n")}` : "";
   }
 
   // src/components/ULIsland/ULIsland.tsx
-  var LOGO = /* @__PURE__ */ React15.createElement("svg", { viewBox: "0 0 32 32", width: "22", height: "22", fill: "none", stroke: "currentColor", strokeWidth: "1.5", strokeLinejoin: "round", "aria-hidden": "true" }, /* @__PURE__ */ React15.createElement("path", { d: "M4 12 10 5h12l6 7-12 16z M4 12h24 M10 5l6 7 6-7 M16 12v16" }));
-  var BACK = /* @__PURE__ */ React15.createElement("svg", { viewBox: "0 0 24 24", width: "20", height: "20", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round", "aria-hidden": "true" }, /* @__PURE__ */ React15.createElement("path", { d: "M19 12H5 M12 19l-7-7 7-7" }));
+  var LOGO = /* @__PURE__ */ React16.createElement("svg", { viewBox: "0 0 32 32", width: "22", height: "22", fill: "none", stroke: "currentColor", strokeWidth: "1.5", strokeLinejoin: "round", "aria-hidden": "true" }, /* @__PURE__ */ React16.createElement("path", { d: "M4 12 10 5h12l6 7-12 16z M4 12h24 M10 5l6 7 6-7 M16 12v16" }));
+  var BACK = /* @__PURE__ */ React16.createElement("svg", { viewBox: "0 0 24 24", width: "20", height: "20", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round", "aria-hidden": "true" }, /* @__PURE__ */ React16.createElement("path", { d: "M19 12H5 M12 19l-7-7 7-7" }));
   function ConfigFace({ config: config2, current }) {
-    const navRef = React15.useRef(null);
-    const lensRef = React15.useRef(null);
-    const restRef = React15.useRef(config2.indicatorRest);
+    const navRef = React16.useRef(null);
+    const lensRef = React16.useRef(null);
+    const restRef = React16.useRef(config2.indicatorRest);
     restRef.current = config2.indicatorRest;
-    React15.useEffect(() => {
+    React16.useEffect(() => {
       if (!navRef.current || !lensRef.current) return;
       const ind = createNavIndicator({ container: navRef.current, lens: lensRef.current, items: "a[href], button", rest: () => restRef.current ? navRef.current?.querySelector('[aria-current="page"]') : null });
       return () => ind.destroy();
     }, []);
     const lead = config2.leading;
-    return /* @__PURE__ */ React15.createElement("div", { className: "ul-island-config" }, lead.kind === "back" ? /* @__PURE__ */ React15.createElement(ULGlass, { as: "a", materialCategory: "chrome", href: lead.href, "aria-label": lead.label, tier: "sm", interactive: true, pressable: true, radius: "50%", className: "ul-island-back" }, BACK) : /* @__PURE__ */ React15.createElement("a", { href: lead.href, "aria-label": lead.label, className: "ul-island-logo" }, LOGO), /* @__PURE__ */ React15.createElement("nav", { ref: navRef, className: "ul-island-nav", "aria-label": config2.variant === "docs" ? "Documentation" : "Main" }, /* @__PURE__ */ React15.createElement(ULGlass, { as: "span", materialCategory: "chrome", ref: lensRef, tier: "sm", radius: "var(--ul-radius-capsule)", className: "ul-island-lens", "aria-hidden": "true" }), /* @__PURE__ */ React15.createElement("ul", null, config2.nav.map((n) => /* @__PURE__ */ React15.createElement("li", { key: n.key }, n.menu ? /* @__PURE__ */ React15.createElement("button", { type: "button", "aria-haspopup": "true", "aria-current": current === n.key ? "page" : void 0 }, n.label, /* @__PURE__ */ React15.createElement("span", { "aria-hidden": "true", className: "ul-island-chev" }, "\u25BE")) : /* @__PURE__ */ React15.createElement("a", { href: n.href || "#", "aria-current": current === n.key ? "page" : void 0 }, n.label))))), config2.cta ? /* @__PURE__ */ React15.createElement("a", { className: "ul-island-cta", href: config2.cta.href }, config2.cta.label) : null);
+    return /* @__PURE__ */ React16.createElement("div", { className: "ul-island-config" }, lead.kind === "back" ? /* @__PURE__ */ React16.createElement(ULGlass, { as: "a", materialCategory: "chrome", href: lead.href, "aria-label": lead.label, tier: "sm", interactive: true, pressable: true, radius: "50%", className: "ul-island-back" }, BACK) : /* @__PURE__ */ React16.createElement("a", { href: lead.href, "aria-label": lead.label, className: "ul-island-logo" }, LOGO), /* @__PURE__ */ React16.createElement("nav", { ref: navRef, className: "ul-island-nav", "aria-label": config2.variant === "docs" ? "Documentation" : "Main" }, /* @__PURE__ */ React16.createElement(ULGlass, { as: "span", materialCategory: "chrome", ref: lensRef, tier: "sm", radius: "var(--ul-radius-capsule)", className: "ul-island-lens", "aria-hidden": "true" }), /* @__PURE__ */ React16.createElement("ul", null, config2.nav.map((n) => /* @__PURE__ */ React16.createElement("li", { key: n.key }, n.menu ? /* @__PURE__ */ React16.createElement("button", { type: "button", "aria-haspopup": "true", "aria-current": current === n.key ? "page" : void 0 }, n.label, /* @__PURE__ */ React16.createElement("span", { "aria-hidden": "true", className: "ul-island-chev" }, "\u25BE")) : /* @__PURE__ */ React16.createElement("a", { href: n.href || "#", "aria-current": current === n.key ? "page" : void 0 }, n.label))))), config2.cta ? /* @__PURE__ */ React16.createElement("a", { className: "ul-island-cta", href: config2.cta.href }, config2.cta.label) : null);
   }
   function overshootFrames(os, from, to, N = 36) {
     const zeta = os <= 0 ? 1 : -Math.log(os) / Math.sqrt(Math.PI ** 2 + Math.log(os) ** 2);
@@ -7601,8 +7712,8 @@ ${r.examples.join("\n")}` : "";
   function slotsOf(children) {
     const out = {};
     const rest = [];
-    React15.Children.forEach(children, (ch) => {
-      const slot2 = React15.isValidElement(ch) ? ch.props["data-slot"] : void 0;
+    React16.Children.forEach(children, (ch) => {
+      const slot2 = React16.isValidElement(ch) ? ch.props["data-slot"] : void 0;
       if (typeof slot2 === "string") out[slot2] = ch;
       else if (ch != null && ch !== false) rest.push(ch);
     });
@@ -7610,21 +7721,21 @@ ${r.examples.join("\n")}` : "";
   }
   function ULIsland({ state = "compact", compact, expanded, notification, onDismiss, tools, accent, accentStrength, label: label2, config: config2, current, className, style, children, ...rest }) {
     const sl = slotsOf(children);
-    if (config2 && !expanded && !sl.out.expanded) expanded = /* @__PURE__ */ React15.createElement(ConfigFace, { config: config2, current });
+    if (config2 && !expanded && !sl.out.expanded) expanded = /* @__PURE__ */ React16.createElement(ConfigFace, { config: config2, current });
     compact ??= sl.out.compact ?? (sl.rest.length ? sl.rest : null);
     expanded ??= sl.out.expanded;
     notification ??= sl.out.notification;
     tools ??= sl.out.tools;
-    const pillRef = React15.useRef(null);
-    const size = React15.useRef(null);
-    const anim = React15.useRef(null);
-    const [elastic, setElastic] = React15.useState(void 0);
+    const pillRef = React16.useRef(null);
+    const size = React16.useRef(null);
+    const anim = React16.useRef(null);
+    const [elastic, setElastic] = React16.useState(void 0);
     const face = state === "expanded" && expanded ? "expanded" : "compact";
-    React15.useLayoutEffect(() => {
+    React16.useLayoutEffect(() => {
       const v = parseFloat(getComputedStyle(pillRef.current ?? document.documentElement).getPropertyValue("--ul-island-elasticity"));
       if (Number.isFinite(v)) setElastic(v);
     }, []);
-    React15.useLayoutEffect(() => {
+    React16.useLayoutEffect(() => {
       const el = pillRef.current;
       if (!el) return;
       const cur = anim.current;
@@ -7663,12 +7774,12 @@ ${r.examples.join("\n")}` : "";
       return () => cancelAnimationFrame(raf);
     }, [face, config2?.variant, config2?.nav.length, config2?.leading.kind]);
     if (config2 && !tools && !sl.out.tools && (config2.poppers.length || config2.studioLink)) {
-      tools = /* @__PURE__ */ React15.createElement(React15.Fragment, null, config2.poppers.map((k) => /* @__PURE__ */ React15.createElement(ULIslandTool, { key: k, "aria-label": "Language" }, /* @__PURE__ */ React15.createElement("span", { className: "ul-island-code" }, "EN"))), config2.studioLink ? /* @__PURE__ */ React15.createElement(ULIslandTool, { href: STUDIO_URL, "aria-label": "Go to studio", tip: "Go to studio" }, /* @__PURE__ */ React15.createElement("svg", { viewBox: "0 0 24 24", width: "20", height: "20", fill: "none", stroke: "currentColor", strokeWidth: "1.9", strokeLinecap: "round", strokeLinejoin: "round", "aria-hidden": "true" }, /* @__PURE__ */ React15.createElement("rect", { width: "7", height: "7", x: "3", y: "3", rx: "1.5" }), /* @__PURE__ */ React15.createElement("rect", { width: "7", height: "7", x: "14", y: "3", rx: "1.5" }), /* @__PURE__ */ React15.createElement("rect", { width: "7", height: "7", x: "14", y: "14", rx: "1.5" }), /* @__PURE__ */ React15.createElement("rect", { width: "7", height: "7", x: "3", y: "14", rx: "1.5" }))) : null);
+      tools = /* @__PURE__ */ React16.createElement(React16.Fragment, null, config2.poppers.map((k) => /* @__PURE__ */ React16.createElement(ULIslandTool, { key: k, "aria-label": "Language" }, /* @__PURE__ */ React16.createElement("span", { className: "ul-island-code" }, "EN"))), config2.studioLink ? /* @__PURE__ */ React16.createElement(ULIslandTool, { href: STUDIO_URL, "aria-label": "Go to studio", tip: "Go to studio" }, /* @__PURE__ */ React16.createElement("svg", { viewBox: "0 0 24 24", width: "20", height: "20", fill: "none", stroke: "currentColor", strokeWidth: "1.9", strokeLinecap: "round", strokeLinejoin: "round", "aria-hidden": "true" }, /* @__PURE__ */ React16.createElement("rect", { width: "7", height: "7", x: "3", y: "3", rx: "1.5" }), /* @__PURE__ */ React16.createElement("rect", { width: "7", height: "7", x: "14", y: "3", rx: "1.5" }), /* @__PURE__ */ React16.createElement("rect", { width: "7", height: "7", x: "14", y: "14", rx: "1.5" }), /* @__PURE__ */ React16.createElement("rect", { width: "7", height: "7", x: "3", y: "14", rx: "1.5" }))) : null);
     }
     accent ??= config2?.accent ?? void 0;
     const acc = accentAttrs(accent, accentStrength);
     const islandStrength = accent && accentStrength == null;
-    return /* @__PURE__ */ React15.createElement(
+    return /* @__PURE__ */ React16.createElement(
       "div",
       {
         ...rest,
@@ -7679,19 +7790,19 @@ ${r.examples.join("\n")}` : "";
         "data-variant": config2?.variant,
         style: { ...islandStrength ? { "--ul-accent-level": "var(--ul-island-accent-strength)" } : null, ...acc.style, ...style }
       },
-      /* @__PURE__ */ React15.createElement(ULGlass, { ref: pillRef, as: "nav", materialCategory: "chrome", "aria-label": label2, "data-ul-morph-occluder": "", tier: "sm", priority: "island", interactive: true, elasticity: elastic, className: "ul-island-pill", radius: "var(--ul-radius-capsule)" }, /* @__PURE__ */ React15.createElement("div", { className: "ul-island-track" }, /* @__PURE__ */ React15.createElement("div", { className: "ul-island-face", "data-active": face === "compact", "aria-hidden": face !== "compact", ...{ inert: face !== "compact" ? "" : void 0 } }, compact), expanded ? /* @__PURE__ */ React15.createElement("div", { className: "ul-island-face", "data-active": face === "expanded", "aria-hidden": face !== "expanded", ...{ inert: face !== "expanded" ? "" : void 0 } }, expanded) : null)),
+      /* @__PURE__ */ React16.createElement(ULGlass, { ref: pillRef, as: "nav", materialCategory: "chrome", "aria-label": label2, "data-ul-morph-occluder": "", tier: "sm", priority: "island", interactive: true, elasticity: elastic, className: "ul-island-pill", radius: "var(--ul-radius-capsule)" }, /* @__PURE__ */ React16.createElement("div", { className: "ul-island-track" }, /* @__PURE__ */ React16.createElement("div", { className: "ul-island-face", "data-active": face === "compact", "aria-hidden": face !== "compact", ...{ inert: face !== "compact" ? "" : void 0 } }, compact), expanded ? /* @__PURE__ */ React16.createElement("div", { className: "ul-island-face", "data-active": face === "expanded", "aria-hidden": face !== "expanded", ...{ inert: face !== "expanded" ? "" : void 0 } }, expanded) : null)),
       tools,
-      notification ? /* @__PURE__ */ React15.createElement(ULAnchoredSurface, { open: state === "notification", anchorRef: pillRef, onClose: onDismiss, side: "bottom", align: "center", tier: "lg", role: "status", "aria-live": "polite", closeOnOutside: !!onDismiss }, notification) : null
+      notification ? /* @__PURE__ */ React16.createElement(ULAnchoredSurface, { open: state === "notification", anchorRef: pillRef, onClose: onDismiss, side: "bottom", align: "center", tier: "lg", role: "status", "aria-live": "polite", closeOnOutside: !!onDismiss }, notification) : null
     );
   }
-  var ULIslandTool = React15.forwardRef(function ULIslandTool2({ active: active2, className, children, href, tip, ...rest }, ref) {
-    const [elastic, setElastic] = React15.useState(void 0);
-    const own = React15.useRef(null);
-    React15.useLayoutEffect(() => {
+  var ULIslandTool = React16.forwardRef(function ULIslandTool2({ active: active2, className, children, href, tip, ...rest }, ref) {
+    const [elastic, setElastic] = React16.useState(void 0);
+    const own = React16.useRef(null);
+    React16.useLayoutEffect(() => {
       const v = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--ul-island-elasticity"));
       if (Number.isFinite(v)) setElastic(v);
     }, []);
-    React15.useEffect(() => {
+    React16.useEffect(() => {
       const el = own.current, layer2 = el?.offsetParent ?? el?.parentElement;
       if (!tip || !el || !layer2) return;
       const t = createAnchoredTooltip({ container: el, layer: layer2 });
@@ -7703,7 +7814,7 @@ ${r.examples.join("\n")}` : "";
       else if (ref) ref.current = el;
     };
     const tag = href ? { as: "a", href } : { as: "button", type: "button" };
-    return /* @__PURE__ */ React15.createElement(
+    return /* @__PURE__ */ React16.createElement(
       ULGlass,
       {
         ref: setRef,
@@ -7838,59 +7949,13 @@ ${r.examples.join("\n")}` : "";
   }
 
   // src/components/ULSpinner/ULSpinner.tsx
-  var React16 = __toESM(__require("react"), 1);
+  var React17 = __toESM(__require("react"), 1);
   function ULSpinner({ label: label2, className, ...rest }) {
-    return /* @__PURE__ */ React16.createElement("span", { ...rest, className: className ? `ul-spinner ${className}` : "ul-spinner", role: label2 ? "status" : void 0, "aria-label": label2, "aria-hidden": label2 ? void 0 : true });
+    return /* @__PURE__ */ React17.createElement("span", { ...rest, className: className ? `ul-spinner ${className}` : "ul-spinner", role: label2 ? "status" : void 0, "aria-label": label2, "aria-hidden": label2 ? void 0 : true });
   }
 
   // src/components/ULButton/ULButton.tsx
   var React18 = __toESM(__require("react"), 1);
-
-  // src/components/shared/dev.ts
-  var React17 = __toESM(__require("react"), 1);
-  var isDev = () => typeof window !== "undefined" && window.__UL_PROD__ !== true;
-  var warned = /* @__PURE__ */ new WeakMap();
-  function warnOnce(el, key, msg) {
-    if (!isDev()) return;
-    let s = warned.get(el);
-    if (!s) {
-      s = /* @__PURE__ */ new Set();
-      warned.set(el, s);
-    }
-    if (s.has(key)) return;
-    s.add(key);
-    console.warn(`[UL] ${msg}`, el);
-  }
-  function surfaceBehind(el) {
-    for (let n = el.parentElement; n; n = n.parentElement) {
-      const tag = n.getAttribute("data-ul-surface");
-      if (tag === "busy" || tag === "solid" || tag === "glass") return tag;
-      if (n.classList.contains("ul-glass")) return "glass";
-      const cs = getComputedStyle(n);
-      if (cs.backgroundImage && cs.backgroundImage !== "none") return "busy";
-      const m = cs.backgroundColor.match(/[\d.]+/g);
-      if (m && (m.length < 4 || +m[3] > 0.9)) return "solid";
-    }
-    return "solid";
-  }
-  function useBareOnBusy(ref, warn) {
-    const [bare, setBare] = React17.useState(false);
-    React17.useLayoutEffect(() => {
-      const el = ref.current;
-      if (!el) return;
-      setBare(surfaceBehind(el) === "busy");
-      const t = window.setTimeout(() => {
-        if (!el.isConnected) return;
-        const busy = surfaceBehind(el) === "busy";
-        setBare(busy);
-        if (busy && warn) warnOnce(el, "surface", warn);
-      }, 1200);
-      return () => clearTimeout(t);
-    }, []);
-    return bare;
-  }
-
-  // src/components/ULButton/ULButton.tsx
   var STRENGTH = { primary: "vivid", secondary: "subtle", tinted: "tinted", plain: void 0, destructive: "vivid" };
   var RADIUS = { capsule: "var(--ul-radius-capsule)", rounded: "var(--ul-control-radius)", circle: "50%" };
   var ULButton = React18.forwardRef(function ULButton2({
