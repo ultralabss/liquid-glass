@@ -1,0 +1,52 @@
+# Publish @ultralabs/glass to npm with Trusted Publishing (GitHub OIDC): no npm token, no OTP.
+# One-time setup on npmjs.com: package @ultralabs/glass → Settings → Trusted publishing → GitHub Actions,
+# repository ultralabss/liquid-glass, workflow file "publish.yml".
+# Run: Actions → Publish → Run workflow (main), or push a tag v<version> that matches package.json.
+name: Publish
+
+on:
+  workflow_dispatch:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+  id-token: write # OIDC token for npm Trusted Publishing + provenance
+
+concurrency:
+  group: publish
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+
+      # Trusted Publishing needs npm >= 11.5
+      - run: npm install -g npm@latest
+
+      - run: npm ci
+
+      - name: Tag matches package.json
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: test "${GITHUB_REF_NAME#v}" = "$(node -p "require('./package.json').version")"
+
+      - name: Version not published yet
+        run: |
+          V=$(node -p "require('./package.json').version")
+          if npm view "@ultralabs/glass@$V" version >/dev/null 2>&1; then echo "::error::@ultralabs/glass@$V is already on npm, bump the version"; exit 1; fi
+
+      - run: npm run typecheck
+      - run: npm run check:callbacks
+      - run: npm run check:tokens
+      - run: npm run check:api
+      - run: npm run build:release
+      - run: npm run check:pack
+
+      - run: npm publish --access public --provenance

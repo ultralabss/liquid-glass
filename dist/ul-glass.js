@@ -1828,8 +1828,14 @@ var UL = (() => {
     dropPriv(s);
     setUrl(s, "");
   }
+  var stickyPriv = (s) => !!s.priv && !!s.morphed;
+  function withPasses(s, p, n) {
+    const b = p.scales[0] ?? 0;
+    return { ...p, n, scales: n === 3 ? [b, b * (1 - 0.05 * s.aberration), b * (1 - 0.1 * s.aberration)] : [b] };
+  }
   var waitingMaps = /* @__PURE__ */ new WeakSet();
   function bindFilter(s) {
+    if (s.el.hasAttribute("data-ul-morphing")) s.morphed = true;
     if (s.mode !== "refract") {
       unbindFilter(s);
       return;
@@ -1855,9 +1861,11 @@ var UL = (() => {
       }));
       return;
     }
-    const p = paramsOf(s);
+    let p = paramsOf(s);
     if (!p) return;
-    if (isLive(s)) {
+    const sticky = !isLive(s) && stickyPriv(s);
+    if (sticky && s.priv.n !== p.n) p = withPasses(s, p, s.priv.n);
+    if (isLive(s) || sticky) {
       if (!s.priv || s.priv.n !== p.n) {
         dropPriv(s);
         s.priv = takePriv(p.n);
@@ -2138,6 +2146,7 @@ var UL = (() => {
     const q = config.forceQuality ?? s.opts.quality ?? "auto";
     if (q === "flat" || isFlatMaterial(s.el)) return "flat";
     if (!s.canRefract) return "fallback";
+    if (s.el.classList.contains("ul-anchored")) return "lite";
     if (q === "full") return "refract";
     if (q === "lite") return "lite";
     return s.granted ? "refract" : "lite";
@@ -3934,6 +3943,13 @@ ${r.examples.join("\n")}` : "";
     tau = 0;
     anim = null;
     stageAnim = null;
+    /** Backdrop shell (UL-635): the only blurred element while the morph runs; see ensureShell(). */
+    shell = null;
+    shellAnim = null;
+    shellRaf = 0;
+    shellTimer = 0;
+    shellFade = null;
+    shellFilter = null;
     seg = null;
     loop = 0;
     fin = null;
@@ -4264,7 +4280,104 @@ ${r.examples.join("\n")}` : "";
       this.surface.dispatchEvent(new CustomEvent("ul:morph", { bubbles: true, detail: { phase: this.phase, state, duration, reduced: reduced(), morph: this } }));
     }
     /* ---------- lifecycle ---------- */
+    /*
+     * Backdrop shell (UL-635). A backdrop-filter on an element whose transform / clip-path / size animation ends (or whose
+     * clip-path, overflow and will-change are cleared at settle) makes Chrome rebuild its backdrop: one frame of unblurred
+     * page. Same fix as the island -> contact dialog morph: while the morph runs the blur lives on a sibling shell that
+     * plays the SAME keyframes, the surface has backdrop-filter: none; at settle the surface first goes static, then on the
+     * next frame gets its blur back while the shell hides in the same commit, and the shell is removed a frame later.
+     * The shell carries the plain CSS part of the surface's backdrop (SVG url() filters are dropped while moving).
+     */
+    ensureShell() {
+      const s = this.surface, parent = s.parentElement;
+      cancelAnimationFrame(this.shellRaf);
+      this.shellRaf = 0;
+      clearTimeout(this.shellTimer);
+      this.shellTimer = 0;
+      this.shellFade?.cancel();
+      this.shellFade = null;
+      if (!parent) return;
+      if (this.shellFilter == null || !s.style.getPropertyValue("backdrop-filter")) {
+        const cs2 = getComputedStyle(s);
+        const raw = cs2.backdropFilter || cs2.webkitBackdropFilter || "none";
+        const plain = raw === "none" ? "" : raw.replace(/url\([^)]*\)/g, "").trim();
+        this.shellFilter = plain || "none";
+      }
+      if (this.shellFilter === "none") {
+        this.dropShell();
+        return;
+      }
+      const cs = getComputedStyle(s);
+      const sh = this.shell ?? (this.shell = document.createElement("div"));
+      sh.className = "ul-morph-shell";
+      sh.setAttribute("aria-hidden", "true");
+      if (sh.parentElement !== parent || sh.nextSibling !== s) parent.insertBefore(sh, s);
+      const st = sh.style;
+      st.cssText = "";
+      st.position = cs.position === "static" ? "absolute" : cs.position;
+      st.left = cs.left;
+      st.top = cs.top;
+      st.right = "auto";
+      st.bottom = "auto";
+      st.margin = "0";
+      st.zIndex = cs.zIndex;
+      st.translate = cs.translate;
+      st.boxSizing = "border-box";
+      st.width = cs.width;
+      st.height = cs.height;
+      st.borderRadius = cs.borderTopLeftRadius;
+      st.pointerEvents = "none";
+      st.visibility = "visible";
+      st.background = "transparent";
+      st.setProperty("backdrop-filter", this.shellFilter);
+      st.setProperty("-webkit-backdrop-filter", this.shellFilter);
+      s.style.setProperty("backdrop-filter", "none", "important");
+      s.style.setProperty("-webkit-backdrop-filter", "none", "important");
+    }
+    /** Interrupted / not a shell run: no shell, the surface owns its blur again at once. */
+    dropShell() {
+      cancelAnimationFrame(this.shellRaf);
+      this.shellRaf = 0;
+      clearTimeout(this.shellTimer);
+      this.shellTimer = 0;
+      this.shellFade?.cancel();
+      this.shellFade = null;
+      this.shellAnim?.cancel();
+      this.shellAnim = null;
+      this.shell?.remove();
+      this.surface.style.removeProperty("backdrop-filter");
+      this.surface.style.removeProperty("-webkit-backdrop-filter");
+    }
+    /** Settled: frame 0 the surface is already static (no blur), frame 1 blur back on the surface + shell hidden, frame 2 shell gone. */
+    handoverShell() {
+      const s = this.surface, sh = this.shell, sa = this.shellAnim;
+      this.shellAnim = null;
+      if (!sh || !sh.isConnected) {
+        this.dropShell();
+        return;
+      }
+      cancelAnimationFrame(this.shellRaf);
+      this.shellRaf = requestAnimationFrame(() => {
+        this.shellRaf = 0;
+        s.style.removeProperty("backdrop-filter");
+        s.style.removeProperty("-webkit-backdrop-filter");
+        this.shellTimer = window.setTimeout(() => {
+          this.shellTimer = 0;
+          if (!sh.isConnected) return;
+          const fade = sh.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 180, easing: "linear", fill: "forwards" });
+          this.shellFade = fade;
+          fade.onfinish = () => {
+            if (this.shellFade !== fade) return;
+            this.shellFade = null;
+            sa?.cancel();
+            fade.cancel();
+            sh.remove();
+          };
+        }, 160);
+      });
+    }
     begin() {
+      this.ensureShell();
       const s = this.surface, fin = this.fin;
       s.style.visibility = "";
       s.setAttribute("data-ul-morphing", "");
@@ -4295,7 +4408,7 @@ ${r.examples.join("\n")}` : "";
       b?.cancel();
       const s = this.surface;
       s.removeAttribute("data-ul-morphing");
-      s.style.willChange = "";
+      s.style.willChange = "transform";
       if (this.prevOverflow !== null) {
         s.style.overflow = this.prevOverflow;
         this.prevOverflow = null;
@@ -4313,6 +4426,8 @@ ${r.examples.join("\n")}` : "";
       this.hideGoo();
       this.clearHole();
       if (settled) releaseGlassTier(s);
+      if (settled) this.handoverShell();
+      else this.dropShell();
     }
     /** Visual rect of the surface right now (animation applied), in the surface's local px. Read BEFORE stop(). */
     visualPose() {
@@ -4355,7 +4470,7 @@ ${r.examples.join("\n")}` : "";
       }
       this.ensureHole();
       const ha = this.holeRect();
-      const anim = s.animate(poses.map((f, i) => ({
+      const keys = poses.map((f, i) => ({
         offset: i / N,
         transform: `translate(${f.x.toFixed(2)}px, ${f.y.toFixed(2)}px)`,
         width: `${f.w.toFixed(2)}px`,
@@ -4363,12 +4478,15 @@ ${r.examples.join("\n")}` : "";
         borderRadius: `${f.r.toFixed(2)}px`,
         ...this.opts.anchorOnTop === false ? {} : { clipPath: this.clipFor(g2, f, ha) }
         // the hole is keyframed: always in sync with the pose, no per-frame style writes
-      })), { duration: dur, easing: "linear", fill: "both" });
+      }));
+      const anim = s.animate(keys, { duration: dur, easing: "linear", fill: "both" });
+      this.shellAnim?.cancel();
+      this.shellAnim = this.shell?.isConnected ? this.shell.animate(keys, { duration: dur, easing: "linear", fill: "both" }) : null;
       this.stageAnim = this.stage ? this.stage.animate(poses.map((f, i) => {
         const [dx, dy] = TRAVEL[this.side] ?? TRAVEL.bottom, d = (1 - f.c) * tok6.offset;
         return { offset: i / N, opacity: f.c.toFixed(3), transform: `translate(${(f.cx - dx * d).toFixed(2)}px, ${(f.cy - dy * d).toFixed(2)}px)` };
       }), { duration: dur, easing: "linear", fill: "both" }) : null;
-      startNow(anim, this.stageAnim);
+      startNow(anim, this.stageAnim, this.shellAnim);
       this.anim = anim;
       this.seg = { t0, t1, dur };
       const useGoo = !!this.goo && tok6.goo && !reduced();
@@ -4609,6 +4727,7 @@ ${r.examples.join("\n")}` : "";
     destroy() {
       this.stopOpenBehavior();
       this.stop();
+      this.dropShell();
       const s = this.surface;
       for (const p of ["left", "top", "visibility", "transform-origin", "opacity", "pointer-events", "translate", "clip-path", "overflow", "will-change"]) s.style.removeProperty(p);
       s.getAnimations().forEach((an) => {

@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.1 — 2026-11-22
+### Fixed
+- Menus, selects and popovers no longer flash after their open animation settles (UL-635). Cause: the surface switched its `backdrop-filter` to an SVG `url(#ul-refraction-…)` filter at settle, and Chrome paints such a filter with no backdrop at all until it has built it (about 0.5 s on the first open while the displacement map decodes, one frame afterwards). Anchored overlays (`.ul-anchored`) now always use the lite material (CSS blur + colour, built instantly), and their morph carries the blur on a separate shell element that hands over to the settled surface (the island → dialog pattern).
+- Button labels keep descenders (g, j, p, y) when a consumer clips the label for an ellipsis: `.ul-btn` has `line-height: 1`, the label now has `.2em` block padding with a matching negative margin (layout unchanged).
+- Listbox inside an anchored surface: the scroll area reaches the surface edge, so the floating selection indicator is no longer cut off above the first item.
+### Changed
+- Anchored overlays never refract (see above). Use refraction on in-flow surfaces; for a large surface that must refract regardless of the area budget, pass `quality="full"`.
+
 ## 0.1.0 — 2026-11-10
 Not tagged, not published (owner: docs/release-checklist.md). Earlier per-task records below are kept as history.
 ### Added
