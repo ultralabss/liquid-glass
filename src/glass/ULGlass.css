@@ -20,6 +20,11 @@
   inherits: false;
   initial-value: 0;
 }
+/* Pointer light written inline by the engine on every glass surface. Not inherited, so glass nested in glass (buttons in a
+   toolbar, cards in a drawer) never picks up the parent's light or pointer position; unset reads fall back via var(--mx, 50%). */
+@property --ul-light { syntax: "*"; inherits: false; }
+@property --mx { syntax: "*"; inherits: false; }
+@property --my { syntax: "*"; inherits: false; }
 [data-ul-accent="ice"] { --ul-accent: var(--ul-accent-ice); }
 [data-ul-accent="violet"] { --ul-accent: var(--ul-accent-violet); }
 [data-ul-accent="emerald"] { --ul-accent: var(--ul-accent-emerald); }

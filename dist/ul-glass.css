@@ -17,6 +17,9 @@
   --ul-accent-k: var(--ul-accent-strength-subtle);
 }
 @property --ul-lite { syntax: "<number>"; inherits: false; initial-value: 0; }
+@property --ul-light { syntax: "*"; inherits: false; }
+@property --mx { syntax: "*"; inherits: false; }
+@property --my { syntax: "*"; inherits: false; }
 [data-ul-accent=ice] {
   --ul-accent: var(--ul-accent-ice);
 }
