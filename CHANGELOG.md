@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.1.2 — 2026-11-22
+### Added
+- Glass clarity (Apple's Clear ↔ Tinted). Token `--ul-glass-clarity` (0..1, default 0.5 = the designed material), prop `clarity` on `ULGlass`, and `clarity` on `ULProvider` (context, so portaled menus and popovers get it). 1 = clear (thin tint, scrim and frost), 0 = tinted. The lens is untouched.
+- `useClarity` hook; `decideGlassTier` is now exported from the package entry.
+### Fixed
+- Cold start: a refract surface whose displacement map was ready (cache hit, or its decode listener lost the map to a size change) stayed at lens strength 0 until its first later resize. It now ramps in from any path.
+- Resize: the lens no longer drops to lite while the map for the new size decodes. The old map stays on, stretched to the live element size every frame during a CSS transition, and swaps once the new map is decoded (no regeneration per frame).
+### Docs
+- `quality="full"` is a request, not a guarantee (JSDoc, README); README notes on backdrop roots and the `padding` prop; a dev-only `console.debug` for nested glass.
+
 ## 0.1.1 — 2026-11-22
 ### Fixed
 - Menus, selects and popovers no longer flash after their open animation settles (UL-635). Cause: the surface switched its `backdrop-filter` to an SVG `url(#ul-refraction-…)` filter at settle, and Chrome paints such a filter with no backdrop at all until it has built it (about 0.5 s on the first open while the displacement map decodes, one frame afterwards). Anchored overlays (`.ul-anchored`) now always use the lite material (CSS blur + colour, built instantly), and their morph carries the blur on a separate shell element that hands over to the settled surface (the island → dialog pattern).

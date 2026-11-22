@@ -65,6 +65,7 @@
   --ul-tint-regular: 0.05;
   --ul-tint-strong: 0.07;
   --ul-tint-flat: 0.06;
+  --ul-glass-clarity: 0.5;
   --ul-glass-saturate: 140%;
   --ul-glass-brightness: 1.04;
   --ul-glass-sm-blur: var(--ul-blur-sm);

@@ -50,6 +50,19 @@ export function useMaterial(category: MaterialCategory, instance?: Material): { 
   return { material: r.material, flat: r.material === 'flat', attr: r.material === 'flat' || r.source === 'instance' || r.source === 'scope' ? r.material : undefined };
 }
 
+/**
+ * Glass clarity 0..1 (Apple's "Clear ↔ Tinted"). 0.5 = the designed material; toward 1 the body tint, backing scrim and frost
+ * thin out (clear), toward 0 they thicken (tinted). Carried by context so portaled surfaces (menus, popovers, dialogs) get it too.
+ */
+const ClarityCtx = React.createContext<number | undefined>(undefined);
+const clamp01 = (n: number) => Math.min(1, Math.max(0, n));
+/** Resolved clarity for a surface: instance prop > nearest ULProvider > undefined (inherit the CSS token / DOM ancestor). */
+export function useClarity(instance?: number): number | undefined {
+  const scope = React.useContext(ClarityCtx);
+  const v = instance ?? scope;
+  return v == null || !Number.isFinite(Number(v)) ? undefined : clamp01(Number(v));
+}
+
 export interface ULProviderProps {
   /**
    * Material for this subtree: "glass" | "flat" for every category, or per category
@@ -57,15 +70,22 @@ export interface ULProviderProps {
    * @default undefined (inherit; category defaults: inputs "flat", the rest "glass")
    */
   material?: MaterialConfig;
+  /**
+   * Glass clarity for this subtree, 0..1 (Clear ↔ Tinted). 0.5 = the designed material, 1 = clear, 0 = tinted.
+   * Reaches every ULGlass below, including portaled menus and popovers. A surface's own `clarity` prop wins.
+   * @default undefined (inherit; the token --ul-glass-clarity is 0.5)
+   */
+  clarity?: number;
   /** Subtree that resolves its material from this scope. */
   children?: React.ReactNode;
 }
-/** Scope provider (no DOM). Currently carries `material`. */
-export function ULProvider({ material, children }: ULProviderProps) {
+/** Scope provider (no DOM). Carries `material` and `clarity`. */
+export function ULProvider({ material, clarity, children }: ULProviderProps) {
   const parent = React.useContext(MaterialCtx);
+  const parentClarity = React.useContext(ClarityCtx);
   const key = typeof material === 'string' ? material : JSON.stringify(material ?? null);
   const value = React.useMemo(() => mergeMaterialScope(parent, material), [parent, key]); // eslint-disable-line react-hooks/exhaustive-deps
-  return <MaterialCtx.Provider value={value}>{children}</MaterialCtx.Provider>;
+  return <MaterialCtx.Provider value={value}><ClarityCtx.Provider value={clarity ?? parentClarity}>{children}</ClarityCtx.Provider></MaterialCtx.Provider>;
 }
 
 /** Nearest `data-ul-material` attribute (non-React path). */
