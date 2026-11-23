@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.4 — 2026-11-23
+### Added
+- `interiorWarp` prop on `ULGlass` and token `--ul-glass-interior-warp` (0..1, default 0): smooth wavy displacement across the whole surface, not only the bezel ring, so text anywhere behind a large surface (dialog, sheet) visibly bends. Amplitude up to ±warp × lens scale / 2 px; combine with `blur={0}` for pure distortion. Needs refraction (`quality="full"`).
+### Fixed
+- `--ul-rim-angle` is registered with `inherits: false` (like `--ul-light`, `--mx`, `--my` in 0.1.3), so nested glass keeps its own rim highlight.
+### Docs
+- The bezel is capped at `--ul-glass-bezel-max-ratio` (default 0.35) × the shorter side, not at half of it; set the token to 0.5 to let a large bezel reach the middle.
+
 ## 0.1.3 — 2026-11-22
 ### Fixed
 - Resize: the exact map is now regenerated while the surface is still resizing (at most every ~120 ms; the old lens stays on until each new map is decoded), so the lens converges on the true shape in small steps instead of one visible jump from a stretched map when the transition ends.
