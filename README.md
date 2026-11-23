@@ -48,7 +48,7 @@ Glass samples what is behind it, so an ancestor that creates a backdrop root (`c
 | `debug` | boolean | `false` | paints the displacement map |
 | `accent` | preset \| color | inherited | colors body, backdrop, rim, glow, pointer light |
 | `accentStrength` | `'subtle' \| 'tinted' \| 'vivid'` \| 0..1 | inherited (tinted once accented) | how strongly |
-| `backdrop` | `'dark' \| 'mid' \| 'light'` | inherited (dark) | selects the contrast scrim |
+| `backdrop` | `'dark' \| 'mid' \| 'light' \| 'auto'` | inherited (dark) | selects the contrast scrim; `auto` measures what is behind the surface (colours, gradients, same-origin images) and follows theme / scroll / resize |
 | `appearance` | `'liquid' \| 'frosted' \| 'solid'` | inherited (`liquid`) | liquid lens, ordinary frosted glass (no lens), or no transparency. Set once with `<ULProvider appearance={…}>`, also per category |
 | `preset` | `'clear' \| 'dramatic' \| 'calm' \| 'frosted'` | – | ready-made look; explicit props win |
 | `distortion` | 0..1 | – | one lever: 0 none, 0.5 designed, 1 double lens plus whole-surface warp |

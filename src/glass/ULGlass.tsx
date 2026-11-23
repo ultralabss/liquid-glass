@@ -1,7 +1,8 @@
 import * as React from 'react';
 import { attachGlass, detachGlass, materialize, type GlassTier, type LensMode, type GlassQuality, type GlassPriority } from './engine.ts';
 import { GlassGroupContext } from './ULGlassGroup.tsx';
-import { accentAttrs, type Accent, type AccentStrength, type Backdrop } from './accent.tsx';
+import { accentAttrs, type Accent, type AccentStrength, type BackdropSetting } from './accent.tsx';
+import { measureBackdrop, BACKDROP_THRESHOLDS } from './backdrop.ts';
 import { useMaterial, useClarity, useAppearance, useGlassMotion, type Material, type MaterialCategory, type Appearance } from './material.tsx';
 import { GLASS_PRESETS, type GlassPreset } from './presets.ts';
 import './ULGlass.css';
@@ -73,8 +74,11 @@ export interface ULGlassProps extends React.HTMLAttributes<HTMLElement>, ULGlass
   accent?: Accent;
   /** subtle | tinted (default once an accent is set) | vivid, or k 0..1. Omit to inherit. */
   accentStrength?: AccentStrength;
-  /** What sits behind this surface; selects the contrast scrim. Omit to inherit (default dark). */
-  backdrop?: Backdrop;
+  /**
+   * What sits behind this surface; selects the contrast scrim: dark | mid | light, or `auto` to measure it (background colours,
+   * gradients, same-origin images / video behind the surface; re-measured on resize, scroll, theme change). Omit to inherit (default dark).
+   */
+  backdrop?: BackdropSetting;
   /**
    * Liquid lens, frosted glass or solid. `liquid` = refraction + lens (default), `frosted` = ordinary frosted glass (blur +
    * saturate + tint, no lens; cheap and stable everywhere), `solid` = no transparency. Omit to inherit the nearest ULProvider
@@ -125,6 +129,43 @@ export interface ULGlassProps extends React.HTMLAttributes<HTMLElement>, ULGlass
   materialCategory?: MaterialCategory;
 }
 
+/** Measured backdrop class for `backdrop="auto"` (undefined until measured / when not auto). Re-measures on resize, scroll, theme change and shortly after mount (images). */
+function useAutoBackdrop(ref: React.RefObject<HTMLElement | null>, enabled: boolean): 'dark' | 'mid' | 'light' | undefined {
+  const [bd, setBd] = React.useState<'dark' | 'mid' | 'light' | undefined>(undefined);
+  React.useLayoutEffect(() => {
+    if (!enabled) { setBd(undefined); return; }
+    const el = ref.current;
+    if (!el) return;
+    let prev: 'dark' | 'mid' | 'light' | undefined, timer = 0, raf = 0;
+    const run = () => {
+      raf = 0;
+      if (!el.isConnected) return;
+      const m = measureBackdrop(el);
+      const T = BACKDROP_THRESHOLDS, H = 0.03; // hysteresis: stay on the previous class near a boundary (no flicker on gradients / video)
+      if (prev && m.backdrop !== prev) {
+        const edge = (m.backdrop === 'dark' && prev === 'mid') || (m.backdrop === 'mid' && prev === 'dark') ? T.dark : T.light;
+        if ((prev === 'dark' && m.backdrop === 'light') || (prev === 'light' && m.backdrop === 'dark') ? false : Math.abs(m.luminance - edge) < H) return;
+      }
+      if (m.backdrop !== prev) { prev = m.backdrop; setBd(m.backdrop); }
+    };
+    const soon = (ms = 150) => { clearTimeout(timer); timer = window.setTimeout(() => { if (!raf) raf = requestAnimationFrame(run); }, ms); };
+    run();
+    const first = window.setTimeout(() => soon(0), 700); // images / fonts / transitions that settle after mount
+    const mo = new MutationObserver(() => soon());
+    mo.observe(document.documentElement, { attributes: true, attributeFilter: ['class', 'style', 'data-theme', 'data-ul-theme'] });
+    const mq = typeof matchMedia === 'function' ? matchMedia('(prefers-color-scheme: dark)') : null;
+    const on = () => soon();
+    mq?.addEventListener?.('change', on);
+    window.addEventListener('resize', on);
+    window.addEventListener('scroll', on, { passive: true, capture: true });
+    return () => {
+      clearTimeout(timer); clearTimeout(first); if (raf) cancelAnimationFrame(raf); mo.disconnect();
+      mq?.removeEventListener?.('change', on); window.removeEventListener('resize', on); window.removeEventListener('scroll', on, true);
+    };
+  }, [enabled, ref]);
+  return bd;
+}
+
 const len = (v: number | string) => (typeof v === 'number' || /^[\d.]+$/.test(v) ? `${v}px` : v);
 
 /** Preset values under explicit props: undefined explicit props never hide a preset value. */
@@ -161,6 +202,7 @@ export const ULGlass = React.forwardRef<HTMLElement, ULGlassProps>(function ULGl
   if (mat.flat) { quality = 'flat'; light = false; }
   const node = React.useRef<HTMLElement | null>(null);
   const inGroup = React.useContext(GlassGroupContext) !== null;
+  const autoBd = useAutoBackdrop(node, backdrop === 'auto');
   const setRef = React.useCallback((el: HTMLElement | null) => {
     node.current = el;
     if (typeof ref === 'function') ref(el);
@@ -214,7 +256,8 @@ export const ULGlass = React.forwardRef<HTMLElement, ULGlassProps>(function ULGl
       data-in-group={inGroup ? '' : undefined}
       data-ul-accent={acc['data-ul-accent']}
       data-ul-accent-strength={acc['data-ul-accent-strength']}
-      data-ul-backdrop={backdrop}
+      data-ul-backdrop={backdrop === 'auto' ? autoBd : backdrop}
+      data-ul-backdrop-auto={backdrop === 'auto' ? '' : undefined}
       data-ul-material={mat.attr}
       data-ul-appearance={ap}
       data-ul-proximity={proximity != null ? String(proximity) : undefined}

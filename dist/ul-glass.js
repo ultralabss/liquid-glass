@@ -42,6 +42,7 @@ var UL = (() => {
     ACCENT_STRENGTHS: () => ACCENT_STRENGTHS,
     ACTION_CANCEL: () => ACTION_CANCEL,
     AnchoredMorph: () => AnchoredMorph,
+    BACKDROP_THRESHOLDS: () => BACKDROP_THRESHOLDS,
     ChartAxes: () => ChartAxes,
     ChartDataTable: () => ChartDataTable,
     ChartFrame: () => ChartFrame,
@@ -313,6 +314,7 @@ var UL = (() => {
     makeTimeFormat: () => makeTimeFormat,
     mapCost: () => mapCost,
     materialize: () => materialize,
+    measureBackdrop: () => measureBackdrop,
     measureGlassNow: () => measureGlassNow,
     mergeMaterialScope: () => mergeMaterialScope,
     minScrim: () => minScrim,
@@ -3329,6 +3331,242 @@ var UL = (() => {
     );
   }
 
+  // src/glass/contrast.ts
+  var lin = (c) => c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+  var gam = (c) => c <= 31308e-7 ? 12.92 * c : 1.055 * c ** (1 / 2.4) - 0.055;
+  var over = (top, a, bot) => [0, 1, 2].map((i) => a * top[i] + (1 - a) * bot[i]);
+  var lerp = (a, b, x) => a + (b - a) * x;
+  var clamp2 = (v, lo = 0, hi = 1) => Math.min(hi, Math.max(lo, v));
+  var WHITE = [1, 1, 1];
+  var BLACK = [0, 0, 0];
+  var ctx = null;
+  function toRGB(color) {
+    ctx ??= document.createElement("canvas").getContext("2d");
+    ctx.fillStyle = "#000";
+    ctx.fillStyle = color.trim();
+    const v = String(ctx.fillStyle);
+    if (v.startsWith("#")) return [1, 3, 5].map((i) => parseInt(v.slice(i, i + 2), 16) / 255);
+    const m = v.match(/[\d.]+/g) || ["0", "0", "0"];
+    return [0, 1, 2].map((i) => Number(m[i]) / 255);
+  }
+  function toLab(c) {
+    const [r, g2, b] = c.map(lin);
+    const l = Math.cbrt(0.4122214708 * r + 0.5363325363 * g2 + 0.0514459929 * b);
+    const m = Math.cbrt(0.2119034982 * r + 0.6806995451 * g2 + 0.1073969566 * b);
+    const s = Math.cbrt(0.0883024619 * r + 0.2817188376 * g2 + 0.6299787005 * b);
+    return [0.2104542553 * l + 0.793617785 * m - 0.0040720468 * s, 1.9779984951 * l - 2.428592205 * m + 0.4505937099 * s, 0.0259040371 * l + 0.7827717662 * m - 0.808675766 * s];
+  }
+  function fromLab([L, a, b]) {
+    const l = (L + 0.3963377774 * a + 0.2158037573 * b) ** 3, m = (L - 0.1055613458 * a - 0.0638541728 * b) ** 3, s = (L - 0.0894841775 * a - 1.291485548 * b) ** 3;
+    return [4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s, -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s, -0.0041960863 * l - 0.7034186147 * m + 1.707614701 * s].map((v) => clamp2(gam(v)));
+  }
+  var mixOklab = (a, p, b) => {
+    const A2 = toLab(a), B = toLab(b);
+    return fromLab(A2.map((v, i) => p * v + (1 - p) * B[i]));
+  };
+  var blendLum = (c) => 0.3 * c[0] + 0.59 * c[1] + 0.11 * c[2];
+  function blendColor(src, dst) {
+    const d = blendLum(dst) - blendLum(src);
+    let c = src.map((v) => v + d);
+    const l = blendLum(c), n = Math.min(...c), x = Math.max(...c);
+    if (n < 0) c = c.map((v) => l + (v - l) * l / (l - n));
+    if (x > 1) c = c.map((v) => l + (v - l) * (1 - l) / (x - l));
+    return c;
+  }
+  var luminance = (c) => 0.2126 * lin(c[0]) + 0.7152 * lin(c[1]) + 0.0722 * lin(c[2]);
+  function contrastRatio(a, b) {
+    const x = luminance(typeof a === "string" ? toRGB(a) : a), y = luminance(typeof b === "string" ? toRGB(b) : b);
+    return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05);
+  }
+  function readContrastTokens(el = document.documentElement) {
+    const cs = getComputedStyle(el);
+    const s = (k) => cs.getPropertyValue(k).trim();
+    const n = (k, f) => {
+      const v = parseFloat(s(k));
+      return Number.isFinite(v) ? v : f;
+    };
+    const pct = (k, f) => n(k, f * 100) / 100;
+    const r = (name, sub, viv, p = false) => p ? { subtle: pct(`--ul-accent-${name}-subtle`, sub), vivid: pct(`--ul-accent-${name}-vivid`, viv) } : { subtle: n(`--ul-accent-${name}-subtle`, sub), vivid: n(`--ul-accent-${name}-vivid`, viv) };
+    const sc = (c) => ({ subtle: n(`--ul-scrim-${c}-subtle`, 0), tinted: n(`--ul-scrim-${c}-tinted`, 0), vivid: n(`--ul-scrim-${c}-vivid`, 0) });
+    return {
+      text: toRGB(s("--ul-color-text")),
+      text2: toRGB(s("--ul-color-text-2")),
+      tint: Math.max(n("--ul-glass-sm-tint", 0), n("--ul-glass-md-tint", 0), n("--ul-glass-lg-tint", 0), n("--ul-glass-xl-tint", 0), n("--ul-tint-strong", 0.07)),
+      light: n("--ul-glass-light-intensity", 0.16),
+      brightness: n("--ul-glass-brightness", 1.04),
+      deep: pct("--ul-accent-deep", 0.28),
+      k: { subtle: n("--ul-accent-strength-subtle", 0.22), tinted: n("--ul-accent-strength-tinted", 0.64), vivid: n("--ul-accent-strength-vivid", 1) },
+      mixTint: r("tint", 0.12, 1, true),
+      shade: r("shade", 0, 0.35, true),
+      body: r("body", 0, 0.26),
+      wash: r("wash", 0.07, 0.1),
+      lightMix: r("light", 0.35, 0.8, true),
+      backdrop: r("backdrop", 0, 0.75),
+      scrim: { dark: sc("dark"), mid: sc("mid"), light: sc("light") },
+      maxLum: { dark: n("--ul-contrast-dark-max-luminance", 0.03), mid: n("--ul-contrast-mid-max-luminance", 0.2), light: 1 },
+      target: n("--ul-contrast-target", 4.5)
+    };
+  }
+  var strengthX = (t, k) => clamp2((k - t.k.subtle) / (1 - t.k.subtle));
+  function scrimAt(t, backdrop, x) {
+    const xt = strengthX(t, t.k.tinted), s = t.scrim[backdrop];
+    const p = clamp2(x / xt), q = clamp2((x - xt) / (1 - xt));
+    return s.subtle + p * (s.tinted - s.subtle) + q * (s.vivid - s.tinted);
+  }
+  function worstSurface(t, accent, backdrop, x, scrim = scrimAt(t, backdrop, x), withLight = false) {
+    const v = (r) => lerp(r.subtle, r.vivid, x);
+    const g2 = Math.min(1, gam(t.maxLum[backdrop]) * t.brightness);
+    let c = [g2, g2, g2];
+    c = over(blendColor(accent, c), v(t.backdrop), c);
+    c = over(mixOklab(mixOklab(accent, v(t.mixTint), WHITE), 1 - v(t.shade), BLACK), t.tint * 1.5 + v(t.body), c);
+    c = over(mixOklab(accent, t.deep, BLACK), scrim, c);
+    c = over(accent, v(t.wash), c);
+    if (withLight) c = over(mixOklab(accent, v(t.lightMix), WHITE), t.light, c);
+    return c;
+  }
+  function accentContrastReport(el = document.documentElement, accents) {
+    const t = readContrastTokens(el);
+    const cs = getComputedStyle(el);
+    const list = accents ?? Object.fromEntries(ACCENT_PRESETS.map((p) => [p, cs.getPropertyValue(`--ul-accent-${p}`).trim()]));
+    const rows = [];
+    for (const [name, color] of Object.entries(list)) {
+      const a = toRGB(color);
+      for (const strength of ACCENT_STRENGTHS) {
+        const x = strengthX(t, t.k[strength]);
+        for (const backdrop of ["dark", "mid", "light"]) {
+          const scrim = scrimAt(t, backdrop, x);
+          const text2 = contrastRatio(t.text2, worstSurface(t, a, backdrop, x, scrim));
+          const textLit = contrastRatio(t.text, worstSurface(t, a, backdrop, x, scrim, true));
+          rows.push({ accent: name, strength, backdrop, scrim: Math.round(scrim * 100) / 100, text2, textLit, pass: text2 >= t.target && textLit >= t.target });
+        }
+      }
+    }
+    return rows;
+  }
+  var hex = (c) => "#" + c.map((v) => Math.round(clamp2(v) * 255).toString(16).padStart(2, "0")).join("");
+  function toOklch(color) {
+    const [L, a, b] = toLab(typeof color === "string" ? toRGB(color) : color);
+    return [L, Math.hypot(a, b), (Math.atan2(b, a) * 180 / Math.PI + 360) % 360];
+  }
+  var fromOklch = (L, C, h) => {
+    const r = h * Math.PI / 180;
+    return hex(fromLab([L, C * Math.cos(r), C * Math.sin(r)]));
+  };
+  function guardAccent(color, el = document.documentElement) {
+    const worstOf = (c) => Math.min(...accentContrastReport(el, { c }).map((r) => Math.min(r.text2, r.textLit)));
+    const target = readContrastTokens(el).target;
+    const chosen = hex(toRGB(color));
+    let w = worstOf(chosen);
+    if (w >= target) return { chosen, effective: chosen, adjusted: false, worst: w };
+    const cs = getComputedStyle(el), n = (k, f) => {
+      const v = parseFloat(cs.getPropertyValue(k));
+      return Number.isFinite(v) ? v : f;
+    };
+    const lo = n("--ul-accent-custom-l-min", 0.66), hi = n("--ul-accent-custom-l-max", 0.86), cmax = n("--ul-accent-custom-c-max", 0.16), mid = (lo + hi) / 2;
+    let [L, C, h] = toOklch(chosen);
+    L = clamp2(L, lo, hi);
+    C = Math.min(C, cmax);
+    let eff = fromOklch(L, C, h);
+    for (let i = 0; i < 24 && (w = worstOf(eff)) < target; i++) {
+      C *= 0.85;
+      L += (mid - L) * 0.35;
+      eff = fromOklch(L, C, h);
+    }
+    return { chosen, effective: eff, adjusted: eff !== chosen, worst: w };
+  }
+  function minScrim(t, accents, backdrop, x) {
+    for (let s = 0; s <= 1.0001; s += 0.01) {
+      if (accents.every((a) => contrastRatio(t.text2, worstSurface(t, a, backdrop, x, s)) >= t.target && contrastRatio(t.text, worstSurface(t, a, backdrop, x, s, true)) >= t.target)) return Math.round(s * 100) / 100;
+    }
+    return 1;
+  }
+
+  // src/glass/backdrop.ts
+  function parseColor(c) {
+    const t = c.trim();
+    if (!t || t === "transparent") return null;
+    const m = t.match(/^rgba?\(([^)]+)\)$/);
+    if (m) {
+      const p = m[1].split(/[\s,/]+/).filter(Boolean).map((x) => x.endsWith("%") ? parseFloat(x) / 100 : parseFloat(x));
+      const a = p.length > 3 ? p[3] : 1;
+      return a > 0 ? [p[0] / 255, p[1] / 255, p[2] / 255, a] : null;
+    }
+    const [r, g2, b] = toRGB(t);
+    return [r, g2, b, 1];
+  }
+  function layerColor(el, bgImage) {
+    if (!bgImage || bgImage === "none") return null;
+    const cols = bgImage.match(/rgba?\([^)]*\)|color\([^)]*\)|oklch\([^)]*\)|#[0-9a-fA-F]{3,8}\b/g);
+    if (cols?.length) {
+      const rgb = cols.map(parseColor).filter((x) => !!x);
+      if (rgb.length) {
+        const n = rgb.length, a = rgb.reduce((s, c) => s + c[3], 0) / n;
+        return [rgb.reduce((s, c) => s + c[0], 0) / n, rgb.reduce((s, c) => s + c[1], 0) / n, rgb.reduce((s, c) => s + c[2], 0) / n, Math.min(1, a)];
+      }
+    }
+    return null;
+  }
+  function mediaColor(el) {
+    try {
+      const src = el;
+      if (el instanceof HTMLImageElement && !el.complete) return null;
+      if (el instanceof HTMLVideoElement && el.readyState < 2) return null;
+      const c = document.createElement("canvas");
+      c.width = c.height = 8;
+      const x = c.getContext("2d", { willReadFrequently: true });
+      if (!x) return null;
+      x.drawImage(src, 0, 0, 8, 8);
+      const d = x.getImageData(0, 0, 8, 8).data;
+      let r = 0, g2 = 0, b = 0;
+      for (let i = 0; i < d.length; i += 4) {
+        r += d[i];
+        g2 += d[i + 1];
+        b += d[i + 2];
+      }
+      const n = d.length / 4;
+      return [r / n / 255, g2 / n / 255, b / n / 255, 1];
+    } catch {
+      return null;
+    }
+  }
+  var BACKDROP_THRESHOLDS = { dark: 0.2, light: 0.5 };
+  function measureBackdrop(el) {
+    const rect = el.getBoundingClientRect();
+    const pts = rect.width && rect.height ? [[0.5, 0.5], [0.2, 0.2], [0.8, 0.2], [0.2, 0.8], [0.8, 0.8]].map(([fx, fy]) => [rect.left + rect.width * fx, rect.top + rect.height * fy]) : [];
+    let sum = 0, n = 0;
+    for (const [x, y] of pts.length ? pts : [[0, 0]]) {
+      const stack2 = typeof document.elementsFromPoint === "function" ? document.elementsFromPoint(Math.min(Math.max(x, 0), innerWidth - 1), Math.min(Math.max(y, 0), innerHeight - 1)) : [];
+      const idx = stack2.indexOf(el);
+      const under = idx >= 0 ? stack2.slice(idx + 1) : stack2.filter((e) => !el.contains(e) && e !== el);
+      let r = 0, g2 = 0, b = 0, left = 1;
+      for (const e of under) {
+        const cs = getComputedStyle(e);
+        if (cs.visibility === "hidden" || parseFloat(cs.opacity) === 0) continue;
+        const layers = [layerColor(e, cs.backgroundImage), parseColor(cs.backgroundColor)];
+        if (/^(IMG|VIDEO|CANVAS)$/.test(e.tagName)) layers.unshift(mediaColor(e));
+        for (const c of layers) {
+          if (!c || left <= 0.02) continue;
+          const a = c[3] * parseFloat(cs.opacity || "1");
+          r += c[0] * a * left;
+          g2 += c[1] * a * left;
+          b += c[2] * a * left;
+          left *= 1 - a;
+        }
+        if (left <= 0.02) break;
+      }
+      if (left > 0.02) {
+        const root2 = parseColor(getComputedStyle(document.documentElement).backgroundColor) ?? parseColor(getComputedStyle(document.body).backgroundColor) ?? [1, 1, 1, 1];
+        r += root2[0] * left;
+        g2 += root2[1] * left;
+        b += root2[2] * left;
+      }
+      sum += luminance([r, g2, b]);
+      n++;
+    }
+    const L = n ? sum / n : 0;
+    return { backdrop: L < BACKDROP_THRESHOLDS.dark ? "dark" : L < BACKDROP_THRESHOLDS.light ? "mid" : "light", luminance: L };
+  }
+
   // src/glass/material.tsx
   var React4 = __toESM(__require("react"), 1);
   var MATERIAL_CATEGORIES = ["inputs", "controls", "surfaces", "overlays", "chrome"];
@@ -3406,6 +3644,57 @@ var UL = (() => {
   };
 
   // src/glass/ULGlass.tsx
+  function useAutoBackdrop(ref, enabled) {
+    const [bd, setBd] = React5.useState(void 0);
+    React5.useLayoutEffect(() => {
+      if (!enabled) {
+        setBd(void 0);
+        return;
+      }
+      const el = ref.current;
+      if (!el) return;
+      let prev, timer = 0, raf = 0;
+      const run = () => {
+        raf = 0;
+        if (!el.isConnected) return;
+        const m = measureBackdrop(el);
+        const T7 = BACKDROP_THRESHOLDS, H = 0.03;
+        if (prev && m.backdrop !== prev) {
+          const edge2 = m.backdrop === "dark" && prev === "mid" || m.backdrop === "mid" && prev === "dark" ? T7.dark : T7.light;
+          if (prev === "dark" && m.backdrop === "light" || prev === "light" && m.backdrop === "dark" ? false : Math.abs(m.luminance - edge2) < H) return;
+        }
+        if (m.backdrop !== prev) {
+          prev = m.backdrop;
+          setBd(m.backdrop);
+        }
+      };
+      const soon = (ms4 = 150) => {
+        clearTimeout(timer);
+        timer = window.setTimeout(() => {
+          if (!raf) raf = requestAnimationFrame(run);
+        }, ms4);
+      };
+      run();
+      const first2 = window.setTimeout(() => soon(0), 700);
+      const mo = new MutationObserver(() => soon());
+      mo.observe(document.documentElement, { attributes: true, attributeFilter: ["class", "style", "data-theme", "data-ul-theme"] });
+      const mq = typeof matchMedia === "function" ? matchMedia("(prefers-color-scheme: dark)") : null;
+      const on2 = () => soon();
+      mq?.addEventListener?.("change", on2);
+      window.addEventListener("resize", on2);
+      window.addEventListener("scroll", on2, { passive: true, capture: true });
+      return () => {
+        clearTimeout(timer);
+        clearTimeout(first2);
+        if (raf) cancelAnimationFrame(raf);
+        mo.disconnect();
+        mq?.removeEventListener?.("change", on2);
+        window.removeEventListener("resize", on2);
+        window.removeEventListener("scroll", on2, true);
+      };
+    }, [enabled, ref]);
+    return bd;
+  }
   var len = (v) => typeof v === "number" || /^[\d.]+$/.test(v) ? `${v}px` : v;
   function withPreset(props) {
     const pr = props.preset ? GLASS_PRESETS[props.preset] : void 0;
@@ -3482,6 +3771,7 @@ var UL = (() => {
     }
     const node = React5.useRef(null);
     const inGroup = React5.useContext(GlassGroupContext) !== null;
+    const autoBd = useAutoBackdrop(node, backdrop === "auto");
     const setRef = React5.useCallback((el) => {
       node.current = el;
       if (typeof ref === "function") ref(el);
@@ -3533,7 +3823,8 @@ var UL = (() => {
         "data-in-group": inGroup ? "" : void 0,
         "data-ul-accent": acc["data-ul-accent"],
         "data-ul-accent-strength": acc["data-ul-accent-strength"],
-        "data-ul-backdrop": backdrop,
+        "data-ul-backdrop": backdrop === "auto" ? autoBd : backdrop,
+        "data-ul-backdrop-auto": backdrop === "auto" ? "" : void 0,
         "data-ul-material": mat.attr,
         "data-ul-appearance": ap,
         "data-ul-proximity": proximity2 != null ? String(proximity2) : void 0,
@@ -3600,12 +3891,12 @@ var UL = (() => {
       if (!raf) raf = requestAnimationFrame(tick2);
     }, { passive: true, capture: true });
   }
-  var lin = (c) => {
+  var lin2 = (c) => {
     c /= 255;
     return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
   };
   function oklch(r, gg, b) {
-    const R = lin(r), G = lin(gg), B = lin(b);
+    const R = lin2(r), G = lin2(gg), B = lin2(b);
     const l = Math.cbrt(0.4122214708 * R + 0.5363325363 * G + 0.0514459929 * B), m = Math.cbrt(0.2119034982 * R + 0.6806995451 * G + 0.1073969566 * B), s = Math.cbrt(0.0883024619 * R + 0.2817188376 * G + 0.6299787005 * B);
     const A2 = 1.9779984951 * l - 2.428592205 * m + 0.4505937099 * s, Bb = 0.0259040371 * l + 0.7827717662 * m - 0.808675766 * s;
     return { C: Math.hypot(A2, Bb), h: (Math.atan2(Bb, A2) * 180 / Math.PI + 360) % 360, gx: gg - Math.max(r, b) };
@@ -3881,7 +4172,7 @@ ${r.examples.join("\n")}` : "";
 
   // src/motion/placement.ts
   var OPPOSITE = { top: "bottom", bottom: "top", left: "right", right: "left" };
-  var clamp2 = (v, lo, hi) => Math.min(Math.max(v, lo), Math.max(lo, hi));
+  var clamp3 = (v, lo, hi) => Math.min(Math.max(v, lo), Math.max(lo, hi));
   function computePlacement(a, w, h, { side = "bottom", align = "center", offset = 8, padding = 8, cover } = {}) {
     const vw2 = window.innerWidth, vh = window.innerHeight;
     if (cover != null) {
@@ -3902,7 +4193,7 @@ ${r.examples.join("\n")}` : "";
         x2 = s2 === "right" ? a.left - cover : a.right + cover - w;
         y2 = align === "start" ? a.top - cover : align === "end" ? a.bottom + cover - h : a.top + a.height / 2 - h / 2;
       }
-      return { x: clamp2(x2, padding, vw2 - padding - w), y: clamp2(y2, padding, vh - padding - h), side: s2, align };
+      return { x: clamp3(x2, padding, vw2 - padding - w), y: clamp3(y2, padding, vh - padding - h), side: s2, align };
     }
     const space = { top: a.top, bottom: vh - a.bottom, left: a.left, right: vw2 - a.right };
     const vertical = (s2) => s2 === "top" || s2 === "bottom";
@@ -3917,7 +4208,7 @@ ${r.examples.join("\n")}` : "";
       x = s === "right" ? a.right + offset : a.left - offset - w;
       y = align === "start" ? a.top : align === "end" ? a.bottom - h : a.top + a.height / 2 - h / 2;
     }
-    return { x: clamp2(x, padding, vw2 - padding - w), y: clamp2(y, padding, vh - padding - h), side: s, align };
+    return { x: clamp3(x, padding, vw2 - padding - w), y: clamp3(y, padding, vh - padding - h), side: s, align };
   }
 
   // src/motion/goo.ts
@@ -4041,8 +4332,8 @@ ${r.examples.join("\n")}` : "";
   var reduced = () => morphConfig.reducedMotion === "auto" ? media2("(prefers-reduced-motion: reduce)") : morphConfig.reducedMotion === "reduce";
   var isMorphReduced = reduced;
   var overshootEase = (os) => overshootSpring(os ?? readMorphTokens().overshoot).toCSS(48);
-  var clamp3 = (v, lo = 0, hi = 1) => Math.min(hi, Math.max(lo, v));
-  var lerp = (a, b, t) => a + (b - a) * t;
+  var clamp4 = (v, lo = 0, hi = 1) => Math.min(hi, Math.max(lo, v));
+  var lerp2 = (a, b, t) => a + (b - a) * t;
   var smooth = (t) => t * t * (3 - 2 * t);
   function readMorphTokens() {
     const cs = getComputedStyle(document.documentElement);
@@ -4064,7 +4355,7 @@ ${r.examples.join("\n")}` : "";
   }
   var springCache = /* @__PURE__ */ new Map();
   function overshootSpring(os) {
-    const key = Math.round(clamp3(os, 0, 0.5) * 1e3) / 1e3;
+    const key = Math.round(clamp4(os, 0, 0.5) * 1e3) / 1e3;
     let s = springCache.get(key);
     if (s) return s;
     const zeta = key <= 0 ? 1 : -Math.log(key) / Math.sqrt(Math.PI ** 2 + Math.log(key) ** 2);
@@ -4076,11 +4367,11 @@ ${r.examples.join("\n")}` : "";
   var stageW = (el) => el ? parseFloat(getComputedStyle(el).width) || el.offsetWidth : 0;
   var stageH = (el) => el ? parseFloat(getComputedStyle(el).height) || el.offsetHeight : 0;
   function poseAt(g2, tl, tok6, sp, tau) {
-    const p = clamp3(tau / tl.Tm);
-    const pS = clamp3((tau - tl.lag) / Math.max(1, tl.Tm - tl.lag));
+    const p = clamp4(tau / tl.Tm);
+    const pS = clamp4((tau - tl.lag) / Math.max(1, tl.Tm - tl.lag));
     const eP = sp(p), eS = sp(pS);
-    const bell = Math.sin(Math.PI * clamp3(p / 0.7)) * tok6.stretch;
-    let w = lerp(g2.aw, g2.fw, eS), h = lerp(g2.ah, g2.fh, eS);
+    const bell = Math.sin(Math.PI * clamp4(p / 0.7)) * tok6.stretch;
+    let w = lerp2(g2.aw, g2.fw, eS), h = lerp2(g2.ah, g2.fh, eS);
     if (g2.axis === "y") {
       h *= 1 + bell;
       w *= 1 - bell * 0.5;
@@ -4090,23 +4381,23 @@ ${r.examples.join("\n")}` : "";
     }
     w = Math.max(1, w);
     h = Math.max(1, h);
-    const Ox = lerp(g2.ax + g2.fx * g2.aw, g2.fx * g2.fw, eP);
-    const Oy = lerp(g2.ay + g2.fy * g2.ah, g2.fy * g2.fh, eP);
-    const k = smooth(clamp3((p - 0.08) / 0.47));
+    const Ox = lerp2(g2.ax + g2.fx * g2.aw, g2.fx * g2.fw, eP);
+    const Oy = lerp2(g2.ay + g2.fy * g2.ah, g2.fy * g2.fh, eP);
+    const k = smooth(clamp4((p - 0.08) / 0.47));
     return {
       x: Ox - g2.fx * w,
       y: Oy - g2.fy * h,
       w,
       h,
-      r: Math.max(0, Math.min(lerp(g2.aR, g2.fR, clamp3(eS)), w / 2, h / 2)),
+      r: Math.max(0, Math.min(lerp2(g2.aR, g2.fR, clamp4(eS)), w / 2, h / 2)),
       cx: -g2.fx * (g2.fw - w),
       cy: -g2.fy * (g2.fh - h),
       k,
-      goo: 1 - clamp3((p - 0.4) / 0.2),
-      bridge: 1 - clamp3(p / 0.5),
+      goo: 1 - clamp4((p - 0.4) / 0.2),
+      bridge: 1 - clamp4(p / 0.5),
       Ox,
       Oy,
-      c: smooth(clamp3((p - 0.3) / 0.3))
+      c: smooth(clamp4((p - 0.3) / 0.3))
       // content: only once the surface has cleared the anchor
     };
   }
@@ -4406,7 +4697,7 @@ ${r.examples.join("\n")}` : "";
     buildGeo(a) {
       const f = this.fin;
       const acx = a.left + a.width / 2 - f.L, acy = a.top + a.height / 2 - f.T;
-      const along = (v, size) => clamp3(v, Math.min(f.fR, size / 2), Math.max(size - f.fR, size / 2)) / size;
+      const along = (v, size) => clamp4(v, Math.min(f.fR, size / 2), Math.max(size - f.fR, size / 2)) / size;
       let fx = 0.5, fy = 0;
       switch (this.side) {
         case "top":
@@ -4444,7 +4735,7 @@ ${r.examples.join("\n")}` : "";
     currentTau() {
       if (this.anim && this.seg) {
         const ct = Number(this.anim.currentTime) || 0;
-        return lerp(this.seg.t0, this.seg.t1, this.seg.dur ? clamp3(ct / this.seg.dur) : 1);
+        return lerp2(this.seg.t0, this.seg.t1, this.seg.dur ? clamp4(ct / this.seg.dur) : 1);
       }
       return this.tau;
     }
@@ -4650,13 +4941,13 @@ ${r.examples.join("\n")}` : "";
         this.tau = t1;
         return Promise.resolve(true);
       }
-      const N = Math.round(clamp3(Math.ceil(Math.abs(t1 - t0) / 8), 2, 90));
-      const poses = Array.from({ length: N + 1 }, (_, i) => poseAt(g2, tl, tok6, sp, lerp(t0, t1, i / N)));
+      const N = Math.round(clamp4(Math.ceil(Math.abs(t1 - t0) / 8), 2, 90));
+      const poses = Array.from({ length: N + 1 }, (_, i) => poseAt(g2, tl, tok6, sp, lerp2(t0, t1, i / N)));
       if (from) {
         const d = { x: from.x - g2.L - poses[0].x, y: from.y - g2.T - poses[0].y, w: from.w - poses[0].w, h: from.h - poses[0].h, r: from.r - poses[0].r };
         const blend = Math.max(1, Math.min(dur, tok6.lag * 1.6 * morphConfig.timeScale));
         poses.forEach((f, i) => {
-          const wgt = 1 - smooth(clamp3(i / N * dur / blend));
+          const wgt = 1 - smooth(clamp4(i / N * dur / blend));
           if (wgt <= 0) return;
           f.x += d.x * wgt;
           f.y += d.y * wgt;
@@ -4698,14 +4989,14 @@ ${r.examples.join("\n")}` : "";
       const useGoo = !!this.goo && tok6.goo && !reduced();
       const tick2 = () => {
         if (this.anim !== anim) return;
-        const tau = lerp(t0, t1, clamp3((Number(anim.currentTime) || 0) / dur));
+        const tau = lerp2(t0, t1, clamp4((Number(anim.currentTime) || 0) / dur));
         this.tau = tau;
         const f = poseAt(g2, tl, tok6, sp, tau);
         setGlassMaterialize(s, f.k);
         s.style.setProperty("--ul-rim", f.k.toFixed(3));
         setGlassGeometry(s, f.w, f.h);
         this.applyHole();
-        if (this.scrim) this.scrimTo(smooth(clamp3(tau / (tl.Tm * 0.6))));
+        if (this.scrim) this.scrimTo(smooth(clamp4(tau / (tl.Tm * 0.6))));
         if (useGoo) this.drawGoo(g2, f, tok6);
         this.loop = requestAnimationFrame(tick2);
       };
@@ -4773,7 +5064,7 @@ ${r.examples.join("\n")}` : "";
       else measureGlassNow(s);
       const tl = this.tl = this.timeline(tok6);
       if (reduced()) return this.simple(true, o0);
-      const t0 = clamp3(tauC, 0, tl.Tt);
+      const t0 = clamp4(tauC, 0, tl.Tt);
       if (t0 <= 0) bump(this.anchor);
       if (!wasAnimating) decideGlassTier(s);
       this.begin();
@@ -4846,7 +5137,7 @@ ${r.examples.join("\n")}` : "";
         s.style.visibility = "hidden";
         return Promise.resolve(true);
       }
-      const f = poseAt(g2, tl, tok6, overshootSpring(tok6.overshoot), clamp3(tauC, 0, tl.Tm));
+      const f = poseAt(g2, tl, tok6, overshootSpring(tok6.overshoot), clamp4(tauC, 0, tl.Tm));
       const base = { width: `${f.w}px`, height: `${f.h}px`, borderRadius: `${f.r}px` };
       const tr = `translate(${f.x}px, ${f.y}px)`;
       s.style.transformOrigin = "center";
@@ -4953,9 +5244,9 @@ ${r.examples.join("\n")}` : "";
   };
 
   // src/motion/lensBubble.ts
-  var clamp4 = (v, lo = 0, hi = 1) => Math.min(hi, Math.max(lo, v));
+  var clamp5 = (v, lo = 0, hi = 1) => Math.min(hi, Math.max(lo, v));
   var smooth2 = (t) => t * t * (3 - 2 * t);
-  var lerp2 = (a, b, t) => a + (b - a) * t;
+  var lerp3 = (a, b, t) => a + (b - a) * t;
   var zetaFor = (r) => r <= 5e-4 ? 1 : -Math.log(r) / Math.sqrt(Math.PI ** 2 + Math.log(r) ** 2);
   function readLensTokens(el, kind) {
     const cs = getComputedStyle(el);
@@ -5379,7 +5670,7 @@ ${r.examples.join("\n")}` : "";
       this.stillMs = moving ? 0 : this.stillMs + dt * 1e3;
       const act = this.activeSize(G);
       const reduced3 = isMorphReduced();
-      const z = Math.max(t.zetaMin, zetaFor(clamp4(t.overshoot / (t.scale - 1), 0, 0.6)));
+      const z = Math.max(t.zetaMin, zetaFor(clamp5(t.overshoot / (t.scale - 1), 0, 0.6)));
       let settled = true;
       if (reduced3) {
         this.g = { x: 1, v: 0 };
@@ -5408,7 +5699,7 @@ ${r.examples.join("\n")}` : "";
       const sinceRel = this.releaseAt ? now2 - this.releaseAt : -1;
       const early = !!this.o.earlyShrink && this.releaseAt > 0 && !this.pressed;
       const held = early ? sinceRel < t.shrinkStart * t.settle * this.relK * getMorphTimeScale() : this.pressed || now2 < this.holdUntil || this.stillMs < hold || !settled;
-      if (reduced3) this.fade = clamp4(this.fade + (held ? 1 : -1) * (dtw / (150 * getMorphTimeScale())));
+      if (reduced3) this.fade = clamp5(this.fade + (held ? 1 : -1) * (dtw / (150 * getMorphTimeScale())));
       else {
         const Tg = early && !held ? Math.max(0.06, (t.linger * this.relK - t.shrinkStart * t.settle * this.relK) * 0.8) / 1e3 : (held ? t.grow : t.shrink * 0.9) * this.pace / 1e3;
         stepSpring(this.g, held ? 1 : 0, 4 / (z * Math.max(0.05, Tg)), z, dt);
@@ -5442,13 +5733,13 @@ ${r.examples.join("\n")}` : "";
       if (!p) return;
       const reduced3 = isMorphReduced();
       const g2 = reduced3 ? 0 : this.g.x;
-      const gk = clamp4(g2);
-      const W = lerp2(G.w, act.along, g2), H = lerp2(G.h, act.cross, g2);
+      const gk = clamp5(g2);
+      const W = lerp3(G.w, act.along, g2), H = lerp3(G.h, act.cross, g2);
       const grow = (W - G.w) / 2;
       const a = this.a.x - grow, b = this.b.x + grow;
       const len2 = Math.max(1, b - a);
       const cross = Math.max(1, H * (1 - 0.5 * (len2 / Math.max(1, W) - 1)));
-      const r = Math.max(0, Math.min(lerp2(G.r, act.r, gk), cross / 2, len2 / 2));
+      const r = Math.max(0, Math.min(lerp3(G.r, act.r, gk), cross / 2, len2 / 2));
       const y = this.o.axis === "y";
       const x0 = y ? G.cc - cross / 2 : a, y0 = y ? a : G.cc - cross / 2;
       const w = y ? cross : len2, h = y ? len2 : cross;
@@ -5460,7 +5751,7 @@ ${r.examples.join("\n")}` : "";
       p.glass.style.borderRadius = `${r.toFixed(2)}px`;
       p.glass.style.setProperty("--ul-glass-radius", `${r.toFixed(2)}px`);
       const k = reduced3 ? this.fade : gk;
-      const alpha = this.persistent ? 1 : reduced3 ? this.fade : smooth2(clamp4(g2 * 3));
+      const alpha = this.persistent ? 1 : reduced3 ? this.fade : smooth2(clamp5(g2 * 3));
       p.wrap.style.opacity = alpha.toFixed(3);
       p.wrap.style.setProperty("--ul-lens-k", k.toFixed(3));
       p.wrap.toggleAttribute("data-fallback", p.glass.dataset.ulMode !== "refract");
@@ -6136,7 +6427,7 @@ ${r.examples.join("\n")}` : "";
 
   // src/components/ULIsland/navIndicator.ts
   var reduced2 = () => typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
-  var clamp5 = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+  var clamp6 = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
   function createNavIndicator(o) {
     const { container, lens } = o;
     const sel = o.items ?? "a, button";
@@ -6198,7 +6489,7 @@ ${r.examples.join("\n")}` : "";
         W.t = m.w;
         H.t = m.h;
       }
-      const z = zetaFor(clamp5(num6("--ul-lens-overshoot", 0.04) / Math.max(0.01, num6("--ul-lens-scale", 1.3) - 1), 0, 0.6));
+      const z = zetaFor(clamp6(num6("--ul-lens-overshoot", 0.04) / Math.max(0.01, num6("--ul-lens-scale", 1.3) - 1), 0, 0.6));
       const k = 380, c = 2 * z * Math.sqrt(k);
       for (const a of [X, Y, W, H]) {
         if (rm) {
@@ -6211,10 +6502,10 @@ ${r.examples.join("\n")}` : "";
       }
       const ka = 260, ca = 2 * Math.sqrt(ka);
       A2.v += (-ka * (A2.x - A2.t) - ca * A2.v) * dt;
-      A2.x = clamp5(A2.x + A2.v * dt, 0, 1);
-      const maxS = num6("--ul-pop-stretch", 0.06) * clamp5(num6("--ul-elasticity", 0.6) / 0.6, 0, 1.5);
-      const sx = rm ? 0 : clamp5(Math.abs(X.v) / 2400, 0, maxS);
-      const sy = rm ? 0 : clamp5(Math.abs(Y.v) / 2400, 0, maxS);
+      A2.x = clamp6(A2.x + A2.v * dt, 0, 1);
+      const maxS = num6("--ul-pop-stretch", 0.06) * clamp6(num6("--ul-elasticity", 0.6) / 0.6, 0, 1.5);
+      const sx = rm ? 0 : clamp6(Math.abs(X.v) / 2400, 0, maxS);
+      const sy = rm ? 0 : clamp6(Math.abs(Y.v) / 2400, 0, maxS);
       const w = W.x * (1 + sx - sy * 0.5), h = H.x * (1 + sy - sx * 0.5);
       lens.style.width = `${w.toFixed(2)}px`;
       lens.style.height = `${h.toFixed(2)}px`;
@@ -7484,156 +7775,6 @@ ${r.examples.join("\n")}` : "";
         /* @__PURE__ */ React15.createElement("span", { className: "ul-tab-label" }, it.label)
       );
     })), keepMounted ? items.filter((it) => it.content !== void 0 && visited.current.has(it.value)).map((it) => panel2(it, it.value === v)) : current && current.content !== void 0 ? panel2(current, true) : null);
-  }
-
-  // src/glass/contrast.ts
-  var lin2 = (c) => c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
-  var gam = (c) => c <= 31308e-7 ? 12.92 * c : 1.055 * c ** (1 / 2.4) - 0.055;
-  var over = (top, a, bot) => [0, 1, 2].map((i) => a * top[i] + (1 - a) * bot[i]);
-  var lerp3 = (a, b, x) => a + (b - a) * x;
-  var clamp6 = (v, lo = 0, hi = 1) => Math.min(hi, Math.max(lo, v));
-  var WHITE = [1, 1, 1];
-  var BLACK = [0, 0, 0];
-  var ctx = null;
-  function toRGB(color) {
-    ctx ??= document.createElement("canvas").getContext("2d");
-    ctx.fillStyle = "#000";
-    ctx.fillStyle = color.trim();
-    const v = String(ctx.fillStyle);
-    if (v.startsWith("#")) return [1, 3, 5].map((i) => parseInt(v.slice(i, i + 2), 16) / 255);
-    const m = v.match(/[\d.]+/g) || ["0", "0", "0"];
-    return [0, 1, 2].map((i) => Number(m[i]) / 255);
-  }
-  function toLab(c) {
-    const [r, g2, b] = c.map(lin2);
-    const l = Math.cbrt(0.4122214708 * r + 0.5363325363 * g2 + 0.0514459929 * b);
-    const m = Math.cbrt(0.2119034982 * r + 0.6806995451 * g2 + 0.1073969566 * b);
-    const s = Math.cbrt(0.0883024619 * r + 0.2817188376 * g2 + 0.6299787005 * b);
-    return [0.2104542553 * l + 0.793617785 * m - 0.0040720468 * s, 1.9779984951 * l - 2.428592205 * m + 0.4505937099 * s, 0.0259040371 * l + 0.7827717662 * m - 0.808675766 * s];
-  }
-  function fromLab([L, a, b]) {
-    const l = (L + 0.3963377774 * a + 0.2158037573 * b) ** 3, m = (L - 0.1055613458 * a - 0.0638541728 * b) ** 3, s = (L - 0.0894841775 * a - 1.291485548 * b) ** 3;
-    return [4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s, -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s, -0.0041960863 * l - 0.7034186147 * m + 1.707614701 * s].map((v) => clamp6(gam(v)));
-  }
-  var mixOklab = (a, p, b) => {
-    const A2 = toLab(a), B = toLab(b);
-    return fromLab(A2.map((v, i) => p * v + (1 - p) * B[i]));
-  };
-  var blendLum = (c) => 0.3 * c[0] + 0.59 * c[1] + 0.11 * c[2];
-  function blendColor(src, dst) {
-    const d = blendLum(dst) - blendLum(src);
-    let c = src.map((v) => v + d);
-    const l = blendLum(c), n = Math.min(...c), x = Math.max(...c);
-    if (n < 0) c = c.map((v) => l + (v - l) * l / (l - n));
-    if (x > 1) c = c.map((v) => l + (v - l) * (1 - l) / (x - l));
-    return c;
-  }
-  var luminance = (c) => 0.2126 * lin2(c[0]) + 0.7152 * lin2(c[1]) + 0.0722 * lin2(c[2]);
-  function contrastRatio(a, b) {
-    const x = luminance(typeof a === "string" ? toRGB(a) : a), y = luminance(typeof b === "string" ? toRGB(b) : b);
-    return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05);
-  }
-  function readContrastTokens(el = document.documentElement) {
-    const cs = getComputedStyle(el);
-    const s = (k) => cs.getPropertyValue(k).trim();
-    const n = (k, f) => {
-      const v = parseFloat(s(k));
-      return Number.isFinite(v) ? v : f;
-    };
-    const pct = (k, f) => n(k, f * 100) / 100;
-    const r = (name, sub, viv, p = false) => p ? { subtle: pct(`--ul-accent-${name}-subtle`, sub), vivid: pct(`--ul-accent-${name}-vivid`, viv) } : { subtle: n(`--ul-accent-${name}-subtle`, sub), vivid: n(`--ul-accent-${name}-vivid`, viv) };
-    const sc = (c) => ({ subtle: n(`--ul-scrim-${c}-subtle`, 0), tinted: n(`--ul-scrim-${c}-tinted`, 0), vivid: n(`--ul-scrim-${c}-vivid`, 0) });
-    return {
-      text: toRGB(s("--ul-color-text")),
-      text2: toRGB(s("--ul-color-text-2")),
-      tint: Math.max(n("--ul-glass-sm-tint", 0), n("--ul-glass-md-tint", 0), n("--ul-glass-lg-tint", 0), n("--ul-glass-xl-tint", 0), n("--ul-tint-strong", 0.07)),
-      light: n("--ul-glass-light-intensity", 0.16),
-      brightness: n("--ul-glass-brightness", 1.04),
-      deep: pct("--ul-accent-deep", 0.28),
-      k: { subtle: n("--ul-accent-strength-subtle", 0.22), tinted: n("--ul-accent-strength-tinted", 0.64), vivid: n("--ul-accent-strength-vivid", 1) },
-      mixTint: r("tint", 0.12, 1, true),
-      shade: r("shade", 0, 0.35, true),
-      body: r("body", 0, 0.26),
-      wash: r("wash", 0.07, 0.1),
-      lightMix: r("light", 0.35, 0.8, true),
-      backdrop: r("backdrop", 0, 0.75),
-      scrim: { dark: sc("dark"), mid: sc("mid"), light: sc("light") },
-      maxLum: { dark: n("--ul-contrast-dark-max-luminance", 0.03), mid: n("--ul-contrast-mid-max-luminance", 0.2), light: 1 },
-      target: n("--ul-contrast-target", 4.5)
-    };
-  }
-  var strengthX = (t, k) => clamp6((k - t.k.subtle) / (1 - t.k.subtle));
-  function scrimAt(t, backdrop, x) {
-    const xt = strengthX(t, t.k.tinted), s = t.scrim[backdrop];
-    const p = clamp6(x / xt), q = clamp6((x - xt) / (1 - xt));
-    return s.subtle + p * (s.tinted - s.subtle) + q * (s.vivid - s.tinted);
-  }
-  function worstSurface(t, accent, backdrop, x, scrim = scrimAt(t, backdrop, x), withLight = false) {
-    const v = (r) => lerp3(r.subtle, r.vivid, x);
-    const g2 = Math.min(1, gam(t.maxLum[backdrop]) * t.brightness);
-    let c = [g2, g2, g2];
-    c = over(blendColor(accent, c), v(t.backdrop), c);
-    c = over(mixOklab(mixOklab(accent, v(t.mixTint), WHITE), 1 - v(t.shade), BLACK), t.tint * 1.5 + v(t.body), c);
-    c = over(mixOklab(accent, t.deep, BLACK), scrim, c);
-    c = over(accent, v(t.wash), c);
-    if (withLight) c = over(mixOklab(accent, v(t.lightMix), WHITE), t.light, c);
-    return c;
-  }
-  function accentContrastReport(el = document.documentElement, accents) {
-    const t = readContrastTokens(el);
-    const cs = getComputedStyle(el);
-    const list = accents ?? Object.fromEntries(ACCENT_PRESETS.map((p) => [p, cs.getPropertyValue(`--ul-accent-${p}`).trim()]));
-    const rows = [];
-    for (const [name, color] of Object.entries(list)) {
-      const a = toRGB(color);
-      for (const strength of ACCENT_STRENGTHS) {
-        const x = strengthX(t, t.k[strength]);
-        for (const backdrop of ["dark", "mid", "light"]) {
-          const scrim = scrimAt(t, backdrop, x);
-          const text2 = contrastRatio(t.text2, worstSurface(t, a, backdrop, x, scrim));
-          const textLit = contrastRatio(t.text, worstSurface(t, a, backdrop, x, scrim, true));
-          rows.push({ accent: name, strength, backdrop, scrim: Math.round(scrim * 100) / 100, text2, textLit, pass: text2 >= t.target && textLit >= t.target });
-        }
-      }
-    }
-    return rows;
-  }
-  var hex = (c) => "#" + c.map((v) => Math.round(clamp6(v) * 255).toString(16).padStart(2, "0")).join("");
-  function toOklch(color) {
-    const [L, a, b] = toLab(typeof color === "string" ? toRGB(color) : color);
-    return [L, Math.hypot(a, b), (Math.atan2(b, a) * 180 / Math.PI + 360) % 360];
-  }
-  var fromOklch = (L, C, h) => {
-    const r = h * Math.PI / 180;
-    return hex(fromLab([L, C * Math.cos(r), C * Math.sin(r)]));
-  };
-  function guardAccent(color, el = document.documentElement) {
-    const worstOf = (c) => Math.min(...accentContrastReport(el, { c }).map((r) => Math.min(r.text2, r.textLit)));
-    const target = readContrastTokens(el).target;
-    const chosen = hex(toRGB(color));
-    let w = worstOf(chosen);
-    if (w >= target) return { chosen, effective: chosen, adjusted: false, worst: w };
-    const cs = getComputedStyle(el), n = (k, f) => {
-      const v = parseFloat(cs.getPropertyValue(k));
-      return Number.isFinite(v) ? v : f;
-    };
-    const lo = n("--ul-accent-custom-l-min", 0.66), hi = n("--ul-accent-custom-l-max", 0.86), cmax = n("--ul-accent-custom-c-max", 0.16), mid = (lo + hi) / 2;
-    let [L, C, h] = toOklch(chosen);
-    L = clamp6(L, lo, hi);
-    C = Math.min(C, cmax);
-    let eff = fromOklch(L, C, h);
-    for (let i = 0; i < 24 && (w = worstOf(eff)) < target; i++) {
-      C *= 0.85;
-      L += (mid - L) * 0.35;
-      eff = fromOklch(L, C, h);
-    }
-    return { chosen, effective: eff, adjusted: eff !== chosen, worst: w };
-  }
-  function minScrim(t, accents, backdrop, x) {
-    for (let s = 0; s <= 1.0001; s += 0.01) {
-      if (accents.every((a) => contrastRatio(t.text2, worstSurface(t, a, backdrop, x, s)) >= t.target && contrastRatio(t.text, worstSurface(t, a, backdrop, x, s, true)) >= t.target)) return Math.round(s * 100) / 100;
-    }
-    return 1;
   }
 
   // src/components/ULIsland/ULIsland.tsx
