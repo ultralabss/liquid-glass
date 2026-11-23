@@ -76,7 +76,9 @@ Hooks: `usePointerLight`, `useReducedMotion`, `useReducedTransparency`, `useMedi
 <ULGlass priority="overlay" />             // ranked first (anchored surfaces / role=dialog get this automatically)
 configureGlass({ budget: 'auto' })         // or an area in px² (e.g. 150000), or Infinity
 getGlassStats()                            // { visible, refract, lite, flat, budget, areaUsed, refractCount, degraded, … }
+prewarmGlassMap({ width: 576, height: 520, radius: 22, from: scopeEl })  // before a big dialog / drawer first opens
 ```
+The lens map of a large surface is generated and decoded the first time that size is needed (the second open is a cache hit). For a dialog that is not mounted until it opens, call `prewarmGlassMap` once at app start (it runs when the browser is idle and returns a promise): pass the size the surface will have, its exact corner `radius` in px (part of the cache key) and `from`, the element whose `--ul-glass-*` tokens it will inherit (default `<html>`; pass your scope element if the scope overrides bezel, refraction, magnify or interior-warp). Same size, radius, lens tokens and `mode` / `refraction` → same map, so the first open already has the lens.
 Budget and thresholds are tokens (`perf.*`, see DESIGN.md "Performance rules"). Dev HUD: load `showcase/perf-hud.js` before the bundle and press Shift+P (fps, p95 frame time, JS per frame, glass / backdrop-filter / refracted counts, light writes per second, budget; "Run bench" stores idle / scroll / pointer results in localStorage `ul-perf-results`).
 
 ## Build

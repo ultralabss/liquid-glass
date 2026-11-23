@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.2 — 2026-11-24
+### Added
+- `prewarmGlassMap({ width, height, radius, from?, mode?, refraction? })`: generates and decodes the lens map of a surface that is not on screen yet, when the browser is idle. A big dialog, drawer or sheet then opens with the lens (and `interiorWarp`) already there; before, the first open built the map (a synchronous per-pixel loop plus PNG encode) and decoded it before the lens appeared, and only the second open was instant. Uses the same cache key as a real surface (shared `mapSpec`), so call it with the surface's real size, exact radius and token scope. Type `PrewarmOptions`.
+### Changed
+- Internal: map key computation moved into one helper used by both measuring and prewarming (no behaviour change for mounted surfaces).
+
 ## 0.2.1 — 2026-11-23
 ### Added
 - `backdrop="auto"` on `ULGlass`: the surface measures what sits behind it and picks the contrast scrim (`dark` | `mid` | `light`). It composites the elements under the surface (background colours, gradient stop averages, same-origin images / video / canvas via an 8×8 downscale) down to the page colour, with a small hysteresis so gradients and video do not flicker. Re-measured on resize, scroll, theme change (`class`, `style`, `data-theme` on `<html>`, `prefers-color-scheme`) and shortly after mount. Cross-origin images cannot be read and count as unknown.

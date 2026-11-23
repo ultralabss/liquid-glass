@@ -559,6 +559,68 @@ function applyDebug(s: GlassState) {
   }
 }
 
+/**
+ * Everything that decides which displacement map a surface needs: lens tokens (read through `num`), size bucket, radius, arrow.
+ * Shared by measure() and prewarmGlassMap() so a prewarmed map has exactly the key the real surface will ask for.
+ */
+function mapSpec(num: (name: string, fallback: number) => number, w: number, h: number, r: number | [number, number, number, number], lens: LensMode, refraction: number, arrow: MapArrow | null) {
+  // Bezel ≤ --ul-glass-bezel-max-ratio × shorter side, so the lens reaches into small controls instead of washing over them.
+  const bezel = Math.round(Math.min(num('--ul-glass-bezel', 32), perf.bezelMax * Math.min(w, h)) * 2) / 2;
+  const magnify = num('--ul-glass-magnify', 1);
+  const warp = Math.max(0, Math.min(1, num('--ul-glass-interior-warp', 0)));
+  const aberration = num('--ul-glass-aberration', 2);
+  let base = num('--ul-glass-refraction', 70) * refraction * PROFILE[lens].gain;
+  const small = w * h < perf.smallArea;
+  // Small controls: guarantee a visible edge shift (offset at the rim ≈ scale / 2 px).
+  if (small && base > 0) base = Math.max(base, perf.smallShift * 2);
+  // Quantize to size buckets (rounded UP so the map always covers the element) so similar surfaces share maps and filters. Small surfaces use exact sizes.
+  const B = small ? perf.bucketSmall : perf.bucket, W = Math.ceil(w / B) * B, H = Math.ceil(h / B) * B;
+  const rk = Array.isArray(r) ? r.map((x) => x.toFixed(1)).join('/') : r.toFixed(1);
+  const ak = arrow ? `a${arrow.edge}${arrow.pos}` : '';
+  const key = `${W}x${H}r${rk}b${bezel}m${magnify}w${warp}s${base}${lens}${ak}`;
+  return { key, base, aberration, make: () => generateDisplacementMap(W, H, r, bezel, { mode: lens, magnify, scale: base, arrow: arrow ?? undefined, warp }) };
+}
+
+export interface PrewarmOptions {
+  /** Surface size in CSS px (what offsetWidth / offsetHeight will be once shown). */
+  width: number;
+  height: number;
+  /** Corner radius in px, exactly what the surface will have (`getComputedStyle(surface).borderTopLeftRadius`): it is part of the map
+   *  key, so a different radius warms a map the real surface never uses. */
+  radius: number | [number, number, number, number];
+  /** Element whose computed `--ul-glass-*` tokens (bezel, refraction, magnify, interior-warp…) the surface will inherit.
+   *  Default `document.documentElement`; pass the scope element (e.g. `.studio-glass-scope`) if tokens are overridden there. */
+  from?: Element;
+  /** Lens profile of the surface (default 'standard'). */
+  mode?: LensMode;
+  /** The surface's `refraction` multiplier (default 1). */
+  refraction?: number;
+}
+
+/**
+ * Generate and decode the displacement map for a surface that is not on screen yet (a dialog, drawer, sheet…), so its first
+ * open already has the lens instead of waiting for the map. The key is built the same way measure() builds it, so the
+ * real surface hits the cache. Runs when the browser is idle; resolves when the map is decoded (never rejects).
+ */
+export function prewarmGlassMap(opts: PrewarmOptions): Promise<void> {
+  if (typeof document === 'undefined' || !supportsRefraction()) return Promise.resolve();
+  return new Promise<void>((resolve) => {
+    const run = () => {
+      try {
+        if (!perfRead) readPerf();
+        const cs = getComputedStyle(opts.from ?? document.documentElement);
+        const num = (name: string, fallback: number) => { const v = parseFloat(cs.getPropertyValue(name)); return Number.isFinite(v) ? v : fallback; };
+        const r = opts.radius;
+        const spec = mapSpec(num, Math.round(opts.width), Math.round(opts.height), r, opts.mode ?? 'standard', opts.refraction ?? 1, null);
+        const m = getMaps(spec.key, spec.make);
+        (m.decoded ?? Promise.resolve()).then(() => resolve(), () => resolve());
+      } catch { resolve(); }
+    };
+    const ric = (window as unknown as { requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => void }).requestIdleCallback;
+    if (ric) ric(run, { timeout: 1500 }); else setTimeout(run, 50);
+  });
+}
+
 function measure(s: GlassState) {
   s.raf = 0;
   const el = s.el;
@@ -584,24 +646,14 @@ function measure(s: GlassState) {
   const radii: [number, number, number, number] = [rad(cs.borderTopLeftRadius), rad(cs.borderTopRightRadius), rad(cs.borderBottomRightRadius), rad(cs.borderBottomLeftRadius)];
   const r = radii[0] === radii[1] && radii[1] === radii[2] && radii[2] === radii[3] ? radii[0] : radii;
   const lens = s.opts.mode ?? 'standard';
-  // Bezel ≤ --ul-glass-bezel-max-ratio × shorter side, so the lens reaches into small controls instead of washing over them.
-  const bezel = Math.round(Math.min(num('--ul-glass-bezel', 32), perf.bezelMax * Math.min(w, h)) * 2) / 2;
-  const magnify = num('--ul-glass-magnify', 1);
-  const warp = Math.max(0, Math.min(1, num('--ul-glass-interior-warp', 0)));
-  s.aberration = num('--ul-glass-aberration', 2);
-  s.base = num('--ul-glass-refraction', 70) * Number(s.opts.refraction ?? 1) * PROFILE[lens].gain;
-  const small = w * h < perf.smallArea;
-  // Small controls: guarantee a visible edge shift (offset at the rim ≈ scale / 2 px).
-  if (small && s.base > 0) s.base = Math.max(s.base, perf.smallShift * 2);
-  // Quantize to size buckets (rounded UP so the map always covers the element) so similar surfaces share maps and filters. Small surfaces use exact sizes.
-  const B = small ? perf.bucketSmall : perf.bucket, W = Math.ceil(w / B) * B, H = Math.ceil(h / B) * B;
-  const rk = Array.isArray(r) ? r.map((x) => x.toFixed(1)).join('/') : r.toFixed(1);
   const arrow = arrowOf(s, cs, w, h);
-  const ak = arrow ? `a${arrow.edge}${arrow.pos}` : '';
-  const key = `${W}x${H}r${rk}b${bezel}m${magnify}w${warp}s${s.base}${lens}${ak}`;
+  const spec = mapSpec(num, w, h, r, lens, Number(s.opts.refraction ?? 1), arrow);
+  s.aberration = spec.aberration;
+  s.base = spec.base;
+  const key = spec.key;
   if (key === s.key) { s.held = undefined; s.stretch = undefined; }
   else {
-    const next = getMaps(key, () => generateDisplacementMap(W, H, r, bezel, { mode: lens, magnify, scale: s.base, arrow: arrow ?? undefined, warp }));
+    const next = getMaps(key, spec.make);
     if (s.maps?.ready && !next.ready && s.mode === 'refract' && s.q > 0) {
       // Resize: keep the old lens on (stretched to the live size) until the new map decodes, then swap. No drop to lite.
       const hold = { maps: next, key };

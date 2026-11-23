@@ -4,9 +4,9 @@ export { ULGlassGroup, GlassGroupContext } from './glass/ULGlassGroup.tsx';
 export type { ULGlassGroupProps } from './glass/ULGlassGroup.tsx';
 export {
   attachGlass, detachGlass, configureGlass, supportsRefraction, generateDisplacementMap,
-  materialize, rampGlass, isMobileGlass, refreshGlass, decideGlassTier, setGlassMaterialize, setGlassGeometry, measureGlassNow, releaseGlassTier, setGlassHot, wakeGlass, getGlassMode, getGlassMaps, getGlassStats, trackPointer, untrackPointer, mapCost, isGlassScrolling, prewarmGlass,
+  materialize, rampGlass, isMobileGlass, refreshGlass, decideGlassTier, setGlassMaterialize, setGlassGeometry, measureGlassNow, releaseGlassTier, setGlassHot, wakeGlass, getGlassMode, getGlassMaps, getGlassStats, trackPointer, untrackPointer, mapCost, isGlassScrolling, prewarmGlass, prewarmGlassMap,
 } from './glass/engine.ts';
-export type { MapArrow, GlassTier, GlassMode, GlassQuality, GlassPriority, GlassStats, LensMode, MapOptions, GlassOptions, GlassConfig, DisplacementMaps } from './glass/engine.ts';
+export type { MapArrow, GlassTier, GlassMode, GlassQuality, GlassPriority, GlassStats, LensMode, MapOptions, PrewarmOptions, GlassOptions, GlassConfig, DisplacementMaps } from './glass/engine.ts';
 export { concentric } from './glass/radius.ts';
 export { initGlassDebug, setGlassDebug, recordScroll, debugFlags, startGlassRecorder, stopGlassRecorder } from './glass/glassDebug.ts';
 export { createSpring, springs } from './motion/spring.ts';
