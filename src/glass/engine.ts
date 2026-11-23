@@ -63,7 +63,7 @@ export interface GlassConfig {
 export interface DisplacementMaps { map: string; rim: string; width: number; height: number; /** both images decoded (a filter only references decoded maps) */ ready?: boolean; decoded?: Promise<void> }
 /** Arrow outline (overlays + tooltips, full tier only): the map is built from body ∪ arrow, so the bezel bends into the arrow base. */
 export interface MapArrow { edge: 'top' | 'bottom' | 'left' | 'right'; pos: number; half: number; depth: number }
-export interface MapOptions { mode?: LensMode; magnify?: number; scale?: number; arrow?: MapArrow }
+export interface MapOptions { mode?: LensMode; magnify?: number; scale?: number; arrow?: MapArrow; /** 0..1 smooth wavy displacement across the whole interior (large surfaces); 0 = none. */ warp?: number }
 /** Map generation cost (ms), for the perf report: last plain map, last arrow map, count of each. */
 export const mapCost = { plain: 0, arrow: 0, nPlain: 0, nArrow: 0, maxArrow: 0 };
 export interface GlassStats {
@@ -272,6 +272,10 @@ export function generateDisplacementMap(width: number, height: number, radius: n
   const band = Math.max(1, 2 * res);
   // offset_px = scale * (C/255 − .5); we want offset = −pos * (1 − 1/m)  →  per-real-px coefficient
   const mk = scale > 0 && magnify > 1 ? (2 * (1 - 1 / magnify)) / scale : 0;
+  // Interior warp: two crossed low-frequency waves (wavelength ~ a third of the shorter side, 120..260 px) so text anywhere under the
+  // surface visibly bends, not only the bezel ring. Amplitude w → up to ±w·scale/2 px of displacement; fades in over the bezel.
+  const warp = Math.max(0, Math.min(1, opts.warp ?? 0));
+  const lam = Math.max(120, Math.min(260, Math.min(width, height) / 3)) * res, kw = (2 * Math.PI) / lam;
   const t0 = performance.now();
   // arrow base (body ∪ arrow): along the arrow edge, inside [pos − half, pos + half], the body has no boundary, so the
   // nearest boundary of the union is a base corner. Distances there are measured to those corners (bezel + rim bend into the arrow).
@@ -315,8 +319,11 @@ export function generateDisplacementMap(width: number, height: number, radius: n
       if (mode === 'polar') { const l = Math.hypot(px, py) || 1; nx = px / l; ny = py / l; }
       const inside = dist >= 0;
       const mag = inside && dist < b ? Math.pow(1 - dist / b, exp) : 0;
-      const ox = inside ? clamp(nx * mag + (px / res) * mk, -1, 1) : 0;
-      const oy = inside ? clamp(ny * mag + (py / res) * mk, -1, 1) : 0;
+      const wf = warp > 0 && inside ? warp * Math.min(1, dist / b) : 0; // 0 at the edge (the bezel carries it), full inside
+      const wx = wf ? wf * Math.sin(py * kw + 1.7 * Math.sin(px * kw * 0.6)) : 0;
+      const wy = wf ? wf * Math.sin(px * kw + 1.7 * Math.sin(py * kw * 0.6) + 2.1) : 0;
+      const ox = inside ? clamp(nx * mag + (px / res) * mk + wx, -1, 1) : 0;
+      const oy = inside ? clamp(ny * mag + (py / res) * mk + wy, -1, 1) : 0;
       md.data[i] = 128 - ox * 127;
       md.data[i + 1] = 128 - oy * 127;
       md.data[i + 2] = 128;
@@ -580,6 +587,7 @@ function measure(s: GlassState) {
   // Bezel ≤ --ul-glass-bezel-max-ratio × shorter side, so the lens reaches into small controls instead of washing over them.
   const bezel = Math.round(Math.min(num('--ul-glass-bezel', 32), perf.bezelMax * Math.min(w, h)) * 2) / 2;
   const magnify = num('--ul-glass-magnify', 1);
+  const warp = Math.max(0, Math.min(1, num('--ul-glass-interior-warp', 0)));
   s.aberration = num('--ul-glass-aberration', 2);
   s.base = num('--ul-glass-refraction', 70) * Number(s.opts.refraction ?? 1) * PROFILE[lens].gain;
   const small = w * h < perf.smallArea;
@@ -590,10 +598,10 @@ function measure(s: GlassState) {
   const rk = Array.isArray(r) ? r.map((x) => x.toFixed(1)).join('/') : r.toFixed(1);
   const arrow = arrowOf(s, cs, w, h);
   const ak = arrow ? `a${arrow.edge}${arrow.pos}` : '';
-  const key = `${W}x${H}r${rk}b${bezel}m${magnify}s${s.base}${lens}${ak}`;
+  const key = `${W}x${H}r${rk}b${bezel}m${magnify}w${warp}s${s.base}${lens}${ak}`;
   if (key === s.key) { s.held = undefined; s.stretch = undefined; }
   else {
-    const next = getMaps(key, () => generateDisplacementMap(W, H, r, bezel, { mode: lens, magnify, scale: s.base, arrow: arrow ?? undefined }));
+    const next = getMaps(key, () => generateDisplacementMap(W, H, r, bezel, { mode: lens, magnify, scale: s.base, arrow: arrow ?? undefined, warp }));
     if (s.maps?.ready && !next.ready && s.mode === 'refract' && s.q > 0) {
       // Resize: keep the old lens on (stretched to the live size) until the new map decodes, then swap. No drop to lite.
       const hold = { maps: next, key };

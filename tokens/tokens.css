@@ -102,6 +102,7 @@
   --ul-glass-light-max: 4;
   --ul-glass-magnify: 1.04;
   --ul-glass-bezel-max-ratio: 0.35;
+  --ul-glass-interior-warp: 0;
   --ul-glass-small-edge-shift: 8;
   --ul-glass-flare-size: 140px;
   --ul-glass-flare-intensity: 0.38;
