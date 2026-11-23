@@ -5,6 +5,8 @@ export type AccentPreset = (typeof ACCENT_PRESETS)[number];
 /** A preset name or any CSS color. */
 export type Accent = AccentPreset | (string & {});
 export type Backdrop = 'dark' | 'mid' | 'light';
+/** Backdrop class, or `auto`: measured from what sits behind the surface (see measureBackdrop). */
+export type BackdropSetting = Backdrop | 'auto';
 export const ACCENT_STRENGTHS = ['subtle', 'tinted', 'vivid'] as const;
 /** subtle (ambient) · tinted (default for accented glass) · vivid (hero), or a raw k in 0..1. */
 export type AccentStrength = (typeof ACCENT_STRENGTHS)[number] | number;

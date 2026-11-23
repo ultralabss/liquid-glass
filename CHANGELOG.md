@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.1 — 2026-11-23
+### Added
+- `backdrop="auto"` on `ULGlass`: the surface measures what sits behind it and picks the contrast scrim (`dark` | `mid` | `light`). It composites the elements under the surface (background colours, gradient stop averages, same-origin images / video / canvas via an 8×8 downscale) down to the page colour, with a small hysteresis so gradients and video do not flicker. Re-measured on resize, scroll, theme change (`class`, `style`, `data-theme` on `<html>`, `prefers-color-scheme`) and shortly after mount. Cross-origin images cannot be read and count as unknown.
+- `measureBackdrop(el)` and `BACKDROP_THRESHOLDS` exports; type `BackdropSetting`.
+
 ## 0.2.0 — 2026-11-23
 ### Added
 - `appearance`: ONE switch from the liquid lens to ordinary glass. `liquid` (default), `frosted` (blur + saturate + tint, no lens: cheap and stable everywhere), `solid` (no transparency). On `ULGlass`, and on `ULProvider` for a subtree or per category (`appearance={{ default: "frosted", overlays: "liquid" }}`); most specific wins. Frosted maps to the lite tier, solid to the flat material.
