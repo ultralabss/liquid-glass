@@ -332,6 +332,7 @@ var UL = (() => {
     pointRect: () => pointRect,
     polling: () => polling,
     prewarmGlass: () => prewarmGlass,
+    prewarmGlassMap: () => prewarmGlassMap,
     pushOverlay: () => pushOverlay,
     quantile: () => quantile,
     rampGlass: () => rampGlass,
@@ -1992,6 +1993,44 @@ var UL = (() => {
       el.style.removeProperty("--ul-glass-debug-map");
     }
   }
+  function mapSpec(num6, w, h, r, lens, refraction, arrow) {
+    const bezel = Math.round(Math.min(num6("--ul-glass-bezel", 32), perf.bezelMax * Math.min(w, h)) * 2) / 2;
+    const magnify = num6("--ul-glass-magnify", 1);
+    const warp = Math.max(0, Math.min(1, num6("--ul-glass-interior-warp", 0)));
+    const aberration = num6("--ul-glass-aberration", 2);
+    let base = num6("--ul-glass-refraction", 70) * refraction * PROFILE[lens].gain;
+    const small = w * h < perf.smallArea;
+    if (small && base > 0) base = Math.max(base, perf.smallShift * 2);
+    const B = small ? perf.bucketSmall : perf.bucket, W = Math.ceil(w / B) * B, H = Math.ceil(h / B) * B;
+    const rk = Array.isArray(r) ? r.map((x) => x.toFixed(1)).join("/") : r.toFixed(1);
+    const ak = arrow ? `a${arrow.edge}${arrow.pos}` : "";
+    const key = `${W}x${H}r${rk}b${bezel}m${magnify}w${warp}s${base}${lens}${ak}`;
+    return { key, base, aberration, make: () => generateDisplacementMap(W, H, r, bezel, { mode: lens, magnify, scale: base, arrow: arrow ?? void 0, warp }) };
+  }
+  function prewarmGlassMap(opts) {
+    if (typeof document === "undefined" || !supportsRefraction()) return Promise.resolve();
+    return new Promise((resolve) => {
+      const run = () => {
+        try {
+          if (!perfRead) readPerf();
+          const cs = getComputedStyle(opts.from ?? document.documentElement);
+          const num6 = (name, fallback) => {
+            const v = parseFloat(cs.getPropertyValue(name));
+            return Number.isFinite(v) ? v : fallback;
+          };
+          const r = opts.radius;
+          const spec = mapSpec(num6, Math.round(opts.width), Math.round(opts.height), r, opts.mode ?? "standard", opts.refraction ?? 1, null);
+          const m = getMaps(spec.key, spec.make);
+          (m.decoded ?? Promise.resolve()).then(() => resolve(), () => resolve());
+        } catch {
+          resolve();
+        }
+      };
+      const ric = window.requestIdleCallback;
+      if (ric) ric(run, { timeout: 1500 });
+      else setTimeout(run, 50);
+    });
+  }
   function measure(s) {
     s.raf = 0;
     const el = s.el;
@@ -2037,23 +2076,16 @@ var UL = (() => {
     const radii = [rad(cs.borderTopLeftRadius), rad(cs.borderTopRightRadius), rad(cs.borderBottomRightRadius), rad(cs.borderBottomLeftRadius)];
     const r = radii[0] === radii[1] && radii[1] === radii[2] && radii[2] === radii[3] ? radii[0] : radii;
     const lens = s.opts.mode ?? "standard";
-    const bezel = Math.round(Math.min(num6("--ul-glass-bezel", 32), perf.bezelMax * Math.min(w, h)) * 2) / 2;
-    const magnify = num6("--ul-glass-magnify", 1);
-    const warp = Math.max(0, Math.min(1, num6("--ul-glass-interior-warp", 0)));
-    s.aberration = num6("--ul-glass-aberration", 2);
-    s.base = num6("--ul-glass-refraction", 70) * Number(s.opts.refraction ?? 1) * PROFILE[lens].gain;
-    const small = w * h < perf.smallArea;
-    if (small && s.base > 0) s.base = Math.max(s.base, perf.smallShift * 2);
-    const B = small ? perf.bucketSmall : perf.bucket, W = Math.ceil(w / B) * B, H = Math.ceil(h / B) * B;
-    const rk = Array.isArray(r) ? r.map((x) => x.toFixed(1)).join("/") : r.toFixed(1);
     const arrow = arrowOf(s, cs, w, h);
-    const ak = arrow ? `a${arrow.edge}${arrow.pos}` : "";
-    const key = `${W}x${H}r${rk}b${bezel}m${magnify}w${warp}s${s.base}${lens}${ak}`;
+    const spec = mapSpec(num6, w, h, r, lens, Number(s.opts.refraction ?? 1), arrow);
+    s.aberration = spec.aberration;
+    s.base = spec.base;
+    const key = spec.key;
     if (key === s.key) {
       s.held = void 0;
       s.stretch = void 0;
     } else {
-      const next = getMaps(key, () => generateDisplacementMap(W, H, r, bezel, { mode: lens, magnify, scale: s.base, arrow: arrow ?? void 0, warp }));
+      const next = getMaps(key, spec.make);
       if (s.maps?.ready && !next.ready && s.mode === "refract" && s.q > 0) {
         const hold = { maps: next, key };
         s.held = hold;
