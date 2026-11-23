@@ -29,6 +29,13 @@ export interface ULGlassProps extends React.HTMLAttributes<HTMLElement>, ULGlass
   aberration?: number;
   magnify?: number;
   /**
+   * 0..1 wavy distortion across the WHOLE surface, not only the bezel ring: text anywhere behind a large surface (dialog, sheet)
+   * visibly bends. 0.35 is clear, 1 is strong. Needs refraction (quality "full"); combine with `blur={0}` for pure distortion.
+   * Amplitude is up to ±interiorWarp × lens scale / 2 px. Token `--ul-glass-interior-warp`.
+   * @default undefined (token, 0)
+   */
+  interiorWarp?: number;
+  /**
    * Elastic surface (hover pull, press/drag stretch). Default false. Use for
    * controls only — buttons, icon buttons, chips, switch/slider thumbs,
    * segmented lens, FAB. Cards, panels, sheets, sidebars, toolbars, tables,
@@ -92,7 +99,7 @@ const len = (v: number | string) => (typeof v === 'number' || /^[\d.]+$/.test(v)
 export const ULGlass = React.forwardRef<HTMLElement, ULGlassProps>(function ULGlass(
   {
     as: Tag = 'div', tier = 'md', variant = 'clear', mode = 'standard', radius, padding, refraction = 1,
-    blur, bezel, scale, aberration, magnify, interactive = false, elasticity, legacyElastic = false, pressable = false, pressScale,
+    blur, bezel, scale, aberration, magnify, interiorWarp, interactive = false, elasticity, legacyElastic = false, pressable = false, pressScale,
     light = true, visible = true, debug = false, quality = 'auto', priority, accent, accentStrength, backdrop, clarity, material, materialCategory = 'surfaces', className, style, children, ...rest
   },
   ref,
@@ -110,7 +117,7 @@ export const ULGlass = React.forwardRef<HTMLElement, ULGlassProps>(function ULGl
 
   React.useLayoutEffect(() => {
     if (node.current) attachGlass(node.current, { refraction: Number(refraction), light, debug, mode, interactive, elasticity: elasticity == null ? undefined : Number(elasticity), legacyElastic, pressable, pressScale: pressScale == null ? undefined : Number(pressScale), quality, priority });
-  }, [refraction, light, debug, mode, interactive, elasticity, legacyElastic, pressable, pressScale, quality, priority, tier, radius, padding, blur, bezel, scale, aberration, magnify]);
+  }, [refraction, light, debug, mode, interactive, elasticity, legacyElastic, pressable, pressScale, quality, priority, tier, radius, padding, blur, bezel, scale, aberration, magnify, interiorWarp]);
 
   React.useLayoutEffect(() => {
     const el = node.current;
@@ -131,6 +138,7 @@ export const ULGlass = React.forwardRef<HTMLElement, ULGlassProps>(function ULGl
   if (scale != null) vars['--ul-glass-refraction'] = String(scale);
   if (aberration != null) vars['--ul-glass-aberration'] = String(aberration);
   if (magnify != null) vars['--ul-glass-magnify'] = String(magnify);
+  if (interiorWarp != null) vars['--ul-glass-interior-warp'] = String(interiorWarp);
   if (clar != null) vars['--ul-glass-clarity'] = String(clar);
   const acc = accentAttrs(accent, accentStrength);
 

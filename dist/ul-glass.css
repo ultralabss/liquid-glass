@@ -20,6 +20,7 @@
 @property --ul-light { syntax: "*"; inherits: false; }
 @property --mx { syntax: "*"; inherits: false; }
 @property --my { syntax: "*"; inherits: false; }
+@property --ul-rim-angle { syntax: "*"; inherits: false; }
 [data-ul-accent=ice] {
   --ul-accent: var(--ul-accent-ice);
 }

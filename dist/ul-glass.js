@@ -530,6 +530,7 @@ var UL = (() => {
       },
       magnify: 1.04,
       "bezel-max-ratio": 0.35,
+      "interior-warp": 0,
       "small-edge-shift": 8,
       flare: {
         size: "140px",
@@ -1625,6 +1626,8 @@ var UL = (() => {
     const b = Math.max(1, Math.min(bezel * res, hw, hh));
     const band = Math.max(1, 2 * res);
     const mk = scale > 0 && magnify > 1 ? 2 * (1 - 1 / magnify) / scale : 0;
+    const warp = Math.max(0, Math.min(1, opts.warp ?? 0));
+    const lam = Math.max(120, Math.min(260, Math.min(width, height) / 3)) * res, kw = 2 * Math.PI / lam;
     const t0 = performance.now();
     const ar = opts.arrow;
     const base = ar ? (() => {
@@ -1684,8 +1687,11 @@ var UL = (() => {
         }
         const inside = dist >= 0;
         const mag = inside && dist < b ? Math.pow(1 - dist / b, exp) : 0;
-        const ox = inside ? clamp(nx * mag + px2 / res * mk, -1, 1) : 0;
-        const oy = inside ? clamp(ny * mag + py2 / res * mk, -1, 1) : 0;
+        const wf = warp > 0 && inside ? warp * Math.min(1, dist / b) : 0;
+        const wx = wf ? wf * Math.sin(py2 * kw + 1.7 * Math.sin(px2 * kw * 0.6)) : 0;
+        const wy = wf ? wf * Math.sin(px2 * kw + 1.7 * Math.sin(py2 * kw * 0.6) + 2.1) : 0;
+        const ox = inside ? clamp(nx * mag + px2 / res * mk + wx, -1, 1) : 0;
+        const oy = inside ? clamp(ny * mag + py2 / res * mk + wy, -1, 1) : 0;
         md.data[i] = 128 - ox * 127;
         md.data[i + 1] = 128 - oy * 127;
         md.data[i + 2] = 128;
@@ -2028,6 +2034,7 @@ var UL = (() => {
     const lens = s.opts.mode ?? "standard";
     const bezel = Math.round(Math.min(num6("--ul-glass-bezel", 32), perf.bezelMax * Math.min(w, h)) * 2) / 2;
     const magnify = num6("--ul-glass-magnify", 1);
+    const warp = Math.max(0, Math.min(1, num6("--ul-glass-interior-warp", 0)));
     s.aberration = num6("--ul-glass-aberration", 2);
     s.base = num6("--ul-glass-refraction", 70) * Number(s.opts.refraction ?? 1) * PROFILE[lens].gain;
     const small = w * h < perf.smallArea;
@@ -2036,12 +2043,12 @@ var UL = (() => {
     const rk = Array.isArray(r) ? r.map((x) => x.toFixed(1)).join("/") : r.toFixed(1);
     const arrow = arrowOf(s, cs, w, h);
     const ak = arrow ? `a${arrow.edge}${arrow.pos}` : "";
-    const key = `${W}x${H}r${rk}b${bezel}m${magnify}s${s.base}${lens}${ak}`;
+    const key = `${W}x${H}r${rk}b${bezel}m${magnify}w${warp}s${s.base}${lens}${ak}`;
     if (key === s.key) {
       s.held = void 0;
       s.stretch = void 0;
     } else {
-      const next = getMaps(key, () => generateDisplacementMap(W, H, r, bezel, { mode: lens, magnify, scale: s.base, arrow: arrow ?? void 0 }));
+      const next = getMaps(key, () => generateDisplacementMap(W, H, r, bezel, { mode: lens, magnify, scale: s.base, arrow: arrow ?? void 0, warp }));
       if (s.maps?.ready && !next.ready && s.mode === "refract" && s.q > 0) {
         const hold = { maps: next, key };
         s.held = hold;
@@ -3370,6 +3377,7 @@ var UL = (() => {
     scale,
     aberration,
     magnify,
+    interiorWarp,
     interactive = false,
     elasticity,
     legacyElastic = false,
@@ -3406,7 +3414,7 @@ var UL = (() => {
     }, [ref]);
     React5.useLayoutEffect(() => {
       if (node.current) attachGlass(node.current, { refraction: Number(refraction), light, debug, mode, interactive, elasticity: elasticity == null ? void 0 : Number(elasticity), legacyElastic, pressable, pressScale: pressScale == null ? void 0 : Number(pressScale), quality, priority });
-    }, [refraction, light, debug, mode, interactive, elasticity, legacyElastic, pressable, pressScale, quality, priority, tier, radius, padding, blur, bezel, scale, aberration, magnify]);
+    }, [refraction, light, debug, mode, interactive, elasticity, legacyElastic, pressable, pressScale, quality, priority, tier, radius, padding, blur, bezel, scale, aberration, magnify, interiorWarp]);
     React5.useLayoutEffect(() => {
       const el = node.current;
       return () => {
@@ -3426,6 +3434,7 @@ var UL = (() => {
     if (scale != null) vars["--ul-glass-refraction"] = String(scale);
     if (aberration != null) vars["--ul-glass-aberration"] = String(aberration);
     if (magnify != null) vars["--ul-glass-magnify"] = String(magnify);
+    if (interiorWarp != null) vars["--ul-glass-interior-warp"] = String(interiorWarp);
     if (clar != null) vars["--ul-glass-clarity"] = String(clar);
     const acc = accentAttrs(accent, accentStrength);
     return /* @__PURE__ */ React5.createElement(
