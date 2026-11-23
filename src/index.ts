@@ -159,6 +159,6 @@ export type { ULCarouselProps } from './components/ULBatch2/carousel.tsx';
 export { ULHeading, ULText, ULCode, ULBlockquote, ULList, ULLink, ULProse } from './components/ULBatch2/typography.tsx';
 export type { ULHeadingProps, ULTextProps, ULBlockquoteProps, ULListProps, ULLinkProps, TypeSize } from './components/ULBatch2/typography.tsx';
 
-export { ULProvider, useMaterial, useClarity, resolveMaterial, mergeMaterialScope, MATERIAL_DEFAULTS, MATERIAL_CATEGORIES } from './glass/material.tsx';
-export type { Material, MaterialCategory, MaterialConfig, ULProviderProps } from './glass/material.tsx';
+export { ULProvider, useMaterial, useClarity, useAppearance, resolveAppearance, useGlassMotion, resolveMaterial, mergeMaterialScope, MATERIAL_DEFAULTS, MATERIAL_CATEGORIES } from './glass/material.tsx';
+export type { Material, MaterialCategory, MaterialConfig, Appearance, AppearanceConfig, GlassMotion, ULProviderProps } from './glass/material.tsx';
 export { isFlatMaterial } from './glass/engine.ts';

@@ -1360,7 +1360,9 @@ function flushPointer() {
   const allRects = all.map((el) => el.getBoundingClientRect()); // all reads first, then writes
   // nearest first; only surfaces within the light radius; at most lightMax minus the ones still fading out
   const distOf = (b: DOMRect, el: HTMLElement) => { const m = motions.get(el), ox = m ? m.x : 0, oy = m ? m.y : 0; return Math.hypot(Math.max(b.left - ox - px, 0, px - (b.right - ox)), Math.max(b.top - oy - py, 0, py - (b.bottom - oy))); };
-  const ranked = all.map((el, i) => ({ el, b: allRects[i], d: distOf(allRects[i], el) })).filter((x) => x.d < proximity).sort((a, b) => a.d - b.d);
+  // per-surface reach: data-ul-proximity (px) overrides the global --ul-glass-light-proximity
+  const proxOf = (el: HTMLElement) => { const v = parseFloat(el.dataset.ulProximity ?? ''); return Number.isFinite(v) && v > 0 ? v : proximity; };
+  const ranked = all.map((el, i) => ({ el, b: allRects[i], d: distOf(allRects[i], el) })).filter((x) => x.d < proxOf(x.el)).sort((a, b) => a.d - b.d);
   const keep = ranked.slice(0, lightMax);
   const list = keep.map((x) => x.el), rects = keep.map((x) => x.b);
   const vh = window.innerHeight;
@@ -1371,13 +1373,14 @@ function flushPointer() {
     const b = rects[i];
     const ox = m ? m.x : 0, oy = m ? m.y : 0; // measure the untranslated rect
     const left = b.left - ox, top = b.top - oy, right = b.right - ox, bottom = b.bottom - oy;
-    if (bottom < -proximity || top > vh + proximity) return;
+    const prox = proxOf(el);
+    if (bottom < -prox || top > vh + prox) return;
     live.add(el);
     fading.delete(el);
     const dx = Math.max(left - px, 0, px - right);
     const dy = Math.max(top - py, 0, py - bottom);
     const near = Math.hypot(dx, dy);
-    const light = near === 0 ? 1 : Math.max(0, 1 - near / proximity);
+    const light = near === 0 ? 1 : Math.max(0, 1 - near / prox);
     writeLight(el, light);
     const cx = px - (left + right) / 2, cy = py - (top + bottom) / 2;
     if (light > 0) {

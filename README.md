@@ -49,6 +49,14 @@ Glass samples what is behind it, so an ancestor that creates a backdrop root (`c
 | `accent` | preset \| color | inherited | colors body, backdrop, rim, glow, pointer light |
 | `accentStrength` | `'subtle' \| 'tinted' \| 'vivid'` \| 0..1 | inherited (tinted once accented) | how strongly |
 | `backdrop` | `'dark' \| 'mid' \| 'light'` | inherited (dark) | selects the contrast scrim |
+| `appearance` | `'liquid' \| 'frosted' \| 'solid'` | inherited (`liquid`) | liquid lens, ordinary frosted glass (no lens), or no transparency. Set once with `<ULProvider appearance={…}>`, also per category |
+| `preset` | `'clear' \| 'dramatic' \| 'calm' \| 'frosted'` | – | ready-made look; explicit props win |
+| `distortion` | 0..1 | – | one lever: 0 none, 0.5 designed, 1 double lens plus whole-surface warp |
+| `tint` / `tintColor` | number / CSS color | tier / accent | body tint amount (0 = none) and colour |
+| `frost` | 0..1 | tier blur | backdrop blur, 1 = 32 px |
+| `rim` / `glow` | 0..1 | `1` | specular rim and accent glow strength |
+| `shadow` | `'none' \| 'soft' \| 'deep'` \| CSS | tier | drop shadow |
+| `pointerLight` / `proximity` | number / px | `1` / 140 | pointer light strength (0 = off) and reach per surface |
 | `interiorWarp` | 0..1 | `0` | wavy distortion across the whole surface (large dialogs and sheets); needs `quality="full"`; pair with `blur={0}` |
 | `clarity` | 0..1 | inherited (`0.5`) | Clear ↔ Tinted: body tint, backing scrim and frost. `1` clear, `0` tinted; never touches the lens. Set once for a subtree with `<ULProvider clarity={…}>` (reaches portaled menus too) |
 | `interactive` | boolean | `false` | elastic control (buttons, chips, thumbs) |

@@ -136,7 +136,7 @@
     inset var(--ul-glass-fringe-w, 1.5px) var(--ul-glass-fringe-w, 1.5px) calc(var(--ul-glass-fringe-w, 1.5px) * 1.4) calc(var(--ul-glass-fringe-w, 1.5px) * -.6) rgb(255 84 120 / var(--ul-glass-fringe-a, 0)),
     inset calc(var(--ul-glass-fringe-w, 1.5px) * -1) calc(var(--ul-glass-fringe-w, 1.5px) * -1) calc(var(--ul-glass-fringe-w, 1.5px) * 1.4) calc(var(--ul-glass-fringe-w, 1.5px) * -.6) rgb(72 170 255 / var(--ul-glass-fringe-a, 0)),
     var(--ul-glass-shadow),
-    0 10px calc(36px + var(--ul-ax) * 24px) -10px color-mix(in srgb, var(--ul-accent) calc(var(--ul-a-glow) * 100%), transparent);
+    0 10px calc(36px + var(--ul-ax) * 24px) -10px color-mix(in srgb, var(--ul-accent) calc(var(--ul-a-glow) * var(--ul-glow-k, 1) * 100%), transparent);
 }
 .ul-glass[data-tier=sm] {
   --ul-glass-blur: var(--ul-glass-sm-blur);
@@ -292,7 +292,7 @@
     inset 0 12px 20px -14px rgb(var(--ul-color-white-rgb) / .12),
     inset 0 -12px 20px -14px rgb(0 0 0 / .45),
     var(--ul-glass-shadow),
-    0 10px calc(36px + var(--ul-ax) * 24px) -10px color-mix(in srgb, var(--ul-accent) calc(var(--ul-a-glow) * 100%), transparent);
+    0 10px calc(36px + var(--ul-ax) * 24px) -10px color-mix(in srgb, var(--ul-accent) calc(var(--ul-a-glow) * var(--ul-glow-k, 1) * 100%), transparent);
 }
 [data-ul-accent-legacy] .ul-glass {
   --ul-ax: 0;

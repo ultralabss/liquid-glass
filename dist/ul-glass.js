@@ -342,6 +342,7 @@ var UL = (() => {
     relTime: () => relTime,
     releaseGlassTier: () => releaseGlassTier,
     reorderKeys: () => reorderKeys,
+    resolveAppearance: () => resolveAppearance,
     resolveHeaderConfig: () => resolveHeaderConfig,
     resolveLocale: () => resolveLocale,
     resolveMaterial: () => resolveMaterial,
@@ -384,6 +385,7 @@ var UL = (() => {
     useActionTooltip: () => useActionTooltip,
     useAlertDialog: () => useAlertDialog,
     useAnchoredMorph: () => useAnchoredMorph,
+    useAppearance: () => useAppearance,
     useAsyncAction: () => useAsyncAction,
     useBrush: () => useBrush,
     useCellIndicator: () => useCellIndicator,
@@ -395,6 +397,7 @@ var UL = (() => {
     useContextMenuTarget: () => useContextMenuTarget,
     useDialog: () => useDialog,
     useFieldCtx: () => useFieldCtx,
+    useGlassMotion: () => useGlassMotion,
     useHoverLayer: () => useHoverLayer,
     useInputGroupCtx: () => useInputGroupCtx,
     useLiveKeys: () => useLiveKeys,
@@ -3047,7 +3050,11 @@ var UL = (() => {
       const m = motions.get(el), ox = m ? m.x : 0, oy = m ? m.y : 0;
       return Math.hypot(Math.max(b.left - ox - px, 0, px - (b.right - ox)), Math.max(b.top - oy - py, 0, py - (b.bottom - oy)));
     };
-    const ranked = all.map((el, i) => ({ el, b: allRects[i], d: distOf(allRects[i], el) })).filter((x) => x.d < proximity).sort((a, b) => a.d - b.d);
+    const proxOf = (el) => {
+      const v = parseFloat(el.dataset.ulProximity ?? "");
+      return Number.isFinite(v) && v > 0 ? v : proximity;
+    };
+    const ranked = all.map((el, i) => ({ el, b: allRects[i], d: distOf(allRects[i], el) })).filter((x) => x.d < proxOf(x.el)).sort((a, b) => a.d - b.d);
     const keep = ranked.slice(0, lightMax);
     const list = keep.map((x) => x.el), rects = keep.map((x) => x.b);
     const vh = window.innerHeight;
@@ -3058,13 +3065,14 @@ var UL = (() => {
       const b = rects[i];
       const ox = m ? m.x : 0, oy = m ? m.y : 0;
       const left = b.left - ox, top = b.top - oy, right = b.right - ox, bottom = b.bottom - oy;
-      if (bottom < -proximity || top > vh + proximity) return;
+      const prox = proxOf(el);
+      if (bottom < -prox || top > vh + prox) return;
       live2.add(el);
       fading.delete(el);
       const dx = Math.max(left - px, 0, px - right);
       const dy = Math.max(top - py, 0, py - bottom);
       const near = Math.hypot(dx, dy);
-      const light = near === 0 ? 1 : Math.max(0, 1 - near / proximity);
+      const light = near === 0 ? 1 : Math.max(0, 1 - near / prox);
       writeLight(el, light);
       const cx2 = px - (left + right) / 2, cy = py - (top + bottom) / 2;
       if (light > 0) {
@@ -3354,53 +3362,120 @@ var UL = (() => {
     const v = instance ?? scope;
     return v == null || !Number.isFinite(Number(v)) ? void 0 : clamp01(Number(v));
   }
-  function ULProvider({ material, clarity, children }) {
+  var AppearanceCtx = React4.createContext(void 0);
+  var isAppearance = (v) => v === "liquid" || v === "frosted" || v === "solid";
+  function resolveAppearance(category, instance, scope) {
+    if (isAppearance(instance)) return instance;
+    if (!scope) return void 0;
+    if (typeof scope === "string") return scope;
+    return category && scope[category] || scope.default;
+  }
+  function useAppearance(category, instance) {
+    return resolveAppearance(category, instance, React4.useContext(AppearanceCtx));
+  }
+  var MotionCtx = React4.createContext(void 0);
+  function useGlassMotion() {
+    return React4.useContext(MotionCtx);
+  }
+  function ULProvider({ material, clarity, appearance, motion, children }) {
+    const parentAppearance = React4.useContext(AppearanceCtx);
+    const parentMotion = React4.useContext(MotionCtx);
+    const appKey = typeof appearance === "string" ? appearance : JSON.stringify(appearance ?? null);
+    const appValue = React4.useMemo(() => {
+      if (!appearance) return parentAppearance;
+      if (typeof appearance === "string" || !parentAppearance) return appearance;
+      return typeof parentAppearance === "string" ? { default: parentAppearance, ...appearance } : { ...parentAppearance, ...appearance };
+    }, [parentAppearance, appKey]);
     const parent = React4.useContext(MaterialCtx);
     const parentClarity = React4.useContext(ClarityCtx);
     const key = typeof material === "string" ? material : JSON.stringify(material ?? null);
     const value = React4.useMemo(() => mergeMaterialScope(parent, material), [parent, key]);
-    return /* @__PURE__ */ React4.createElement(MaterialCtx.Provider, { value }, /* @__PURE__ */ React4.createElement(ClarityCtx.Provider, { value: clarity ?? parentClarity }, children));
+    return /* @__PURE__ */ React4.createElement(MaterialCtx.Provider, { value }, /* @__PURE__ */ React4.createElement(ClarityCtx.Provider, { value: clarity ?? parentClarity }, /* @__PURE__ */ React4.createElement(AppearanceCtx.Provider, { value: appValue }, /* @__PURE__ */ React4.createElement(MotionCtx.Provider, { value: motion ?? parentMotion }, children))));
   }
+
+  // src/glass/presets.ts
+  var GLASS_PRESETS = {
+    /** Thin tint and scrim, soft frost: the see-through look. */
+    clear: { clarity: 0.85, frost: 0.18, aberration: 1.5 },
+    /** Strong lens for dark backdrops: wide bezel, high refraction and colour fringe, light magnification. */
+    dramatic: { refraction: 1.5, bezel: 56, aberration: 5, magnify: 1.12, rim: 1, frost: 0.05 },
+    /** Quiet material: weak lens, no fringe, dimmer rim and pointer light. */
+    calm: { refraction: 0.5, aberration: 0, rim: 0.7, pointerLight: 0.4 },
+    /** Ordinary frosted glass, no lens. */
+    frosted: { appearance: "frosted", frost: 0.45 }
+  };
 
   // src/glass/ULGlass.tsx
   var len = (v) => typeof v === "number" || /^[\d.]+$/.test(v) ? `${v}px` : v;
-  var ULGlass = React5.forwardRef(function ULGlass2({
-    as: Tag = "div",
-    tier = "md",
-    variant = "clear",
-    mode = "standard",
-    radius,
-    padding,
-    refraction = 1,
-    blur,
-    bezel,
-    scale,
-    aberration,
-    magnify,
-    interiorWarp,
-    interactive = false,
-    elasticity,
-    legacyElastic = false,
-    pressable = false,
-    pressScale,
-    light = true,
-    visible: visible2 = true,
-    debug = false,
-    quality = "auto",
-    priority,
-    accent,
-    accentStrength,
-    backdrop,
-    clarity,
-    material,
-    materialCategory = "surfaces",
-    className,
-    style,
-    children,
-    ...rest
-  }, ref) {
-    const mat = useMaterial(materialCategory, material);
+  function withPreset(props) {
+    const pr = props.preset ? GLASS_PRESETS[props.preset] : void 0;
+    if (!pr) return props;
+    const out = { ...pr };
+    for (const [k, v] of Object.entries(props)) if (v !== void 0) out[k] = v;
+    return out;
+  }
+  var ULGlass = React5.forwardRef(function ULGlass2(rawProps, ref) {
+    let {
+      as: Tag = "div",
+      tier = "md",
+      variant = "clear",
+      mode = "standard",
+      radius,
+      padding,
+      refraction = 1,
+      blur,
+      bezel,
+      scale,
+      aberration,
+      magnify,
+      interiorWarp,
+      interactive = false,
+      elasticity,
+      legacyElastic = false,
+      pressable = false,
+      pressScale,
+      light = true,
+      visible: visible2 = true,
+      debug = false,
+      quality,
+      priority,
+      accent,
+      accentStrength,
+      backdrop,
+      clarity,
+      material,
+      materialCategory = "surfaces",
+      appearance,
+      preset: _preset,
+      distortion,
+      tint,
+      tintColor,
+      frost,
+      rim,
+      glow,
+      shadow,
+      pointerLight,
+      proximity: proximity2,
+      className,
+      style,
+      children,
+      ...rest
+    } = withPreset(rawProps);
+    const ap = useAppearance(materialCategory, appearance);
+    const motion = useGlassMotion();
+    const mat = useMaterial(materialCategory, material ?? (ap === "solid" ? "flat" : void 0));
     const clar = useClarity(clarity);
+    quality = quality ?? (ap === "frosted" ? "lite" : "auto");
+    if (distortion != null) {
+      const d = Math.max(0, Math.min(1, Number(distortion)));
+      refraction = Number(refraction) * 2 * d;
+      if (interiorWarp == null && d > 0.5) interiorWarp = (d - 0.5) * 0.8;
+    }
+    if (motion === "reduced") {
+      interactive = false;
+      pressable = false;
+    }
+    if (pointerLight != null && Number(pointerLight) <= 0) light = false;
     if (mat.flat) {
       quality = "flat";
       light = false;
@@ -3435,6 +3510,13 @@ var UL = (() => {
     if (aberration != null) vars["--ul-glass-aberration"] = String(aberration);
     if (magnify != null) vars["--ul-glass-magnify"] = String(magnify);
     if (interiorWarp != null) vars["--ul-glass-interior-warp"] = String(interiorWarp);
+    if (tint != null) vars["--ul-glass-tint"] = String(tint);
+    if (tintColor != null) vars["--ul-glass-tint-color"] = tintColor;
+    if (frost != null && blur == null) vars["--ul-glass-blur"] = `${(Math.max(0, Number(frost)) * 32).toFixed(1)}px`;
+    if (rim != null) vars["--ul-rim"] = String(rim);
+    if (glow != null) vars["--ul-glow-k"] = String(glow);
+    if (shadow != null) vars["--ul-glass-shadow"] = shadow === "none" ? "0 0 0 0 transparent" : shadow === "soft" ? "var(--ul-glass-sm-shadow)" : shadow === "deep" ? "var(--ul-glass-xl-shadow)" : shadow;
+    if (pointerLight != null && Number(pointerLight) > 0) vars["--ul-glass-light-intensity"] = String(0.16 * Number(pointerLight));
     if (clar != null) vars["--ul-glass-clarity"] = String(clar);
     const acc = accentAttrs(accent, accentStrength);
     return /* @__PURE__ */ React5.createElement(
@@ -3453,6 +3535,8 @@ var UL = (() => {
         "data-ul-accent-strength": acc["data-ul-accent-strength"],
         "data-ul-backdrop": backdrop,
         "data-ul-material": mat.attr,
+        "data-ul-appearance": ap,
+        "data-ul-proximity": proximity2 != null ? String(proximity2) : void 0,
         style: { ...vars, ...acc.style, ...style }
       },
       children
