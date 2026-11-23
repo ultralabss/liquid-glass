@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.0 — 2026-11-23
+### Added
+- `appearance`: ONE switch from the liquid lens to ordinary glass. `liquid` (default), `frosted` (blur + saturate + tint, no lens: cheap and stable everywhere), `solid` (no transparency). On `ULGlass`, and on `ULProvider` for a subtree or per category (`appearance={{ default: "frosted", overlays: "liquid" }}`); most specific wins. Frosted maps to the lite tier, solid to the flat material.
+- `ULProvider motion="reduced"`: no elastic or press motion in the subtree.
+- `ULGlass` look props: `preset` (`clear` | `dramatic` | `calm` | `frosted`; explicit props win), `distortion` (0..1, one lever for lens strength plus whole-surface warp), `tint`, `tintColor`, `frost` (0..1), `rim`, `glow`, `shadow` (`none` | `soft` | `deep` | any box-shadow), `pointerLight` (0 = off, 1 = designed) and `proximity` (px, per surface; 1 lights only on hover).
+- Hooks and helpers: `useAppearance`, `resolveAppearance`, `useGlassMotion`.
+
 ## 0.1.4 — 2026-11-23
 ### Added
 - `interiorWarp` prop on `ULGlass` and token `--ul-glass-interior-warp` (0..1, default 0): smooth wavy displacement across the whole surface, not only the bezel ring, so text anywhere behind a large surface (dialog, sheet) visibly bends. Amplitude up to ±warp × lens scale / 2 px; combine with `blur={0}` for pure distortion. Needs refraction (`quality="full"`).

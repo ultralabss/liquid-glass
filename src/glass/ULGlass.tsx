@@ -2,7 +2,8 @@ import * as React from 'react';
 import { attachGlass, detachGlass, materialize, type GlassTier, type LensMode, type GlassQuality, type GlassPriority } from './engine.ts';
 import { GlassGroupContext } from './ULGlassGroup.tsx';
 import { accentAttrs, type Accent, type AccentStrength, type Backdrop } from './accent.tsx';
-import { useMaterial, useClarity, type Material, type MaterialCategory } from './material.tsx';
+import { useMaterial, useClarity, useAppearance, useGlassMotion, type Material, type MaterialCategory, type Appearance } from './material.tsx';
+import { GLASS_PRESETS, type GlassPreset } from './presets.ts';
 import './ULGlass.css';
 
 export type GlassVariant = 'clear' | 'chrome';
@@ -75,6 +76,36 @@ export interface ULGlassProps extends React.HTMLAttributes<HTMLElement>, ULGlass
   /** What sits behind this surface; selects the contrast scrim. Omit to inherit (default dark). */
   backdrop?: Backdrop;
   /**
+   * Liquid lens, frosted glass or solid. `liquid` = refraction + lens (default), `frosted` = ordinary frosted glass (blur +
+   * saturate + tint, no lens; cheap and stable everywhere), `solid` = no transparency. Omit to inherit the nearest ULProvider
+   * `appearance` (also per category), else liquid.
+   * @default undefined (inherited; liquid)
+   */
+  appearance?: Appearance;
+  /** Ready-made look: clear | dramatic | calm | frosted. Explicit props win over the preset. */
+  preset?: GlassPreset;
+  /**
+   * One lever for the lens, 0..1: 0 = none, 0.5 = the designed strength, 1 = double refraction plus a wavy warp (0.4) across the whole
+   * surface. Explicit `refraction` / `interiorWarp` win.
+   */
+  distortion?: number;
+  /** Body tint amount (0 = none, so pure distortion over the backdrop). Overrides the tier token. */
+  tint?: number;
+  /** Body tint colour (any CSS colour). Default: derived from the accent. */
+  tintColor?: string;
+  /** Frost 0..1 (backdrop blur, 0 = none, 1 = 32 px). Overrides the tier blur; explicit `blur` wins. */
+  frost?: number;
+  /** Specular rim strength 0..1 (the 1px lit ring). Default 1. */
+  rim?: number;
+  /** Accent glow strength, 0..1 (1 = designed). Default 1. */
+  glow?: number;
+  /** Drop shadow: none | soft | deep, or any CSS box-shadow list. */
+  shadow?: 'none' | 'soft' | 'deep' | (string & {});
+  /** Pointer light strength: 0 = off, 1 = designed, above 1 = brighter. */
+  pointerLight?: number;
+  /** How far (px) from the surface the pointer still lights it. Default: --ul-glass-light-proximity (140). Use a small value (1) to light only on hover. */
+  proximity?: number;
+  /**
    * Clarity 0..1 (Apple's Clear ↔ Tinted): how much body tint, backing scrim and frost this surface carries.
    * 0.5 = the designed material, 1 = clear, 0 = tinted. Omit to inherit the nearest ULProvider `clarity`, else the token
    * --ul-glass-clarity (a CSS ancestor can also set it). Never touches the lens.
@@ -96,16 +127,37 @@ export interface ULGlassProps extends React.HTMLAttributes<HTMLElement>, ULGlass
 
 const len = (v: number | string) => (typeof v === 'number' || /^[\d.]+$/.test(v) ? `${v}px` : v);
 
+/** Preset values under explicit props: undefined explicit props never hide a preset value. */
+function withPreset(props: ULGlassProps): ULGlassProps {
+  const pr = props.preset ? GLASS_PRESETS[props.preset] : undefined;
+  if (!pr) return props;
+  const out: Record<string, unknown> = { ...pr };
+  for (const [k, v] of Object.entries(props)) if (v !== undefined) out[k] = v;
+  return out as ULGlassProps;
+}
+
 export const ULGlass = React.forwardRef<HTMLElement, ULGlassProps>(function ULGlass(
-  {
-    as: Tag = 'div', tier = 'md', variant = 'clear', mode = 'standard', radius, padding, refraction = 1,
-    blur, bezel, scale, aberration, magnify, interiorWarp, interactive = false, elasticity, legacyElastic = false, pressable = false, pressScale,
-    light = true, visible = true, debug = false, quality = 'auto', priority, accent, accentStrength, backdrop, clarity, material, materialCategory = 'surfaces', className, style, children, ...rest
-  },
+  rawProps,
   ref,
 ) {
-  const mat = useMaterial(materialCategory, material);
+  let {
+    as: Tag = 'div', tier = 'md', variant = 'clear', mode = 'standard', radius, padding, refraction = 1,
+    blur, bezel, scale, aberration, magnify, interiorWarp, interactive = false, elasticity, legacyElastic = false, pressable = false, pressScale,
+    light = true, visible = true, debug = false, quality, priority, accent, accentStrength, backdrop, clarity, material, materialCategory = 'surfaces',
+    appearance, preset: _preset, distortion, tint, tintColor, frost, rim, glow, shadow, pointerLight, proximity, className, style, children, ...rest
+  } = withPreset(rawProps) as ULGlassProps & { as?: React.ElementType };
+  const ap = useAppearance(materialCategory, appearance);
+  const motion = useGlassMotion();
+  const mat = useMaterial(materialCategory, material ?? (ap === 'solid' ? 'flat' : undefined));
   const clar = useClarity(clarity);
+  quality = quality ?? (ap === 'frosted' ? 'lite' : 'auto');
+  if (distortion != null) {
+    const d = Math.max(0, Math.min(1, Number(distortion)));
+    refraction = Number(refraction) * 2 * d;
+    if (interiorWarp == null && d > 0.5) interiorWarp = (d - 0.5) * 0.8;
+  }
+  if (motion === 'reduced') { interactive = false; pressable = false; }
+  if (pointerLight != null && Number(pointerLight) <= 0) light = false;
   if (mat.flat) { quality = 'flat'; light = false; }
   const node = React.useRef<HTMLElement | null>(null);
   const inGroup = React.useContext(GlassGroupContext) !== null;
@@ -139,6 +191,13 @@ export const ULGlass = React.forwardRef<HTMLElement, ULGlassProps>(function ULGl
   if (aberration != null) vars['--ul-glass-aberration'] = String(aberration);
   if (magnify != null) vars['--ul-glass-magnify'] = String(magnify);
   if (interiorWarp != null) vars['--ul-glass-interior-warp'] = String(interiorWarp);
+  if (tint != null) vars['--ul-glass-tint'] = String(tint);
+  if (tintColor != null) vars['--ul-glass-tint-color'] = tintColor;
+  if (frost != null && blur == null) vars['--ul-glass-blur'] = `${(Math.max(0, Number(frost)) * 32).toFixed(1)}px`;
+  if (rim != null) vars['--ul-rim'] = String(rim);
+  if (glow != null) vars['--ul-glow-k'] = String(glow);
+  if (shadow != null) vars['--ul-glass-shadow'] = shadow === 'none' ? '0 0 0 0 transparent' : shadow === 'soft' ? 'var(--ul-glass-sm-shadow)' : shadow === 'deep' ? 'var(--ul-glass-xl-shadow)' : shadow;
+  if (pointerLight != null && Number(pointerLight) > 0) vars['--ul-glass-light-intensity'] = String(0.16 * Number(pointerLight));
   if (clar != null) vars['--ul-glass-clarity'] = String(clar);
   const acc = accentAttrs(accent, accentStrength);
 
@@ -157,6 +216,8 @@ export const ULGlass = React.forwardRef<HTMLElement, ULGlassProps>(function ULGl
       data-ul-accent-strength={acc['data-ul-accent-strength']}
       data-ul-backdrop={backdrop}
       data-ul-material={mat.attr}
+      data-ul-appearance={ap}
+      data-ul-proximity={proximity != null ? String(proximity) : undefined}
       style={{ ...vars, ...acc.style, ...style } as React.CSSProperties}
     >
       {children}

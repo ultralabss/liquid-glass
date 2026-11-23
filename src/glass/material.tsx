@@ -63,6 +63,31 @@ export function useClarity(instance?: number): number | undefined {
   return v == null || !Number.isFinite(Number(v)) ? undefined : clamp01(Number(v));
 }
 
+/**
+ * Appearance: ONE switch from the full liquid lens to ordinary glass.
+ * `liquid` = SVG refraction + lens (default behaviour), `frosted` = plain frosted glass (blur + saturate + tint, no lens: cheap and
+ * stable everywhere), `solid` = no transparency (the reduced-transparency look). Set once per subtree on ULProvider, per category
+ * `{ default?, inputs?, controls?, surfaces?, overlays?, chrome? }`, or per surface with ULGlass `appearance`. Most specific wins.
+ */
+export type Appearance = 'liquid' | 'frosted' | 'solid';
+export type AppearanceConfig = Appearance | Partial<Record<'default' | MaterialCategory, Appearance>>;
+const AppearanceCtx = React.createContext<AppearanceConfig | undefined>(undefined);
+const isAppearance = (v: unknown): v is Appearance => v === 'liquid' || v === 'frosted' || v === 'solid';
+/** Resolve the appearance for a category: instance > nearest provider (category, then default) > undefined. */
+export function resolveAppearance(category: MaterialCategory | undefined, instance?: Appearance, scope?: AppearanceConfig): Appearance | undefined {
+  if (isAppearance(instance)) return instance;
+  if (!scope) return undefined;
+  if (typeof scope === 'string') return scope;
+  return (category && scope[category]) || scope.default;
+}
+export function useAppearance(category: MaterialCategory, instance?: Appearance): Appearance | undefined {
+  return resolveAppearance(category, instance, React.useContext(AppearanceCtx));
+}
+/** `reduced` turns off the elastic / press motion of every surface in the subtree (the lens and light stay). */
+export type GlassMotion = 'full' | 'reduced';
+const MotionCtx = React.createContext<GlassMotion | undefined>(undefined);
+export function useGlassMotion(): GlassMotion | undefined { return React.useContext(MotionCtx); }
+
 export interface ULProviderProps {
   /**
    * Material for this subtree: "glass" | "flat" for every category, or per category
@@ -76,16 +101,31 @@ export interface ULProviderProps {
    * @default undefined (inherit; the token --ul-glass-clarity is 0.5)
    */
   clarity?: number;
+  /**
+   * Liquid lens, frosted glass or solid, for this subtree (or per category). A surface's own `appearance` wins.
+   * @default undefined (inherit; liquid)
+   */
+  appearance?: AppearanceConfig;
+  /** `reduced` disables elastic and press motion in this subtree. @default undefined (inherit; full) */
+  motion?: GlassMotion;
   /** Subtree that resolves its material from this scope. */
   children?: React.ReactNode;
 }
-/** Scope provider (no DOM). Carries `material` and `clarity`. */
-export function ULProvider({ material, clarity, children }: ULProviderProps) {
+/** Scope provider (no DOM). Carries `material`, `clarity`, `appearance` and `motion`. */
+export function ULProvider({ material, clarity, appearance, motion, children }: ULProviderProps) {
+  const parentAppearance = React.useContext(AppearanceCtx);
+  const parentMotion = React.useContext(MotionCtx);
+  const appKey = typeof appearance === 'string' ? appearance : JSON.stringify(appearance ?? null);
+  const appValue = React.useMemo<AppearanceConfig | undefined>(() => {
+    if (!appearance) return parentAppearance;
+    if (typeof appearance === 'string' || !parentAppearance) return appearance;
+    return typeof parentAppearance === 'string' ? { default: parentAppearance, ...appearance } : { ...parentAppearance, ...appearance };
+  }, [parentAppearance, appKey]); // eslint-disable-line react-hooks/exhaustive-deps
   const parent = React.useContext(MaterialCtx);
   const parentClarity = React.useContext(ClarityCtx);
   const key = typeof material === 'string' ? material : JSON.stringify(material ?? null);
   const value = React.useMemo(() => mergeMaterialScope(parent, material), [parent, key]); // eslint-disable-line react-hooks/exhaustive-deps
-  return <MaterialCtx.Provider value={value}><ClarityCtx.Provider value={clarity ?? parentClarity}>{children}</ClarityCtx.Provider></MaterialCtx.Provider>;
+  return <MaterialCtx.Provider value={value}><ClarityCtx.Provider value={clarity ?? parentClarity}><AppearanceCtx.Provider value={appValue}><MotionCtx.Provider value={motion ?? parentMotion}>{children}</MotionCtx.Provider></AppearanceCtx.Provider></ClarityCtx.Provider></MaterialCtx.Provider>;
 }
 
 /** Nearest `data-ul-material` attribute (non-React path). */
